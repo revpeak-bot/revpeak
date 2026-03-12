@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Revpeak – Review jujur dan terpercaya untuk teknologi, gadget, ebook, novel, laptop, dan lebih banyak lagi. Temukan produk terbaik untuk Anda.">
+  <meta name="keywords" content="review teknologi, review gadget, review laptop, review hp, review ebook, review novel, afiliasi">
+  <meta name="author" content="Revpeak">
+  <meta property="og:title" content="Revpeak – Review Jujur & Terpercaya">
+  <meta property="og:description" content="Review mendalam untuk gadget, teknologi, ebook, novel, dan lebih banyak lagi.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://revpeak.id">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://revpeak.id">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+
+  <!-- Preconnect untuk Google Fonts (lebih cepat) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+  <title>Revpeak – Review Jujur & Terpercaya</title>
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div class="container">
+      <div class="header-inner">
+        <!-- Logo -->
+        <a href="/" class="logo">
+          ⚡ Rev<span>peak</span>
+        </a>
+
+        <!-- Search -->
+        <div class="search-wrap">
+          <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="search" id="search-input" placeholder="Cari review produk..." aria-label="Cari review">
+        </div>
+
+        <!-- Nav -->
+        <nav id="main-nav" class="nav" role="navigation" aria-label="Menu utama">
+          <a href="/" class="active">Beranda</a>
+          <a href="kategori.html">Kategori</a>
+          <a href="tentang.html">Tentang</a>
+        </nav>
+
+        <!-- Controls -->
+        <button id="theme-toggle" class="theme-toggle" aria-label="Ganti tema">🌙</button>
+        <button id="hamburger" class="hamburger" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero" aria-label="Banner utama">
+    <div class="container">
+      <div class="hero-inner">
+        <div class="hero-text">
+          <div class="hero-eyebrow">
+            ⚡ Review Jujur & Mendalam
+          </div>
+          <h1>Temukan Produk <em>Terbaik</em> untuk Kamu</h1>
+          <p>Kami menguji, mengulas, dan membandingkan gadget, ebook, novel, laptop, dan lebih banyak lagi. Review objektif tanpa bias, untuk keputusan belanja yang lebih cerdas.</p>
+          <div class="hero-btns">
+            <a href="#latest-reviews" class="btn-hero-primary">Lihat Review Terbaru</a>
+            <a href="kategori.html" class="btn-hero-outline">Semua Kategori</a>
+          </div>
+        </div>
+        <div id="hero-featured" class="hero-featured">
+          <!-- Loaded via JS -->
+          <div class="hero-featured-img" style="background:linear-gradient(135deg,#1D4ED8,#2563EB);display:flex;align-items:center;justify-content:center;font-size:64px">📱</div>
+          <div class="hero-featured-body">
+            <span class="badge badge-gold">⭐ Review Unggulan</span>
+            <h3 class="hero-featured-title">Memuat review unggulan...</h3>
+            <div class="hero-featured-meta">
+              <span class="stars-display">★★★★★</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== STATS ===== -->
+  <div class="stats-bar" role="region" aria-label="Statistik situs">
+    <div class="container">
+      <div class="stats-inner">
+        <div class="stat-item">
+          <div class="stat-number" id="stat-reviews">100+</div>
+          <div class="stat-label">Review Dipublish</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">10+</div>
+          <div class="stat-label">Kategori Produk</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">4.8★</div>
+          <div class="stat-label">Rating Rata-rata</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">Review Jujur</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LATEST REVIEWS ===== -->
+  <main class="section" id="latest-reviews">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">📚 Review Terbaru</h2>
+        <a href="kategori.html" class="section-link">Lihat semua →</a>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div id="cat-tabs" class="cat-tabs" role="tablist" aria-label="Filter kategori">
+        <!-- Loaded via JS -->
+        <button class="cat-tab active" data-cat="all">
+          <span class="cat-icon">🌟</span> Semua
+        </button>
+      </div>
+
+      <!-- Reviews Grid -->
+      <div id="reviews-grid" class="reviews-grid" role="list">
+        <!-- Loaded via JS -->
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line short" style="width:40%;margin-bottom:8px"></div><div class="skeleton sk-line medium" style="height:18px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line short" style="width:40%;margin-bottom:8px"></div><div class="skeleton sk-line medium" style="height:18px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line short" style="width:40%;margin-bottom:8px"></div><div class="skeleton sk-line medium" style="height:18px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== NEWSLETTER ===== -->
+  <section class="section" aria-label="Newsletter">
+    <div class="container">
+      <div class="newsletter">
+        <h2>📬 Jangan Lewatkan Review Terbaru</h2>
+        <p>Dapatkan notifikasi review produk terbaru langsung di inbox kamu.</p>
+        <form class="newsletter-form" onsubmit="handleNewsletter(event)">
+          <input type="email" placeholder="Email kamu..." required aria-label="Alamat email">
+          <button type="submit">Subscribe</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="logo">⚡ Rev<span>peak</span></div>
+          <p>Review jujur dan mendalam untuk membantu kamu membuat keputusan belanja yang lebih cerdas.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Kategori</h4>
+          <a href="?cat=smartphone">Smartphone</a>
+          <a href="?cat=laptop">Laptop</a>
+          <a href="?cat=ebook">E-Book</a>
+          <a href="?cat=novel">Novel</a>
+          <a href="?cat=aksesoris">Aksesoris</a>
+        </div>
+        <div class="footer-col">
+          <h4>Navigasi</h4>
+          <a href="/">Beranda</a>
+          <a href="kategori.html">Semua Kategori</a>
+          <a href="tentang.html">Tentang Kami</a>
+          <a href="kebijakan.html">Kebijakan Privasi</a>
+        </div>
+        <div class="footer-col">
+          <h4>Informasi</h4>
+          <a href="disclaimer.html">Disclaimer Afiliasi</a>
+          <a href="kontak.html">Kontak</a>
+          <a href="sitemap.xml">Sitemap</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2025 Revpeak. Semua hak dilindungi.</p>
+        <div class="social-links">
+          <a href="#" aria-label="Instagram">📸</a>
+          <a href="#" aria-label="YouTube">▶️</a>
+          <a href="#" aria-label="Telegram">✈️</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scroll to Top -->
+  <button id="scroll-top" class="scroll-top" aria-label="Kembali ke atas">↑</button>
+
+  <script src="js/app.js"></script>
+  <script>
+    function handleNewsletter(e) {
+      e.preventDefault();
+      showToast('Terima kasih! Kamu sudah berlangganan. 🎉', 'success');
+      e.target.reset();
+    }
+  </script>
+</body>
+</html>
