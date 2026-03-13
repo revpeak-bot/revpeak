@@ -1,333 +1,494 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
-  <title>Admin – Revpeak</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/admin.css">
+  <title>Admin – Revpeak</title>
 </head>
 <body>
 
-  <!-- ===== LOGIN SCREEN ===== -->
-  <div id="login-screen" class="login-screen">
-    <div class="login-box">
-      <div class="login-logo">⚡ Rev<span>peak</span></div>
-      <div class="login-sub">Admin Panel</div>
-      <div id="login-error" class="login-error" style="display:none"></div>
+  <!-- ===== LOGIN ===== -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="a-logo-icon">R</div>
+        <div>
+          <div class="login-brand">Revpeak</div>
+          <div class="login-sub">Admin Panel</div>
+        </div>
+      </div>
+      <h1 class="login-title">Selamat Datang</h1>
+      <p class="login-desc">Masuk untuk mengelola konten website.</p>
       <div class="form-group">
-        <label for="login-email">Email</label>
-        <input type="email" id="login-email" placeholder="admin@revpeak.web.id" autocomplete="email">
+        <label class="form-label">Email</label>
+        <input type="email" id="login-email" class="form-input" placeholder="admin@revpeak.web.id" autocomplete="email">
       </div>
       <div class="form-group">
-        <label for="login-password">Password</label>
-        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"
-          onkeydown="if(event.key==='Enter') doLogin()">
+        <label class="form-label">Password</label>
+        <div class="input-icon-wrap">
+          <input type="password" id="login-password" class="form-input" placeholder="••••••••" autocomplete="current-password">
+          <button class="btn-toggle-pw" id="toggle-pw" type="button" tabindex="-1">👁</button>
+        </div>
       </div>
-      <button class="btn-login" id="btn-login" onclick="doLogin()">
-        <span id="login-text">Masuk →</span>
-        <span id="login-loader" style="display:none">⏳ Memuat...</span>
-      </button>
-      <p class="login-hint">Login menggunakan akun Supabase Authentication</p>
+      <div class="login-error" id="login-error"></div>
+      <button class="btn-login" id="btn-login">Masuk →</button>
     </div>
   </div>
 
-  <!-- ===== APP ===== -->
-  <div id="app" class="app" style="display:none">
+  <!-- ===== ADMIN APP ===== -->
+  <div class="admin-wrap" id="admin-wrap" style="display:none">
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-logo">⚡ Rev<span>peak</span>
-        <button class="sidebar-close" id="sidebar-close" onclick="toggleSidebar()">✕</button>
-      </div>
-      <div class="sidebar-user" id="sidebar-user">
-        <div class="user-avatar" id="user-avatar">A</div>
-        <div class="user-info">
-          <div class="user-name" id="user-name">Admin</div>
-          <div class="user-role">Administrator</div>
+      <div class="sidebar-top">
+        <div class="sidebar-logo">
+          <div class="a-logo-icon sm">R</div>
+          <span class="sidebar-brand">Revpeak</span>
         </div>
+        <button class="sidebar-close-btn" id="sidebar-close">✕</button>
       </div>
+
       <nav class="sidebar-nav">
-        <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
-          <span class="nav-icon">📊</span> Dashboard
-        </div>
-        <div class="nav-item" data-section="reviews" onclick="showSection('reviews')">
-          <span class="nav-icon">📝</span> Semua Review
-        </div>
-        <div class="nav-item" data-section="add-review" onclick="showSection('add-review')">
-          <span class="nav-icon">➕</span> Tambah Review
-        </div>
-        <div class="nav-item" data-section="categories" onclick="showSection('categories')">
-          <span class="nav-icon">📂</span> Kategori
-        </div>
-        <div class="nav-divider"></div>
-        <div class="nav-item" onclick="window.open('/', '_blank')">
-          <span class="nav-icon">🌐</span> Lihat Website
-        </div>
+        <button class="snav-item active" data-page="dashboard">
+          <span class="snav-icon">📊</span>
+          <span class="snav-label">Dashboard</span>
+        </button>
+        <button class="snav-item" data-page="konten">
+          <span class="snav-icon">📝</span>
+          <span class="snav-label">Konten</span>
+          <span class="snav-badge" id="badge-konten">0</span>
+        </button>
+        <button class="snav-item" data-page="kategori">
+          <span class="snav-icon">📁</span>
+          <span class="snav-label">Kategori</span>
+        </button>
+        <button class="snav-item" data-page="tokoh">
+          <span class="snav-icon">👤</span>
+          <span class="snav-label">Tokoh</span>
+        </button>
       </nav>
-      <div class="sidebar-footer">
-        <div class="sidebar-footer-email" id="footer-email"></div>
-        <button class="btn-logout" onclick="doLogout()">🚪 Keluar</button>
+
+      <div class="sidebar-bottom">
+        <div class="sidebar-user">
+          <div class="user-av" id="user-av">A</div>
+          <div>
+            <div class="user-name" id="user-name">Admin</div>
+            <div class="user-role">Administrator</div>
+          </div>
+        </div>
+        <button class="btn-logout" id="btn-logout">Keluar</button>
       </div>
     </aside>
 
-    <!-- Overlay mobile -->
-    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
-
     <!-- Main Content -->
-    <div class="main-content">
+    <div class="admin-main">
 
-      <!-- Top Bar -->
-      <div class="topbar">
-        <button class="hamburger" onclick="toggleSidebar()">
-          <span></span><span></span><span></span>
-        </button>
-        <div class="topbar-title" id="topbar-title">Dashboard</div>
-      </div>
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-hamburger" id="btn-hamburger">
+            <span></span><span></span><span></span>
+          </button>
+          <h2 class="topbar-title" id="topbar-title">Dashboard</h2>
+        </div>
+        <div class="topbar-right">
+          <a href="/" target="_blank" class="btn-topbar-outline">🌐 Lihat Website</a>
+          <button class="btn-topbar-icon" id="theme-toggle" title="Ganti Tema">🌙</button>
+        </div>
+      </header>
 
-      <!-- DASHBOARD -->
-      <div id="section-dashboard" class="section active">
-        <div class="page-header">
-          <h1 class="page-title">📊 Dashboard</h1>
-          <p class="page-sub">Ringkasan konten website</p>
-        </div>
-        <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-icon">📝</div>
-            <div class="stat-num" id="stat-total">–</div>
-            <div class="stat-label">Total Review</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">✅</div>
-            <div class="stat-num" id="stat-published">–</div>
-            <div class="stat-label">Live</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">📝</div>
-            <div class="stat-num" id="stat-draft">–</div>
-            <div class="stat-label">Draft</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">📂</div>
-            <div class="stat-num" id="stat-cats">–</div>
-            <div class="stat-label">Kategori</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-title">⚡ Review Terbaru</div>
-          <div id="recent-list" class="loading-text">Memuat...</div>
-        </div>
-      </div>
+      <!-- Toast container -->
+      <div class="toast-zone" id="toast-zone"></div>
 
-      <!-- REVIEWS LIST -->
-      <div id="section-reviews" class="section">
-        <div class="page-header flex-between">
-          <div>
-            <h1 class="page-title">📝 Semua Review</h1>
-            <p class="page-sub">Kelola semua review</p>
-          </div>
-          <button class="btn-primary" onclick="showSection('add-review')">+ Tambah Review</button>
+      <!-- ===== DASHBOARD ===== -->
+      <div class="apage active" id="page-dashboard">
+        <div class="stats-row" id="stats-row">
+          <div class="stat-box"><div class="stat-box-icon">📝</div><div class="stat-box-val" id="st-total">–</div><div class="stat-box-lbl">Total Konten</div></div>
+          <div class="stat-box"><div class="stat-box-icon">✅</div><div class="stat-box-val" id="st-pub">–</div><div class="stat-box-lbl">Published</div></div>
+          <div class="stat-box"><div class="stat-box-icon">📋</div><div class="stat-box-val" id="st-draft">–</div><div class="stat-box-lbl">Draft</div></div>
+          <div class="stat-box"><div class="stat-box-icon">👁</div><div class="stat-box-val" id="st-views">–</div><div class="stat-box-lbl">Total Views</div></div>
+          <div class="stat-box"><div class="stat-box-icon">📁</div><div class="stat-box-val" id="st-cats">–</div><div class="stat-box-lbl">Kategori</div></div>
         </div>
-        <!-- Filter -->
-        <div class="filter-bar">
-          <input type="search" id="filter-search" placeholder="🔍 Cari review..." oninput="filterReviews()">
-          <select id="filter-status" onchange="filterReviews()">
-            <option value="">Semua Status</option>
-            <option value="published">✅ Live</option>
-            <option value="draft">📝 Draft</option>
-          </select>
-          <select id="filter-cat" onchange="filterReviews()">
-            <option value="">Semua Kategori</option>
-          </select>
-        </div>
-        <div class="card">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Judul</th>
-                  <th>Kategori</th>
-                  <th>Rating</th>
-                  <th>Status</th>
-                  <th>Tanggal</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="reviews-tbody">
-                <tr><td colspan="6" class="loading-text">Memuat...</td></tr>
-              </tbody>
-            </table>
+        <div class="dash-grid">
+          <div class="dash-panel">
+            <div class="dash-panel-hdr">
+              <h3>Konten Terbaru</h3>
+              <button class="btn-sm-link" onclick="showPage('konten')">Lihat Semua →</button>
+            </div>
+            <div id="dash-recent" class="dash-list"><div class="dash-empty">Memuat...</div></div>
           </div>
-          <div id="reviews-empty" class="empty-state" style="display:none">
-            <div class="empty-icon">📭</div>
-            <p>Belum ada review</p>
-            <button class="btn-primary" onclick="showSection('add-review')">+ Tambah Review</button>
+          <div class="dash-panel">
+            <div class="dash-panel-hdr">
+              <h3>Terpopuler</h3>
+            </div>
+            <div id="dash-popular" class="dash-list"><div class="dash-empty">Memuat...</div></div>
           </div>
         </div>
       </div>
 
-      <!-- ADD / EDIT REVIEW -->
-      <div id="section-add-review" class="section">
-        <div class="page-header">
-          <h1 class="page-title" id="form-title">➕ Tambah Review</h1>
-          <p class="page-sub">Isi semua field yang diperlukan</p>
-        </div>
-        <form class="card" onsubmit="return false">
-          <input type="hidden" id="edit-id">
-          <div class="form-grid">
-
-            <div class="form-group full">
-              <label for="f-title">Judul Review <span class="required">*</span></label>
-              <input type="text" id="f-title" placeholder="Contoh: Review Samsung Galaxy A55">
-            </div>
-
-            <div class="form-group">
-              <label for="f-slug">Slug (URL) <span class="required">*</span></label>
-              <input type="text" id="f-slug" placeholder="review-samsung-galaxy-a55">
-              <span class="form-hint">Huruf kecil, pakai strip (-), tanpa spasi</span>
-            </div>
-
-            <div class="form-group">
-              <label for="f-category">Kategori</label>
-              <select id="f-category">
-                <option value="">Pilih kategori...</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="f-rating">Rating (0–5)</label>
-              <div class="rating-wrap">
-                <input type="number" id="f-rating" min="0" max="5" step="0.1" placeholder="4.5" oninput="updateRatingPreview()">
-                <span id="rating-preview" class="rating-preview">☆☆☆☆☆</span>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="f-emoji">Emoji Produk</label>
-              <input type="text" id="f-emoji" placeholder="📱" maxlength="4">
-            </div>
-
-            <div class="form-group full">
-              <label for="f-excerpt">Ringkasan (Excerpt) <span class="required">*</span></label>
-              <textarea id="f-excerpt" rows="2" placeholder="Ringkasan singkat 1–2 kalimat..."></textarea>
-            </div>
-
-            <div class="form-group full">
-              <label for="f-content">Konten Review (HTML) <span class="required">*</span></label>
-              <textarea id="f-content" rows="10" placeholder="<p>Isi review lengkap...</p>&#10;<h2>Desain</h2>&#10;<p>...</p>"></textarea>
-              <span class="form-hint">Gunakan tag HTML: &lt;p&gt; &lt;h2&gt; &lt;h3&gt; &lt;ul&gt; &lt;li&gt; &lt;strong&gt; &lt;em&gt;</span>
-            </div>
-
-            <div class="form-group">
-              <label for="f-pros">Kelebihan (Pros)</label>
-              <textarea id="f-pros" rows="5" placeholder="Kamera sangat bagus&#10;Baterai tahan lama&#10;Harga terjangkau"></textarea>
-              <span class="form-hint">1 kelebihan per baris</span>
-            </div>
-
-            <div class="form-group">
-              <label for="f-cons">Kekurangan (Cons)</label>
-              <textarea id="f-cons" rows="5" placeholder="Tidak ada jack 3.5mm&#10;Update OS lambat"></textarea>
-              <span class="form-hint">1 kekurangan per baris</span>
-            </div>
-
-            <div class="form-group full">
-              <label for="f-affiliate">Link Afiliasi</label>
-              <input type="url" id="f-affiliate" placeholder="https://shopee.co.id/...">
-            </div>
-
-            <div class="form-group full">
-              <label for="f-image">URL Gambar</label>
-              <input type="url" id="f-image" placeholder="https://...gambar.jpg">
-            </div>
-
-            <div class="form-group">
-              <label for="f-author">Penulis</label>
-              <input type="text" id="f-author" placeholder="Admin" value="Admin">
-            </div>
-
-            <div class="form-group">
-              <label>Opsi</label>
-              <div class="toggle-group">
-                <label class="toggle-label">
-                  <input type="checkbox" id="f-published">
-                  <span class="toggle-text">Publish sekarang</span>
-                </label>
-                <label class="toggle-label">
-                  <input type="checkbox" id="f-featured">
-                  <span class="toggle-text">Tandai sebagai Featured</span>
-                </label>
-              </div>
-            </div>
-
-          </div><!-- end form-grid -->
-
-          <div class="form-actions">
-            <button class="btn-primary" id="btn-save" onclick="saveReview()">💾 Simpan Review</button>
-            <button class="btn-secondary" onclick="resetForm()">↺ Reset</button>
-            <button class="btn-secondary" onclick="showSection('reviews')">✕ Batal</button>
+      <!-- ===== KONTEN ===== -->
+      <div class="apage" id="page-konten">
+        <div class="page-toolbar">
+          <div class="toolbar-filters">
+            <input type="search" id="konten-search" class="toolbar-search" placeholder="Cari konten...">
+            <select id="konten-filter-status" class="toolbar-select">
+              <option value="">Semua Status</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+            </select>
+            <select id="konten-filter-type" class="toolbar-select">
+              <option value="">Semua Tipe</option>
+              <option value="review">Review</option>
+              <option value="list">List</option>
+              <option value="video">Video</option>
+              <option value="news">News</option>
+            </select>
           </div>
-        </form>
+          <button class="btn-primary" onclick="openKontenForm()">＋ Tambah Konten</button>
+        </div>
+        <div class="table-wrap">
+          <table class="atable">
+            <thead><tr>
+              <th>Judul</th><th>Tipe</th><th>Kategori</th>
+              <th>Status</th><th>Views</th><th>Tanggal</th><th>Aksi</th>
+            </tr></thead>
+            <tbody id="konten-tbody"><tr><td colspan="7" class="tbl-loading">Memuat...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="tbl-pagination" id="konten-pagination"></div>
       </div>
 
-      <!-- CATEGORIES -->
-      <div id="section-categories" class="section">
-        <div class="page-header flex-between">
-          <div>
-            <h1 class="page-title">📂 Kategori</h1>
-            <p class="page-sub">Kelola kategori review</p>
+      <!-- ===== KATEGORI ===== -->
+      <div class="apage" id="page-kategori">
+        <div class="page-toolbar">
+          <div class="toolbar-filters">
+            <input type="search" id="kat-search" class="toolbar-search" placeholder="Cari kategori...">
           </div>
-          <button class="btn-primary" onclick="toggleCatForm()">+ Tambah Kategori</button>
+          <button class="btn-primary" onclick="openKatForm()">＋ Tambah Kategori</button>
         </div>
-
-        <!-- Form Kategori -->
-        <div id="cat-form" class="card" style="display:none; margin-bottom:16px">
-          <div class="card-title">➕ Kategori Baru</div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="cat-name">Nama Kategori <span class="required">*</span></label>
-              <input type="text" id="cat-name" placeholder="Smartphone">
-            </div>
-            <div class="form-group">
-              <label for="cat-slug">Slug <span class="required">*</span></label>
-              <input type="text" id="cat-slug" placeholder="smartphone">
-            </div>
-            <div class="form-group">
-              <label for="cat-icon">Icon (emoji)</label>
-              <input type="text" id="cat-icon" placeholder="📱" maxlength="4">
-            </div>
-          </div>
-          <div class="form-actions">
-            <button class="btn-primary" onclick="saveCat()">💾 Simpan</button>
-            <button class="btn-secondary" onclick="toggleCatForm()">✕ Batal</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Icon</th><th>Nama</th><th>Slug</th><th>Aksi</th></tr>
-              </thead>
-              <tbody id="cats-tbody">
-                <tr><td colspan="4" class="loading-text">Memuat...</td></tr>
-              </tbody>
-            </table>
-          </div>
+        <div class="cat-grid-admin" id="cat-grid-admin">
+          <div class="tbl-loading">Memuat...</div>
         </div>
       </div>
 
-    </div><!-- end main-content -->
-  </div><!-- end app -->
+      <!-- ===== TOKOH ===== -->
+      <div class="apage" id="page-tokoh">
+        <div class="page-toolbar">
+          <div class="toolbar-filters">
+            <input type="search" id="tokoh-search" class="toolbar-search" placeholder="Cari tokoh...">
+          </div>
+          <button class="btn-primary" onclick="openTokohForm()">＋ Tambah Tokoh</button>
+        </div>
+        <div class="table-wrap">
+          <table class="atable">
+            <thead><tr>
+              <th>Nama</th><th>Profesi</th><th>Status</th><th>Views</th><th>Tanggal</th><th>Aksi</th>
+            </tr></thead>
+            <tbody id="tokoh-tbody"><tr><td colspan="6" class="tbl-loading">Memuat...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
 
-  <!-- Toast Container -->
-  <div id="toast-container" class="toast-container"></div>
+    </div><!-- /admin-main -->
+  </div><!-- /admin-wrap -->
 
-  <!-- Supabase JS SDK via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="../js/admin.js"></script>
+  <!-- ===== MODAL: KONTEN FORM ===== -->
+  <div class="modal-overlay" id="modal-konten">
+    <div class="modal modal-xl">
+      <div class="modal-hdr">
+        <h3 class="modal-ttl" id="modal-konten-ttl">Tambah Konten</h3>
+        <button class="modal-x" onclick="closeModal('modal-konten')">✕</button>
+      </div>
+      <div class="modal-bdy">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tipe Konten <span class="req">*</span></label>
+            <select id="f-type" class="form-input" onchange="onTypeChange()">
+              <option value="review">📝 Review</option>
+              <option value="list">📋 List Produk</option>
+              <option value="video">▶ Video</option>
+              <option value="news">📰 News</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kategori <span class="req">*</span></label>
+            <select id="f-cat" class="form-input">
+              <option value="">Pilih kategori...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Judul <span class="req">*</span></label>
+          <input type="text" id="f-title" class="form-input" placeholder="Judul konten..." oninput="autoSlug(this.value,'f-slug')">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Slug (URL)</label>
+          <div class="slug-wrap">
+            <span class="slug-prefix">…/review.html?slug=</span>
+            <input type="text" id="f-slug" class="form-input" placeholder="judul-konten">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ringkasan (Excerpt)</label>
+          <textarea id="f-excerpt" class="form-input ftarea" rows="2" placeholder="Ringkasan singkat 1-2 kalimat..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">URL Gambar Utama</label>
+            <input type="url" id="f-image" class="form-input" placeholder="https://..." oninput="previewImg(this.value)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emoji Fallback</label>
+            <input type="text" id="f-emoji" class="form-input" placeholder="📱" maxlength="4">
+          </div>
+        </div>
+        <div id="img-prev-wrap" class="img-prev-wrap" style="display:none">
+          <img id="img-prev" alt="Preview">
+          <button type="button" onclick="clearImgPreview()" class="img-prev-clear">✕</button>
+        </div>
+
+        <!-- Video fields -->
+        <div id="video-fields" style="display:none">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">URL Video (YouTube / direct)</label>
+              <input type="url" id="f-video-url" class="form-input" placeholder="https://youtube.com/watch?v=...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Durasi Video</label>
+              <input type="text" id="f-duration" class="form-input" placeholder="10:35">
+            </div>
+          </div>
+        </div>
+
+        <!-- Review fields -->
+        <div id="review-fields">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Rating (0–5)</label>
+              <input type="number" id="f-rating" class="form-input" min="0" max="5" step="0.1" placeholder="4.5">
+            </div>
+            <div class="form-group">
+              <label class="form-label">URL Afiliasi</label>
+              <input type="url" id="f-affiliate" class="form-input" placeholder="https://shopee.co.id/...">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Kelebihan (Pros) – 1 per baris</label>
+              <textarea id="f-pros" class="form-input ftarea" rows="4" placeholder="Kamera bagus&#10;Baterai awet&#10;Harga terjangkau"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kekurangan (Cons) – 1 per baris</label>
+              <textarea id="f-cons" class="form-input ftarea" rows="4" placeholder="Tidak ada slot 3.5mm&#10;Performa kurang"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- List fields -->
+        <div id="list-fields" style="display:none">
+          <div class="form-group">
+            <div class="products-header">
+              <label class="form-label">Daftar Produk</label>
+              <button type="button" class="btn-sm-outline" onclick="addProduct()">＋ Tambah Produk</button>
+            </div>
+            <div id="products-list" class="products-list"></div>
+          </div>
+        </div>
+
+        <!-- Content editor -->
+        <div class="form-group">
+          <label class="form-label">Konten Artikel (HTML)</label>
+          <div class="editor-bar">
+            <button type="button" onclick="ins('h2')">H2</button>
+            <button type="button" onclick="ins('h3')">H3</button>
+            <button type="button" onclick="ins('p')">P</button>
+            <button type="button" onclick="ins('b')"><b>B</b></button>
+            <button type="button" onclick="ins('i')"><i>I</i></button>
+            <button type="button" onclick="ins('ul')">UL</button>
+            <button type="button" onclick="ins('li')">LI</button>
+            <button type="button" onclick="ins('bq')">❝</button>
+            <button type="button" onclick="ins('img')">🖼</button>
+            <button type="button" onclick="ins('a')">🔗</button>
+            <button type="button" class="btn-preview-toggle" id="btn-prev-toggle" onclick="togglePreview()">👁 Preview</button>
+          </div>
+          <textarea id="f-content" class="form-input ftarea feditor" rows="14" placeholder="<p>Tulis konten di sini...</p>"></textarea>
+          <div id="content-preview-box" class="content-preview-box" style="display:none"></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Penulis</label>
+            <input type="text" id="f-author" class="form-input" value="Admin">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tags (pisah koma)</label>
+            <input type="text" id="f-tags" class="form-input" placeholder="smartphone, 2025, murah">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Status Publikasi</label>
+          <div class="toggle-row">
+            <label class="toggle-lbl">
+              <input type="checkbox" id="f-published" class="toggle-inp">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              <span>Published (Tampil di website)</span>
+            </label>
+            <label class="toggle-lbl">
+              <input type="checkbox" id="f-featured" class="toggle-inp">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              <span>Featured (Tampil di Rekomendasi & Hero)</span>
+            </label>
+          </div>
+        </div>
+
+        <input type="hidden" id="f-id">
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-secondary" onclick="closeModal('modal-konten')">Batal</button>
+        <button class="btn-primary" onclick="saveKonten()" id="btn-save-konten">💾 Simpan Konten</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: KATEGORI FORM ===== -->
+  <div class="modal-overlay" id="modal-kat">
+    <div class="modal">
+      <div class="modal-hdr">
+        <h3 class="modal-ttl" id="modal-kat-ttl">Tambah Kategori</h3>
+        <button class="modal-x" onclick="closeModal('modal-kat')">✕</button>
+      </div>
+      <div class="modal-bdy">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nama <span class="req">*</span></label>
+            <input type="text" id="fk-name" class="form-input" placeholder="Smartphone" oninput="autoSlug(this.value,'fk-slug')">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Icon (Emoji)</label>
+            <input type="text" id="fk-icon" class="form-input" placeholder="📱" maxlength="4">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Slug <span class="req">*</span></label>
+          <input type="text" id="fk-slug" class="form-input" placeholder="smartphone">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Deskripsi</label>
+          <input type="text" id="fk-desc" class="form-input" placeholder="Deskripsi singkat...">
+        </div>
+        <input type="hidden" id="fk-id">
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-secondary" onclick="closeModal('modal-kat')">Batal</button>
+        <button class="btn-primary" onclick="saveKat()">💾 Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: TOKOH FORM ===== -->
+  <div class="modal-overlay" id="modal-tokoh">
+    <div class="modal modal-xl">
+      <div class="modal-hdr">
+        <h3 class="modal-ttl" id="modal-tokoh-ttl">Tambah Tokoh</h3>
+        <button class="modal-x" onclick="closeModal('modal-tokoh')">✕</button>
+      </div>
+      <div class="modal-bdy">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nama <span class="req">*</span></label>
+            <input type="text" id="ft-name" class="form-input" placeholder="Nama tokoh..." oninput="autoSlug(this.value,'ft-slug')">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Profesi</label>
+            <input type="text" id="ft-prof" class="form-input" placeholder="Pengusaha, Atlet...">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Slug <span class="req">*</span></label>
+            <input type="text" id="ft-slug" class="form-input" placeholder="nama-tokoh">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kewarganegaraan</label>
+            <input type="text" id="ft-nation" class="form-input" placeholder="Indonesia">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">URL Foto</label>
+            <input type="url" id="ft-image" class="form-input" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tanggal Lahir</label>
+            <input type="text" id="ft-born" class="form-input" placeholder="1 Januari 1990">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bio Singkat</label>
+          <textarea id="ft-bio" class="form-input ftarea" rows="3" placeholder="Biografi singkat..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Konten Artikel (HTML)</label>
+          <textarea id="ft-content" class="form-input ftarea feditor" rows="10" placeholder="<p>Artikel lengkap...</p>"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <div class="toggle-row">
+            <label class="toggle-lbl">
+              <input type="checkbox" id="ft-published" class="toggle-inp">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              <span>Published</span>
+            </label>
+            <label class="toggle-lbl">
+              <input type="checkbox" id="ft-featured" class="toggle-inp">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              <span>Featured</span>
+            </label>
+          </div>
+        </div>
+        <input type="hidden" id="ft-id">
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-secondary" onclick="closeModal('modal-tokoh')">Batal</button>
+        <button class="btn-primary" onclick="saveTokoh()">💾 Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: KONFIRMASI ===== -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal modal-sm">
+      <div class="modal-hdr">
+        <h3 class="modal-ttl">Konfirmasi Hapus</h3>
+        <button class="modal-x" onclick="closeModal('modal-confirm')">✕</button>
+      </div>
+      <div class="modal-bdy">
+        <div class="confirm-icon">🗑️</div>
+        <p id="confirm-msg" class="confirm-msg">Yakin ingin menghapus item ini? Tindakan ini tidak bisa dibatalkan.</p>
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-secondary" onclick="closeModal('modal-confirm')">Batal</button>
+        <button class="btn-danger" id="btn-confirm-ok">Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/admin.js"></script>
 </body>
 </html>
