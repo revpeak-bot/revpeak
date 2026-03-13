@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <title>Admin – Revpeak</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-box">
+      <div class="login-logo">⚡ Rev<span>peak</span></div>
+      <div class="login-sub">Admin Panel</div>
+      <div id="login-error" class="login-error" style="display:none"></div>
+      <div class="form-group">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="admin@revpeak.web.id" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <button class="btn-login" id="btn-login" onclick="doLogin()">
+        <span id="login-text">Masuk →</span>
+        <span id="login-loader" style="display:none">⏳ Memuat...</span>
+      </button>
+      <p class="login-hint">Login menggunakan akun Supabase Authentication</p>
+    </div>
+  </div>
+
+  <!-- ===== APP ===== -->
+  <div id="app" class="app" style="display:none">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">⚡ Rev<span>peak</span>
+        <button class="sidebar-close" id="sidebar-close" onclick="toggleSidebar()">✕</button>
+      </div>
+      <div class="sidebar-user" id="sidebar-user">
+        <div class="user-avatar" id="user-avatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">Admin</div>
+          <div class="user-role">Administrator</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
+          <span class="nav-icon">📊</span> Dashboard
+        </div>
+        <div class="nav-item" data-section="reviews" onclick="showSection('reviews')">
+          <span class="nav-icon">📝</span> Semua Review
+        </div>
+        <div class="nav-item" data-section="add-review" onclick="showSection('add-review')">
+          <span class="nav-icon">➕</span> Tambah Review
+        </div>
+        <div class="nav-item" data-section="categories" onclick="showSection('categories')">
+          <span class="nav-icon">📂</span> Kategori
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-item" onclick="window.open('/', '_blank')">
+          <span class="nav-icon">🌐</span> Lihat Website
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-email" id="footer-email"></div>
+        <button class="btn-logout" onclick="doLogout()">🚪 Keluar</button>
+      </div>
+    </aside>
+
+    <!-- Overlay mobile -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+      <!-- Top Bar -->
+      <div class="topbar">
+        <button class="hamburger" onclick="toggleSidebar()">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="section-dashboard" class="section active">
+        <div class="page-header">
+          <h1 class="page-title">📊 Dashboard</h1>
+          <p class="page-sub">Ringkasan konten website</p>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icon">📝</div>
+            <div class="stat-num" id="stat-total">–</div>
+            <div class="stat-label">Total Review</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-num" id="stat-published">–</div>
+            <div class="stat-label">Live</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📝</div>
+            <div class="stat-num" id="stat-draft">–</div>
+            <div class="stat-label">Draft</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📂</div>
+            <div class="stat-num" id="stat-cats">–</div>
+            <div class="stat-label">Kategori</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚡ Review Terbaru</div>
+          <div id="recent-list" class="loading-text">Memuat...</div>
+        </div>
+      </div>
+
+      <!-- REVIEWS LIST -->
+      <div id="section-reviews" class="section">
+        <div class="page-header flex-between">
+          <div>
+            <h1 class="page-title">📝 Semua Review</h1>
+            <p class="page-sub">Kelola semua review</p>
+          </div>
+          <button class="btn-primary" onclick="showSection('add-review')">+ Tambah Review</button>
+        </div>
+        <!-- Filter -->
+        <div class="filter-bar">
+          <input type="search" id="filter-search" placeholder="🔍 Cari review..." oninput="filterReviews()">
+          <select id="filter-status" onchange="filterReviews()">
+            <option value="">Semua Status</option>
+            <option value="published">✅ Live</option>
+            <option value="draft">📝 Draft</option>
+          </select>
+          <select id="filter-cat" onchange="filterReviews()">
+            <option value="">Semua Kategori</option>
+          </select>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Judul</th>
+                  <th>Kategori</th>
+                  <th>Rating</th>
+                  <th>Status</th>
+                  <th>Tanggal</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="reviews-tbody">
+                <tr><td colspan="6" class="loading-text">Memuat...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="reviews-empty" class="empty-state" style="display:none">
+            <div class="empty-icon">📭</div>
+            <p>Belum ada review</p>
+            <button class="btn-primary" onclick="showSection('add-review')">+ Tambah Review</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADD / EDIT REVIEW -->
+      <div id="section-add-review" class="section">
+        <div class="page-header">
+          <h1 class="page-title" id="form-title">➕ Tambah Review</h1>
+          <p class="page-sub">Isi semua field yang diperlukan</p>
+        </div>
+        <form class="card" onsubmit="return false">
+          <input type="hidden" id="edit-id">
+          <div class="form-grid">
+
+            <div class="form-group full">
+              <label for="f-title">Judul Review <span class="required">*</span></label>
+              <input type="text" id="f-title" placeholder="Contoh: Review Samsung Galaxy A55">
+            </div>
+
+            <div class="form-group">
+              <label for="f-slug">Slug (URL) <span class="required">*</span></label>
+              <input type="text" id="f-slug" placeholder="review-samsung-galaxy-a55">
+              <span class="form-hint">Huruf kecil, pakai strip (-), tanpa spasi</span>
+            </div>
+
+            <div class="form-group">
+              <label for="f-category">Kategori</label>
+              <select id="f-category">
+                <option value="">Pilih kategori...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="f-rating">Rating (0–5)</label>
+              <div class="rating-wrap">
+                <input type="number" id="f-rating" min="0" max="5" step="0.1" placeholder="4.5" oninput="updateRatingPreview()">
+                <span id="rating-preview" class="rating-preview">☆☆☆☆☆</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="f-emoji">Emoji Produk</label>
+              <input type="text" id="f-emoji" placeholder="📱" maxlength="4">
+            </div>
+
+            <div class="form-group full">
+              <label for="f-excerpt">Ringkasan (Excerpt) <span class="required">*</span></label>
+              <textarea id="f-excerpt" rows="2" placeholder="Ringkasan singkat 1–2 kalimat..."></textarea>
+            </div>
+
+            <div class="form-group full">
+              <label for="f-content">Konten Review (HTML) <span class="required">*</span></label>
+              <textarea id="f-content" rows="10" placeholder="<p>Isi review lengkap...</p>&#10;<h2>Desain</h2>&#10;<p>...</p>"></textarea>
+              <span class="form-hint">Gunakan tag HTML: &lt;p&gt; &lt;h2&gt; &lt;h3&gt; &lt;ul&gt; &lt;li&gt; &lt;strong&gt; &lt;em&gt;</span>
+            </div>
+
+            <div class="form-group">
+              <label for="f-pros">Kelebihan (Pros)</label>
+              <textarea id="f-pros" rows="5" placeholder="Kamera sangat bagus&#10;Baterai tahan lama&#10;Harga terjangkau"></textarea>
+              <span class="form-hint">1 kelebihan per baris</span>
+            </div>
+
+            <div class="form-group">
+              <label for="f-cons">Kekurangan (Cons)</label>
+              <textarea id="f-cons" rows="5" placeholder="Tidak ada jack 3.5mm&#10;Update OS lambat"></textarea>
+              <span class="form-hint">1 kekurangan per baris</span>
+            </div>
+
+            <div class="form-group full">
+              <label for="f-affiliate">Link Afiliasi</label>
+              <input type="url" id="f-affiliate" placeholder="https://shopee.co.id/...">
+            </div>
+
+            <div class="form-group full">
+              <label for="f-image">URL Gambar</label>
+              <input type="url" id="f-image" placeholder="https://...gambar.jpg">
+            </div>
+
+            <div class="form-group">
+              <label for="f-author">Penulis</label>
+              <input type="text" id="f-author" placeholder="Admin" value="Admin">
+            </div>
+
+            <div class="form-group">
+              <label>Opsi</label>
+              <div class="toggle-group">
+                <label class="toggle-label">
+                  <input type="checkbox" id="f-published">
+                  <span class="toggle-text">Publish sekarang</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="f-featured">
+                  <span class="toggle-text">Tandai sebagai Featured</span>
+                </label>
+              </div>
+            </div>
+
+          </div><!-- end form-grid -->
+
+          <div class="form-actions">
+            <button class="btn-primary" id="btn-save" onclick="saveReview()">💾 Simpan Review</button>
+            <button class="btn-secondary" onclick="resetForm()">↺ Reset</button>
+            <button class="btn-secondary" onclick="showSection('reviews')">✕ Batal</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- CATEGORIES -->
+      <div id="section-categories" class="section">
+        <div class="page-header flex-between">
+          <div>
+            <h1 class="page-title">📂 Kategori</h1>
+            <p class="page-sub">Kelola kategori review</p>
+          </div>
+          <button class="btn-primary" onclick="toggleCatForm()">+ Tambah Kategori</button>
+        </div>
+
+        <!-- Form Kategori -->
+        <div id="cat-form" class="card" style="display:none; margin-bottom:16px">
+          <div class="card-title">➕ Kategori Baru</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="cat-name">Nama Kategori <span class="required">*</span></label>
+              <input type="text" id="cat-name" placeholder="Smartphone">
+            </div>
+            <div class="form-group">
+              <label for="cat-slug">Slug <span class="required">*</span></label>
+              <input type="text" id="cat-slug" placeholder="smartphone">
+            </div>
+            <div class="form-group">
+              <label for="cat-icon">Icon (emoji)</label>
+              <input type="text" id="cat-icon" placeholder="📱" maxlength="4">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-primary" onclick="saveCat()">💾 Simpan</button>
+            <button class="btn-secondary" onclick="toggleCatForm()">✕ Batal</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Icon</th><th>Nama</th><th>Slug</th><th>Aksi</th></tr>
+              </thead>
+              <tbody id="cats-tbody">
+                <tr><td colspan="4" class="loading-text">Memuat...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end main-content -->
+  </div><!-- end app -->
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Supabase JS SDK via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/admin.js"></script>
+</body>
+</html>
