@@ -9,18 +9,13 @@
   <meta property="og:title" content="Revpeak – Review Jujur & Terpercaya">
   <meta property="og:description" content="Review mendalam untuk gadget, teknologi, ebook, novel, dan lebih banyak lagi.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://revpeak.id">
+  <meta property="og:url" content="https://revpeak.web.id">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://revpeak.id">
-
-  <!-- Favicon -->
+  <link rel="canonical" href="https://revpeak.web.id">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
-
-  <!-- Preconnect untuk Google Fonts (lebih cepat) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="css/style.css">
   <title>Revpeak – Review Jujur & Terpercaya</title>
 </head>
@@ -30,27 +25,18 @@
   <header class="header">
     <div class="container">
       <div class="header-inner">
-        <!-- Logo -->
-        <a href="/" class="logo">
-          ⚡ Rev<span>peak</span>
-        </a>
-
-        <!-- Search -->
+        <a href="/" class="logo">⚡ Rev<span>peak</span></a>
         <div class="search-wrap">
           <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
           <input type="search" id="search-input" placeholder="Cari review produk..." aria-label="Cari review">
         </div>
-
-        <!-- Nav -->
         <nav id="main-nav" class="nav" role="navigation" aria-label="Menu utama">
           <a href="/" class="active">Beranda</a>
           <a href="kategori.html">Kategori</a>
           <a href="tentang.html">Tentang</a>
         </nav>
-
-        <!-- Controls -->
         <button id="theme-toggle" class="theme-toggle" aria-label="Ganti tema">🌙</button>
         <button id="hamburger" class="hamburger" aria-label="Menu" aria-expanded="false">
           <span></span><span></span><span></span>
@@ -64,18 +50,15 @@
     <div class="container">
       <div class="hero-inner">
         <div class="hero-text">
-          <div class="hero-eyebrow">
-            ⚡ Review Jujur & Mendalam
-          </div>
+          <div class="hero-eyebrow">⚡ Review Jujur & Mendalam</div>
           <h1>Temukan Produk <em>Terbaik</em> untuk Kamu</h1>
           <p>Kami menguji, mengulas, dan membandingkan gadget, ebook, novel, laptop, dan lebih banyak lagi. Review objektif tanpa bias, untuk keputusan belanja yang lebih cerdas.</p>
           <div class="hero-btns">
-            <a href="#latest-reviews" class="btn-hero-primary">Lihat Review Terbaru</a>
+            <a href="#konten-utama" class="btn-hero-primary">Lihat Review Terbaru</a>
             <a href="kategori.html" class="btn-hero-outline">Semua Kategori</a>
           </div>
         </div>
         <div id="hero-featured" class="hero-featured">
-          <!-- Loaded via JS -->
           <div class="hero-featured-img" style="background:linear-gradient(135deg,#1D4ED8,#2563EB);display:flex;align-items:center;justify-content:center;font-size:64px">📱</div>
           <div class="hero-featured-body">
             <span class="badge badge-gold">⭐ Review Unggulan</span>
@@ -113,29 +96,60 @@
     </div>
   </div>
 
-  <!-- ===== LATEST REVIEWS ===== -->
-  <main class="section" id="latest-reviews">
+  <!-- ===== KONTEN UTAMA ===== -->
+  <main id="konten-utama" class="section">
     <div class="container">
-      <div class="section-header">
-        <h2 class="section-title">📚 Review Terbaru</h2>
-        <a href="kategori.html" class="section-link">Lihat semua →</a>
+
+      <!-- ===== MAIN TABS ===== -->
+      <div class="main-tabs-wrap">
+        <div class="main-tabs" role="tablist">
+          <button class="main-tab active" data-tab="terbaru" onclick="switchTab('terbaru')" role="tab" aria-selected="true">
+            <span class="tab-icon">🆕</span>
+            <span class="tab-label">Terbaru</span>
+          </button>
+          <button class="main-tab" data-tab="rekomendasi" onclick="switchTab('rekomendasi')" role="tab" aria-selected="false">
+            <span class="tab-icon">⭐</span>
+            <span class="tab-label">Rekomendasi</span>
+          </button>
+          <button class="main-tab" data-tab="trending" onclick="switchTab('trending')" role="tab" aria-selected="false">
+            <span class="tab-icon">🔥</span>
+            <span class="tab-label">Trending</span>
+          </button>
+        </div>
+
+        <!-- Filter Kategori (muncul di semua tab) -->
+        <div id="cat-tabs" class="cat-tabs" role="tablist" aria-label="Filter kategori">
+          <button class="cat-tab active" data-cat="all">
+            <span class="cat-icon">🌟</span> Semua
+          </button>
+        </div>
       </div>
 
-      <!-- Category Filter Tabs -->
-      <div id="cat-tabs" class="cat-tabs" role="tablist" aria-label="Filter kategori">
-        <!-- Loaded via JS -->
-        <button class="cat-tab active" data-cat="all">
-          <span class="cat-icon">🌟</span> Semua
-        </button>
+      <!-- Tab Descriptions -->
+      <div class="tab-desc" id="tab-desc-terbaru">
+        📅 Review dan artikel terbaru yang baru saja dipublish
+      </div>
+      <div class="tab-desc" id="tab-desc-rekomendasi" style="display:none">
+        ⭐ Pilihan terbaik dari tim Revpeak — termasuk artikel rekomendasi produk
+      </div>
+      <div class="tab-desc" id="tab-desc-trending" style="display:none">
+        🔥 Konten yang paling banyak dibaca minggu ini
       </div>
 
       <!-- Reviews Grid -->
       <div id="reviews-grid" class="reviews-grid" role="list">
-        <!-- Loaded via JS -->
         <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line short" style="width:40%;margin-bottom:8px"></div><div class="skeleton sk-line medium" style="height:18px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
         <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line short" style="width:40%;margin-bottom:8px"></div><div class="skeleton sk-line medium" style="height:18px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
         <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line short" style="width:40%;margin-bottom:8px"></div><div class="skeleton sk-line medium" style="height:18px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
       </div>
+
+      <!-- Load More -->
+      <div class="load-more-wrap" id="load-more-wrap" style="display:none">
+        <button class="btn-load-more" id="btn-load-more" onclick="loadMore()">
+          Muat Lebih Banyak ↓
+        </button>
+      </div>
+
     </div>
   </main>
 
@@ -160,6 +174,12 @@
         <div class="footer-brand">
           <div class="logo">⚡ Rev<span>peak</span></div>
           <p>Review jujur dan mendalam untuk membantu kamu membuat keputusan belanja yang lebih cerdas.</p>
+          <p style="margin-top:10px;font-size:13px">
+            📧 <a href="mailto:hello@revpeak.web.id" style="color:var(--text-muted);transition:color 0.2s"
+              onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-muted)'">
+              hello@revpeak.web.id
+            </a>
+          </p>
         </div>
         <div class="footer-col">
           <h4>Kategori</h4>
@@ -177,9 +197,9 @@
           <a href="kebijakan.html">Kebijakan Privasi</a>
         </div>
         <div class="footer-col">
-          <h4>Informasi</h4>
-          <a href="disclaimer.html">Disclaimer Afiliasi</a>
+          <h4>Hubungi Kami</h4>
           <a href="kontak.html">Kontak</a>
+          <a href="mailto:hello@revpeak.web.id">hello@revpeak.web.id</a>
           <a href="sitemap.xml">Sitemap</a>
         </div>
       </div>
@@ -194,7 +214,6 @@
     </div>
   </footer>
 
-  <!-- Scroll to Top -->
   <button id="scroll-top" class="scroll-top" aria-label="Kembali ke atas">↑</button>
 
   <script src="js/app.js"></script>
