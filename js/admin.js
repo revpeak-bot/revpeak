@@ -1,509 +1,987 @@
-/* ===== REVPEAK ADMIN JS ===== */
-/* Menggunakan Supabase Authentication */
+/* ===========================================
+   REVPEAK ADMIN — admin.js
+   Auth: Supabase Authentication
+   WAJIB ISI: SUPABASE_URL dan SUPABASE_ANON_KEY
+=========================================== */
 
-// ===== KONFIGURASI =====
-// Ganti dengan URL dan Anon Key project Supabase kamu
-// Anon key AMAN dipakai di frontend karena Row Level Security (RLS) yang melindungi data
-const SUPABASE_URL = 'https://efaniqeslqtdfeblgffl.supabase.co'; // ← ganti ini
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmYW5pcWVzbHF0ZGZlYmxnZmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMjgxNTcsImV4cCI6MjA4ODkwNDE1N30.sVs4XEO1jnv6E8PSELug0s0So4lteV-O9QcPUGLasao'; // ← ganti ini (anon key, bukan service role!)
+const SUPABASE_URL      = 'https://efaniqeslqtdfeblgffl.supabase.co'; // Ganti ini
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmYW5pcWVzbHF0ZGZlYmxnZmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMjgxNTcsImV4cCI6MjA4ODkwNDE1N30.sVs4XEO1jnv6E8PSELug0s0So4lteV-O9QcPUGLasao'; // Ganti ini
 
-// Init Supabase client
-const { createClient } = supabase;
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPA_HEADERS = {
+  'apikey':        SUPABASE_ANON_KEY,
+  'Content-Type':  'application/json',
+};
 
-// ===== STATE =====
-let allReviews = []; // cache semua review untuk filter
-let categoriesList = []; // cache kategori
+let AUTH_TOKEN   = null;
+let currentUser  = null;
+let allCategories = [];
 
-// ===== INIT =====
-document.addEventListener('DOMContentLoaded', async () => {
-  // Cek apakah sudah login
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    showApp(session.user);
-  } else {
-    showLogin();
-  }
+const PAGE_SIZE  = 15;
+let kontenPage   = 0;
+let kontenTotal  = 0;
 
-  // Listener perubahan auth state (login/logout)
-  sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      showApp(session.user);
-    } else if (event === 'SIGNED_OUT') {
-      showLogin();
+/* ============================================================
+   SUPABASE HELPERS
+============================================================ */
+function authHeaders() {
+  return { ...SUPA_HEADERS, 'Authorization': `Bearer ${AUTH_TOKEN}` };
+}
+
+async function supaGet(table, query = '') {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, { headers: authHeaders() });
+  return r.json();
+}
+
+async function supaInsert(table, data) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify(data),
+  });
+  return { ok: r.ok, data: await r.json() };
+}
+
+async function supaUpdate(table, id, data) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { ...authHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify(data),
+  });
+  return { ok: r.ok, data: await r.json() };
+}
+
+async function supaDelete(table, id) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return r.ok;
+}
+
+/* ============================================================
+   AUTH
+============================================================ */
+async function login() {
+  const email    = val('login-email');
+  const password = val('login-password');
+  const errEl    = document.getElementById('login-error');
+  const btn      = document.getElementById('btn-login');
+
+  if (!email || !password) { showLoginError('Email dan password wajib diisi.'); return; }
+
+  btn.textContent = 'Memuat...';
+  btn.disabled    = true;
+
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method:  'POST',
+      headers: { ...SUPA_HEADERS },
+      body:    JSON.stringify({ email, password }),
+    });
+    const data = await r.json();
+
+    if (!r.ok || !data.access_token) {
+      showLoginError(data.error_description || data.msg || 'Email atau password salah.');
+      btn.textContent = 'Masuk →';
+      btn.disabled    = false;
+      return;
     }
+
+    AUTH_TOKEN  = data.access_token;
+    currentUser = data.user;
+    localStorage.setItem('rp-admin-token', AUTH_TOKEN);
+    localStorage.setItem('rp-admin-email', email);
+    enterApp(email);
+
+  } catch (e) {
+    showLoginError('Gagal terhubung. Cek koneksi internet.');
+    btn.textContent = 'Masuk →';
+    btn.disabled    = false;
+  }
+}
+
+async function checkSession() {
+  const token = localStorage.getItem('rp-admin-token');
+  if (!token) return false;
+
+  // Verify token
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { ...SUPA_HEADERS, 'Authorization': `Bearer ${token}` },
   });
 
-  // Auto slug dari judul
-  document.getElementById('f-title').addEventListener('input', e => {
-    const slug = e.target.value.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-    document.getElementById('f-slug').value = slug;
-  });
+  if (!r.ok) {
+    localStorage.removeItem('rp-admin-token');
+    return false;
+  }
 
-  // Auto slug kategori
-  document.getElementById('cat-name').addEventListener('input', e => {
-    document.getElementById('cat-slug').value = e.target.value.toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
-  });
-});
+  AUTH_TOKEN = token;
+  currentUser = await r.json();
+  return true;
+}
 
-// ===== SHOW / HIDE SCREENS =====
-function showLogin() {
+function enterApp(email) {
+  document.getElementById('login-screen').style.display  = 'none';
+  document.getElementById('admin-wrap').style.display    = 'flex';
+  // Set user info
+  const name = email.split('@')[0];
+  const nameEl = document.getElementById('user-name');
+  const avEl   = document.getElementById('user-av');
+  if (nameEl) nameEl.textContent = name;
+  if (avEl)   avEl.textContent   = name.charAt(0).toUpperCase();
+  initApp();
+}
+
+function logout() {
+  localStorage.removeItem('rp-admin-token');
+  localStorage.removeItem('rp-admin-email');
+  AUTH_TOKEN  = null;
+  currentUser = null;
+  document.getElementById('admin-wrap').style.display    = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-}
-
-async function showApp(user) {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-
-  // Isi info user di sidebar
-  const name = user.email.split('@')[0];
-  document.getElementById('user-name').textContent = name;
-  document.getElementById('user-avatar').textContent = name[0].toUpperCase();
-  document.getElementById('footer-email').textContent = user.email;
-
-  // Load data
-  await loadCategories();
-  await loadDashboard();
-  await loadReviewsTable();
-  await loadCatsTable();
-}
-
-// ===== AUTH: LOGIN =====
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  const errorEl = document.getElementById('login-error');
-  const btnText = document.getElementById('login-text');
-  const btnLoader = document.getElementById('login-loader');
-  const btn = document.getElementById('btn-login');
-
-  if (!email || !password) {
-    showLoginError('Email dan password wajib diisi!');
-    return;
-  }
-
-  // Loading state
-  btn.disabled = true;
-  btnText.style.display = 'none';
-  btnLoader.style.display = 'inline';
-  errorEl.style.display = 'none';
-
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-
-  btn.disabled = false;
-  btnText.style.display = 'inline';
-  btnLoader.style.display = 'none';
-
-  if (error) {
-    showLoginError(
-      error.message.includes('Invalid login') ? 'Email atau password salah!' :
-      error.message.includes('Email not confirmed') ? 'Email belum dikonfirmasi. Cek inbox kamu!' :
-      'Login gagal: ' + error.message
-    );
-  }
-  // Kalau berhasil, onAuthStateChange otomatis dipanggil
 }
 
 function showLoginError(msg) {
   const el = document.getElementById('login-error');
+  if (!el) return;
   el.textContent = '⚠️ ' + msg;
-  el.style.display = 'block';
+  el.classList.add('show');
 }
 
-// ===== AUTH: LOGOUT =====
-async function doLogout() {
-  if (!confirm('Yakin ingin keluar?')) return;
-  await sb.auth.signOut();
+/* ============================================================
+   APP INIT
+============================================================ */
+async function initApp() {
+  await loadCategories();
+  loadDashboard();
+  loadKonten();
+  loadKategoriPage();
+  loadTokoh();
+  initSidebar();
+  initTheme();
+  initSearch();
 }
 
-// ===== NAVIGATION =====
-const sectionTitles = {
-  'dashboard': 'Dashboard',
-  'reviews': 'Semua Review',
-  'add-review': 'Tambah Review',
-  'categories': 'Kategori',
-};
+/* ============================================================
+   SIDEBAR & NAVIGATION
+============================================================ */
+function initSidebar() {
+  // Nav items
+  document.querySelectorAll('.snav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      showPage(btn.dataset.page);
+      closeSidebar();
+    });
+  });
 
-function showSection(name) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item[data-section]').forEach(n => n.classList.remove('active'));
-
-  const section = document.getElementById('section-' + name);
-  if (section) section.classList.add('active');
-
-  const navItem = document.querySelector(`.nav-item[data-section="${name}"]`);
-  if (navItem) navItem.classList.add('active');
-
-  document.getElementById('topbar-title').textContent = sectionTitles[name] || '';
-
-  // Tutup sidebar di mobile
-  closeSidebar();
+  document.getElementById('btn-hamburger')?.addEventListener('click', openSidebar);
+  document.getElementById('sidebar-close')?.addEventListener('click', closeSidebar);
+  document.getElementById('sidebar-overlay')?.addEventListener('click', closeSidebar);
+  document.getElementById('btn-logout')?.addEventListener('click', logout);
 }
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebar-overlay').classList.toggle('open');
+function showPage(name) {
+  document.querySelectorAll('.apage').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.snav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(`page-${name}`)?.classList.add('active');
+  document.querySelector(`.snav-item[data-page="${name}"]`)?.classList.add('active');
+  const titles = { dashboard:'Dashboard', konten:'Konten', kategori:'Kategori', tokoh:'Tokoh' };
+  const ttl = document.getElementById('topbar-title');
+  if (ttl) ttl.textContent = titles[name] || name;
 }
+
+function openSidebar() {
+  document.getElementById('sidebar')?.classList.add('open');
+  document.getElementById('sidebar-overlay')?.classList.add('show');
+}
+
 function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebar-overlay').classList.remove('open');
+  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('sidebar-overlay')?.classList.remove('show');
 }
 
-// ===== DASHBOARD =====
+/* ============================================================
+   THEME
+============================================================ */
+function initTheme() {
+  const saved = localStorage.getItem('rp-admin-theme') || 'light';
+  applyTheme(saved);
+  document.getElementById('theme-toggle')?.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+}
+
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('rp-admin-theme', t);
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
+}
+
+/* ============================================================
+   TOAST
+============================================================ */
+function toast(msg, type = 'success') {
+  const zone = document.getElementById('toast-zone');
+  if (!zone) return;
+  const t = document.createElement('div');
+  t.className = `toast-item ${type}`;
+  const icons = { success:'✅', error:'❌', info:'ℹ️' };
+  t.innerHTML = `<span>${icons[type]||''}</span><span>${msg}</span>`;
+  zone.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+/* ============================================================
+   UTILS
+============================================================ */
+function val(id) { return (document.getElementById(id)?.value || '').trim(); }
+function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v ?? ''; }
+function setChecked(id, v) { const el = document.getElementById(id); if (el) el.checked = !!v; }
+function isChecked(id) { return document.getElementById(id)?.checked || false; }
+function show(id) { const el = document.getElementById(id); if (el) el.style.display = 'block'; }
+function hide(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+
+function autoSlug(str, targetId) {
+  const slug = str.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 80);
+  setVal(targetId, slug);
+}
+
+function timeAgo(d) {
+  const s = (Date.now() - new Date(d)) / 1000;
+  if (s < 60)      return 'baru saja';
+  if (s < 3600)    return Math.floor(s/60) + ' mnt lalu';
+  if (s < 86400)   return Math.floor(s/3600) + ' jam lalu';
+  if (s < 2592000) return Math.floor(s/86400) + ' hari lalu';
+  return new Date(d).toLocaleDateString('id-ID', {day:'numeric',month:'short'});
+}
+
+function fmtViews(v) {
+  if (!v) return '0';
+  if (v >= 1000) return (v/1000).toFixed(1)+'rb';
+  return String(v);
+}
+
+/* ============================================================
+   MODAL
+============================================================ */
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.style.display = 'flex'; setTimeout(() => el.classList.add('open'), 10); }
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove('open'); setTimeout(() => el.style.display = 'none', 200); }
+}
+
+function confirmDelete(msg, onOk) {
+  document.getElementById('confirm-msg').textContent = msg;
+  const btn = document.getElementById('btn-confirm-ok');
+  btn.onclick = () => { onOk(); closeModal('modal-confirm'); };
+  openModal('modal-confirm');
+}
+
+/* ============================================================
+   CATEGORIES (shared)
+============================================================ */
+async function loadCategories() {
+  const data = await supaGet('categories', '?select=id,name,slug,icon&order=name.asc');
+  allCategories = Array.isArray(data) ? data : [];
+
+  // Fill select dropdowns
+  const sel = document.getElementById('f-cat');
+  if (sel) {
+    sel.innerHTML = '<option value="">Pilih kategori...</option>' +
+      allCategories.map(c => `<option value="${c.id}">${c.icon||'📌'} ${c.name}</option>`).join('');
+  }
+  return allCategories;
+}
+
+/* ============================================================
+   DASHBOARD
+============================================================ */
 async function loadDashboard() {
-  try {
-    const [{ count: total }, { count: published }, { count: cats }] = await Promise.all([
-      sb.from('reviews').select('*', { count: 'exact', head: true }),
-      sb.from('reviews').select('*', { count: 'exact', head: true }).eq('is_published', true),
-      sb.from('categories').select('*', { count: 'exact', head: true }),
-    ]);
+  const [allReviews, cats] = await Promise.all([
+    supaGet('reviews', '?select=id,is_published,views&order=created_at.desc'),
+    supaGet('categories', '?select=id'),
+  ]);
 
-    document.getElementById('stat-total').textContent = total || 0;
-    document.getElementById('stat-published').textContent = published || 0;
-    document.getElementById('stat-draft').textContent = (total || 0) - (published || 0);
-    document.getElementById('stat-cats').textContent = cats || 0;
+  const reviews = Array.isArray(allReviews) ? allReviews : [];
+  const total   = reviews.length;
+  const pub     = reviews.filter(r => r.is_published).length;
+  const draft   = total - pub;
+  const views   = reviews.reduce((s, r) => s + (r.views||0), 0);
+  const catCount = Array.isArray(cats) ? cats.length : 0;
 
-    // Recent reviews
-    const { data: recent } = await sb.from('reviews')
-      .select('id, title, slug, rating, is_published, categories(name)')
-      .order('created_at', { ascending: false })
-      .limit(5);
+  setVal('st-total', total); document.getElementById('st-total').textContent = total;
+  document.getElementById('st-pub').textContent   = pub;
+  document.getElementById('st-draft').textContent = draft;
+  document.getElementById('st-views').textContent = fmtViews(views);
+  document.getElementById('st-cats').textContent  = catCount;
+  document.getElementById('badge-konten').textContent = total;
 
-    const el = document.getElementById('recent-list');
-    if (!recent?.length) {
-      el.innerHTML = `<div class="empty-state">
-        <div class="empty-icon">📭</div>
-        <p>Belum ada review.</p>
-        <button class="btn-primary" onclick="showSection('add-review')">+ Tambah Review Pertama</button>
-      </div>`;
-      return;
-    }
+  // Recent
+  const recent = await supaGet('reviews', '?select=id,title,image_url,emoji,post_type,created_at,is_published&order=created_at.desc&limit=7');
+  renderDashList('dash-recent', Array.isArray(recent) ? recent : [], r => `
+    <div class="dash-item" onclick="openKontenForm(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <div class="dash-item-thumb">${r.image_url ? `<img src="${r.image_url}">` : r.emoji||'📝'}</div>
+      <div class="dash-item-body">
+        <div class="dash-item-title">${r.title}</div>
+        <div class="dash-item-meta">${timeAgo(r.created_at)} · ${r.is_published?'<span style="color:var(--success)">Published</span>':'Draft'}</div>
+      </div>
+    </div>`);
 
-    el.innerHTML = `<div class="table-wrap"><table>
-      ${recent.map(r => `<tr>
-        <td class="td-title">${r.title}</td>
-        <td style="color:var(--text-muted);font-size:13px">${r.categories?.name || '–'}</td>
-        <td class="stars">${r.rating ? r.rating + '★' : '–'}</td>
-        <td><span class="badge ${r.is_published ? 'badge-green' : 'badge-gray'}">${r.is_published ? '✅ Live' : '📝 Draft'}</span></td>
-        <td><button class="btn-edit" onclick="editReview(${r.id})">✏️ Edit</button></td>
-      </tr>`).join('')}
-    </table></div>`;
-  } catch (e) {
-    toast('Gagal load dashboard', 'error');
-    console.error(e);
-  }
+  // Popular
+  const popular = await supaGet('reviews', '?select=id,title,image_url,emoji,views&is_published=eq.true&order=views.desc&limit=7');
+  renderDashList('dash-popular', Array.isArray(popular) ? popular : [], r => `
+    <div class="dash-item">
+      <div class="dash-item-thumb">${r.image_url ? `<img src="${r.image_url}">` : r.emoji||'📝'}</div>
+      <div class="dash-item-body">
+        <div class="dash-item-title">${r.title}</div>
+        <div class="dash-item-meta">👁 ${fmtViews(r.views)} views</div>
+      </div>
+    </div>`);
 }
 
-// ===== REVIEWS TABLE =====
-async function loadReviewsTable() {
-  try {
-    const { data, error } = await sb.from('reviews')
-      .select('id, title, slug, rating, is_published, created_at, category_id, categories(name)')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    allReviews = data || [];
-    renderReviewsTable(allReviews);
-  } catch (e) {
-    toast('Gagal load reviews', 'error');
-    console.error(e);
-  }
+function renderDashList(id, items, fn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = items.length ? items.map(fn).join('') : '<div class="dash-empty">Belum ada data</div>';
 }
 
-function renderReviewsTable(reviews) {
-  const tbody = document.getElementById('reviews-tbody');
-  const empty = document.getElementById('reviews-empty');
+/* ============================================================
+   KONTEN
+============================================================ */
+async function loadKonten(page = 0) {
+  kontenPage = page;
+  const tbody = document.getElementById('konten-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="tbl-loading">⏳ Memuat...</td></tr>';
 
-  if (!reviews.length) {
-    tbody.innerHTML = '';
-    empty.style.display = 'block';
+  const search = val('konten-search');
+  const status = val('konten-filter-status');
+  const type   = val('konten-filter-type');
+
+  let q = `?select=id,title,slug,post_type,is_published,is_featured,views,created_at,category_id,categories(name)&order=created_at.desc&limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`;
+  if (status === 'published') q += '&is_published=eq.true';
+  if (status === 'draft')     q += '&is_published=eq.false';
+  if (type)    q += `&post_type=eq.${type}`;
+  if (search)  q += `&or=(title.ilike.*${encodeURIComponent(search)}*,slug.ilike.*${encodeURIComponent(search)}*)`;
+
+  const data  = await supaGet('reviews', q);
+  const items = Array.isArray(data) ? data : [];
+
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="tbl-loading">Belum ada konten</td></tr>';
     return;
   }
 
-  empty.style.display = 'none';
-  tbody.innerHTML = reviews.map(r => `
+  const typeLabel = { review:'bt-review', list:'bt-list', video:'bt-video', news:'bt-news' };
+
+  tbody.innerHTML = items.map(r => `
     <tr>
-      <td class="td-title" style="max-width:200px">
-        ${r.title}
-        <small>${r.slug}</small>
+      <td class="tbl-title-cell">
+        <span class="tbl-title-main">${r.title}</span>
+        <span class="tbl-title-slug">${r.slug}</span>
       </td>
+      <td><span class="badge-type ${typeLabel[r.post_type]||'bt-review'}">${r.post_type||'review'}</span></td>
       <td>${r.categories?.name || '–'}</td>
-      <td class="stars">${r.rating ? r.rating + '★' : '–'}</td>
-      <td><span class="badge ${r.is_published ? 'badge-green' : 'badge-gray'}">
-        ${r.is_published ? '✅ Live' : '📝 Draft'}
-      </span></td>
-      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap">
-        ${new Date(r.created_at).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'})}
-      </td>
       <td>
-        <div class="actions">
-          <button class="btn-edit" onclick="editReview(${r.id})">✏️ Edit</button>
-          <button class="btn-toggle" onclick="togglePublish(${r.id}, ${r.is_published})">
-            ${r.is_published ? '⬇️ Unpublish' : '⬆️ Publish'}
+        <span class="badge-status ${r.is_published ? 'bs-pub':'bs-draft'}">
+          ${r.is_published ? '✅ Published':'⬜ Draft'}
+        </span>
+      </td>
+      <td>${fmtViews(r.views)}</td>
+      <td>${timeAgo(r.created_at)}</td>
+      <td>
+        <div class="tbl-actions">
+          <button class="btn-tbl btn-tbl-edit" onclick='editKonten(${r.id})'>Edit</button>
+          <button class="btn-tbl btn-tbl-toggle" onclick='togglePublish(${r.id},${r.is_published})'>
+            ${r.is_published ? 'Unpublish':'Publish'}
           </button>
-          <button class="btn-del" onclick="deleteReview(${r.id}, '${r.title.replace(/'/g, "\\'").substring(0, 30)}')">🗑️</button>
+          <button class="btn-tbl btn-tbl-del" onclick='deleteKonten(${r.id},"${r.title.replace(/"/g,'')}")'>Hapus</button>
         </div>
       </td>
-    </tr>
-  `).join('');
+    </tr>`).join('');
+
+  renderPagination('konten-pagination', page, items.length);
 }
 
-// Filter reviews
-function filterReviews() {
-  const search = document.getElementById('filter-search').value.toLowerCase();
-  const status = document.getElementById('filter-status').value;
-  const catId = document.getElementById('filter-cat').value;
-
-  let filtered = allReviews.filter(r => {
-    const matchSearch = !search || r.title.toLowerCase().includes(search) || r.slug.includes(search);
-    const matchStatus = !status ||
-      (status === 'published' && r.is_published) ||
-      (status === 'draft' && !r.is_published);
-    const matchCat = !catId || String(r.category_id) === catId;
-    return matchSearch && matchStatus && matchCat;
-  });
-
-  renderReviewsTable(filtered);
+function renderPagination(containerId, current, count) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  if (count < PAGE_SIZE && current === 0) { wrap.innerHTML = ''; return; }
+  let html = '';
+  if (current > 0) html += `<button onclick="loadKonten(${current-1})">‹</button>`;
+  html += `<button class="active">${current + 1}</button>`;
+  if (count >= PAGE_SIZE) html += `<button onclick="loadKonten(${current+1})">›</button>`;
+  wrap.innerHTML = html;
 }
 
-// Toggle publish
-async function togglePublish(id, currentStatus) {
-  const { error } = await sb.from('reviews')
-    .update({ is_published: !currentStatus, updated_at: new Date().toISOString() })
-    .eq('id', id);
+/* ===== KONTEN FORM ===== */
+let productCount = 0;
 
-  if (error) { toast('Gagal update status', 'error'); return; }
-  toast(!currentStatus ? '✅ Review dipublish!' : '📝 Review dijadikan draft', 'success');
-  await loadReviewsTable();
-  await loadDashboard();
-}
+function openKontenForm(existing = null) {
+  resetKontenForm();
+  document.getElementById('modal-konten-ttl').textContent = existing ? 'Edit Konten' : 'Tambah Konten';
 
-// Delete review
-async function deleteReview(id, title) {
-  if (!confirm(`Hapus review "${title}..."?\n\nTindakan ini tidak bisa dibatalkan!`)) return;
-  const { error } = await sb.from('reviews').delete().eq('id', id);
-  if (error) { toast('Gagal hapus review', 'error'); return; }
-  toast('Review dihapus', 'success');
-  await loadReviewsTable();
-  await loadDashboard();
-}
-
-// ===== CATEGORIES =====
-async function loadCategories() {
-  const { data } = await sb.from('categories').select('*').order('name');
-  categoriesList = data || [];
-
-  // Update dropdown di form review
-  const sel = document.getElementById('f-category');
-  sel.innerHTML = '<option value="">Pilih kategori...</option>' +
-    categoriesList.map(c => `<option value="${c.id}">${c.icon || '📌'} ${c.name}</option>`).join('');
-
-  // Update dropdown di filter
-  const filterCat = document.getElementById('filter-cat');
-  filterCat.innerHTML = '<option value="">Semua Kategori</option>' +
-    categoriesList.map(c => `<option value="${c.id}">${c.icon || '📌'} ${c.name}</option>`).join('');
-}
-
-async function loadCatsTable() {
-  const { data } = await sb.from('categories').select('*').order('name');
-  const tbody = document.getElementById('cats-tbody');
-
-  if (!data?.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Belum ada kategori. Tambahkan sekarang!</td></tr>';
+  if (existing && typeof existing === 'object') {
+    fillKontenForm(existing);
+  } else if (typeof existing === 'number') {
+    loadKontenForEdit(existing);
     return;
   }
 
-  tbody.innerHTML = data.map(c => `
-    <tr>
-      <td style="font-size:24px">${c.icon || '📌'}</td>
-      <td style="font-weight:600">${c.name}</td>
-      <td style="color:var(--text-muted);font-size:13px">${c.slug}</td>
-      <td>
-        <button class="btn-del" onclick="deleteCat(${c.id}, '${c.name.replace(/'/g, "\\'")}')">🗑️ Hapus</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function toggleCatForm() {
-  const form = document.getElementById('cat-form');
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
-  if (form.style.display === 'block') document.getElementById('cat-name').focus();
-}
-
-async function saveCat() {
-  const name = document.getElementById('cat-name').value.trim();
-  const slug = document.getElementById('cat-slug').value.trim();
-  const icon = document.getElementById('cat-icon').value.trim() || '📌';
-
-  if (!name || !slug) { toast('Nama dan slug wajib diisi!', 'error'); return; }
-
-  const { error } = await sb.from('categories').insert({ name, slug, icon });
-  if (error) {
-    toast(error.message.includes('unique') ? 'Slug sudah ada, gunakan slug lain!' : 'Gagal simpan: ' + error.message, 'error');
-    return;
+  // Populate category select
+  const sel = document.getElementById('f-cat');
+  if (sel) {
+    sel.innerHTML = '<option value="">Pilih kategori...</option>' +
+      allCategories.map(c => `<option value="${c.id}">${c.icon||'📌'} ${c.name}</option>`).join('');
   }
 
-  toast('Kategori berhasil ditambahkan! 🎉', 'success');
-  document.getElementById('cat-name').value = '';
-  document.getElementById('cat-slug').value = '';
-  document.getElementById('cat-icon').value = '';
-  toggleCatForm();
-  await loadCategories();
-  await loadCatsTable();
-  await loadDashboard();
+  openModal('modal-konten');
 }
 
-async function deleteCat(id, name) {
-  if (!confirm(`Hapus kategori "${name}"?\n\nPastikan tidak ada review di kategori ini!`)) return;
-  const { error } = await sb.from('categories').delete().eq('id', id);
-  if (error) {
-    toast(error.message.includes('foreign') ? 'Tidak bisa hapus – masih ada review di kategori ini!' : 'Gagal hapus', 'error');
-    return;
+async function loadKontenForEdit(id) {
+  const data = await supaGet('reviews', `?id=eq.${id}&limit=1`);
+  const item = Array.isArray(data) ? data[0] : null;
+  if (!item) { toast('Gagal memuat data', 'error'); return; }
+  openKontenForm(item);
+}
+
+function fillKontenForm(r) {
+  setVal('f-id',       r.id);
+  setVal('f-type',     r.post_type || 'review');
+  setVal('f-cat',      r.category_id);
+  setVal('f-title',    r.title);
+  setVal('f-slug',     r.slug);
+  setVal('f-excerpt',  r.excerpt);
+  setVal('f-image',    r.image_url);
+  setVal('f-emoji',    r.emoji);
+  setVal('f-rating',   r.rating);
+  setVal('f-affiliate',r.affiliate_url);
+  setVal('f-video-url',r.video_url);
+  setVal('f-duration', r.duration);
+  setVal('f-author',   r.author || 'Admin');
+  setVal('f-content',  r.content);
+  setChecked('f-published', r.is_published);
+  setChecked('f-featured',  r.is_featured);
+
+  // Pros & Cons
+  if (r.pros) {
+    const pros = typeof r.pros === 'string' ? JSON.parse(r.pros) : r.pros;
+    setVal('f-pros', Array.isArray(pros) ? pros.join('\n') : '');
   }
-  toast('Kategori dihapus', 'success');
-  await loadCategories();
-  await loadCatsTable();
+  if (r.cons) {
+    const cons = typeof r.cons === 'string' ? JSON.parse(r.cons) : r.cons;
+    setVal('f-cons', Array.isArray(cons) ? cons.join('\n') : '');
+  }
+
+  // Tags
+  if (r.tags) {
+    const tags = typeof r.tags === 'string' ? JSON.parse(r.tags) : r.tags;
+    setVal('f-tags', Array.isArray(tags) ? tags.join(', ') : '');
+  }
+
+  // Products
+  if (r.products) {
+    const prods = typeof r.products === 'string' ? JSON.parse(r.products) : r.products;
+    if (Array.isArray(prods)) prods.forEach(p => addProduct(p));
+  }
+
+  // Image preview
+  if (r.image_url) previewImg(r.image_url);
+
+  // Trigger type change to show/hide fields
+  onTypeChange();
+
+  // Populate category select
+  const sel = document.getElementById('f-cat');
+  if (sel) {
+    sel.innerHTML = '<option value="">Pilih kategori...</option>' +
+      allCategories.map(c => `<option value="${c.id}">${c.icon||'📌'} ${c.name}</option>`).join('');
+    setVal('f-cat', r.category_id);
+  }
+
+  openModal('modal-konten');
 }
 
-// ===== SAVE REVIEW =====
-async function saveReview() {
-  const editId = document.getElementById('edit-id').value;
-  const title = document.getElementById('f-title').value.trim();
-  const slug = document.getElementById('f-slug').value.trim();
-  const excerpt = document.getElementById('f-excerpt').value.trim();
-  const content = document.getElementById('f-content').value.trim();
+function resetKontenForm() {
+  ['f-id','f-title','f-slug','f-excerpt','f-image','f-emoji','f-rating',
+   'f-affiliate','f-video-url','f-duration','f-pros','f-cons','f-tags','f-content']
+    .forEach(id => setVal(id, ''));
+  setVal('f-author', 'Admin');
+  setVal('f-type', 'review');
+  setChecked('f-published', false);
+  setChecked('f-featured', false);
+  hide('img-prev-wrap');
+  hide('content-preview-box');
+  document.getElementById('btn-prev-toggle')?.classList.remove('active');
+  // Reset products
+  productCount = 0;
+  const pl = document.getElementById('products-list');
+  if (pl) pl.innerHTML = '';
+  onTypeChange();
+}
 
-  if (!title) { toast('Judul wajib diisi!', 'error'); return; }
-  if (!slug) { toast('Slug wajib diisi!', 'error'); return; }
-  if (!excerpt) { toast('Ringkasan (excerpt) wajib diisi!', 'error'); return; }
+function onTypeChange() {
+  const type = val('f-type');
+  const isVideo  = type === 'video';
+  const isList   = type === 'list';
+  const isReview = type === 'review';
 
-  const category_id = document.getElementById('f-category').value;
-  const rating = parseFloat(document.getElementById('f-rating').value) || null;
-  const emoji = document.getElementById('f-emoji').value.trim() || '📱';
-  const author = document.getElementById('f-author').value.trim() || 'Admin';
-  const affiliate_url = document.getElementById('f-affiliate').value.trim() || null;
-  const image_url = document.getElementById('f-image').value.trim() || null;
-  const is_published = document.getElementById('f-published').checked;
-  const is_featured = document.getElementById('f-featured').checked;
+  document.getElementById('video-fields').style.display  = isVideo ? 'block' : 'none';
+  document.getElementById('list-fields').style.display   = isList  ? 'block' : 'none';
+  document.getElementById('review-fields').style.display = isReview ? 'block' : 'none';
+}
 
-  // Pros & Cons: 1 per baris → JSON array
-  const pros = document.getElementById('f-pros').value.trim().split('\n').map(s => s.trim()).filter(Boolean);
-  const cons = document.getElementById('f-cons').value.trim().split('\n').map(s => s.trim()).filter(Boolean);
+async function saveKonten() {
+  const btn = document.getElementById('btn-save-konten');
+  btn.textContent = '⏳ Menyimpan...';
+  btn.disabled    = true;
+
+  const type = val('f-type');
+  const id   = val('f-id');
+
+  // Pros & cons
+  const prosArr  = val('f-pros').split('\n').map(s=>s.trim()).filter(Boolean);
+  const consArr  = val('f-cons').split('\n').map(s=>s.trim()).filter(Boolean);
+  const tagsArr  = val('f-tags').split(',').map(s=>s.trim()).filter(Boolean);
+
+  // Collect products from builder
+  const products = collectProducts();
 
   const payload = {
-    title, slug, excerpt, content,
-    pros: JSON.stringify(pros),
-    cons: JSON.stringify(cons),
-    rating, emoji, author,
-    affiliate_url, image_url,
-    is_published, is_featured,
-    updated_at: new Date().toISOString(),
-    ...(category_id ? { category_id: parseInt(category_id) } : { category_id: null }),
+    title:           val('f-title'),
+    slug:            val('f-slug'),
+    category_id:     val('f-cat') ? parseInt(val('f-cat')) : null,
+    excerpt:         val('f-excerpt') || null,
+    content:         val('f-content') || null,
+    image_url:       val('f-image') || null,
+    emoji:           val('f-emoji') || '📌',
+    post_type:       type,
+    author:          val('f-author') || 'Admin',
+    is_published:    isChecked('f-published'),
+    is_featured:     isChecked('f-featured'),
+    tags:            tagsArr,
+    rating:          val('f-rating') ? parseFloat(val('f-rating')) : null,
+    affiliate_url:   val('f-affiliate') || null,
+    pros:            prosArr,
+    cons:            consArr,
+    video_url:       val('f-video-url') || null,
+    duration:        val('f-duration') || null,
+    products:        products,
+    product_count:   products.length,
   };
 
-  const btn = document.getElementById('btn-save');
-  btn.disabled = true;
-  btn.textContent = '⏳ Menyimpan...';
-
-  let error;
-  if (editId) {
-    ({ error } = await sb.from('reviews').update(payload).eq('id', editId));
-  } else {
-    payload.created_at = new Date().toISOString();
-    ({ error } = await sb.from('reviews').insert(payload));
-  }
-
-  btn.disabled = false;
-  btn.textContent = '💾 Simpan Review';
-
-  if (error) {
-    toast(
-      error.message.includes('unique') ? 'Slug sudah dipakai! Gunakan slug lain.' :
-      'Gagal simpan: ' + error.message,
-      'error'
-    );
+  if (!payload.title || !payload.slug) {
+    toast('Judul dan slug wajib diisi!', 'error');
+    btn.textContent = '💾 Simpan Konten';
+    btn.disabled    = false;
     return;
   }
 
-  toast(editId ? 'Review berhasil diperbarui! ✨' : 'Review berhasil ditambahkan! 🎉', 'success');
-  resetForm();
-  await loadReviewsTable();
-  await loadDashboard();
-  showSection('reviews');
+  const result = id ? await supaUpdate('reviews', id, payload) : await supaInsert('reviews', payload);
+
+  if (result.ok) {
+    toast(id ? 'Konten berhasil diperbarui!' : 'Konten berhasil ditambahkan!');
+    closeModal('modal-konten');
+    loadKonten(kontenPage);
+    loadDashboard();
+  } else {
+    const errMsg = result.data?.message || result.data?.[0]?.message || 'Terjadi kesalahan';
+    toast('Gagal: ' + errMsg, 'error');
+  }
+
+  btn.textContent = '💾 Simpan Konten';
+  btn.disabled    = false;
 }
 
-// Edit review – load data ke form
-async function editReview(id) {
-  const { data, error } = await sb.from('reviews').select('*').eq('id', id).single();
-  if (error || !data) { toast('Gagal load review', 'error'); return; }
-
-  document.getElementById('edit-id').value = data.id;
-  document.getElementById('f-title').value = data.title || '';
-  document.getElementById('f-slug').value = data.slug || '';
-  document.getElementById('f-category').value = data.category_id || '';
-  document.getElementById('f-excerpt').value = data.excerpt || '';
-  document.getElementById('f-content').value = data.content || '';
-  document.getElementById('f-rating').value = data.rating || '';
-  document.getElementById('f-emoji').value = data.emoji || '📱';
-  document.getElementById('f-author').value = data.author || 'Admin';
-  document.getElementById('f-affiliate').value = data.affiliate_url || '';
-  document.getElementById('f-image').value = data.image_url || '';
-  document.getElementById('f-published').checked = data.is_published || false;
-  document.getElementById('f-featured').checked = data.is_featured || false;
-
-  // Parse pros & cons
-  let pros = [], cons = [];
-  try { pros = typeof data.pros === 'string' ? JSON.parse(data.pros) : (data.pros || []); } catch(e) {}
-  try { cons = typeof data.cons === 'string' ? JSON.parse(data.cons) : (data.cons || []); } catch(e) {}
-  document.getElementById('f-pros').value = pros.join('\n');
-  document.getElementById('f-cons').value = cons.join('\n');
-
-  updateRatingPreview();
-  document.getElementById('form-title').textContent = '✏️ Edit Review';
-  showSection('add-review');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+async function editKonten(id) {
+  await loadKontenForEdit(id);
 }
 
-function resetForm() {
-  document.getElementById('edit-id').value = '';
-  document.getElementById('form-title').textContent = '➕ Tambah Review';
-  ['f-title','f-slug','f-excerpt','f-content','f-rating','f-emoji',
-   'f-affiliate','f-image','f-pros','f-cons'].forEach(id => {
-    document.getElementById(id).value = '';
+async function togglePublish(id, current) {
+  const result = await supaUpdate('reviews', id, { is_published: !current });
+  if (result.ok) {
+    toast(current ? 'Konten di-unpublish' : 'Konten dipublish! ✅');
+    loadKonten(kontenPage);
+  } else {
+    toast('Gagal mengubah status', 'error');
+  }
+}
+
+function deleteKonten(id, title) {
+  confirmDelete(`Hapus konten "${title}"?`, async () => {
+    const ok = await supaDelete('reviews', id);
+    if (ok) { toast('Konten dihapus'); loadKonten(kontenPage); loadDashboard(); }
+    else toast('Gagal menghapus', 'error');
   });
-  document.getElementById('f-author').value = 'Admin';
-  document.getElementById('f-category').value = '';
-  document.getElementById('f-published').checked = false;
-  document.getElementById('f-featured').checked = false;
-  document.getElementById('rating-preview').textContent = '☆☆☆☆☆';
-  document.getElementById('btn-save').textContent = '💾 Simpan Review';
 }
 
-// ===== RATING PREVIEW =====
-function updateRatingPreview() {
-  const r = parseFloat(document.getElementById('f-rating').value) || 0;
-  const full = Math.floor(r);
-  const empty = 5 - Math.ceil(r);
-  const half = 5 - full - empty;
-  document.getElementById('rating-preview').textContent =
-    '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+/* ============================================================
+   PRODUCTS BUILDER (untuk list type)
+============================================================ */
+function addProduct(data = {}) {
+  productCount++;
+  const num = productCount;
+  const pl  = document.getElementById('products-list');
+  if (!pl) return;
+
+  const div = document.createElement('div');
+  div.className = 'product-item';
+  div.id = `product-item-${num}`;
+  div.innerHTML = `
+    <div class="product-item-header">
+      <span class="product-item-num">Produk #${num}</span>
+      <button type="button" class="btn-sm-outline" style="color:var(--danger)" onclick="removeProduct(${num})">✕ Hapus</button>
+    </div>
+    <div class="product-fields">
+      <div class="product-field-full">
+        <input type="text" id="p-name-${num}" class="form-input" placeholder="Nama produk..." value="${data.name||''}">
+      </div>
+      <div class="product-field-full">
+        <textarea id="p-desc-${num}" class="form-input" rows="2" placeholder="Deskripsi singkat...">${data.description||''}</textarea>
+      </div>
+      <div>
+        <input type="text" id="p-price-${num}" class="form-input" placeholder="Rp 150.000" value="${data.price||''}">
+      </div>
+      <div>
+        <input type="text" id="p-rating-${num}" class="form-input" placeholder="Rating (4.5)" value="${data.rating||''}">
+      </div>
+      <div>
+        <input type="text" id="p-emoji-${num}" class="form-input" placeholder="Emoji 🛍️" maxlength="4" value="${data.emoji||''}">
+      </div>
+      <div>
+        <input type="url" id="p-img-${num}" class="form-input" placeholder="URL Gambar" value="${data.image||''}">
+      </div>
+      <div class="product-field-full">
+        <input type="url" id="p-aff-${num}" class="form-input" placeholder="URL Afiliasi" value="${data.affiliate_url||''}">
+      </div>
+    </div>`;
+  pl.appendChild(div);
 }
 
-// ===== TOAST =====
-function toast(msg, type = 'info') {
-  const container = document.getElementById('toast-container');
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-  el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
-  container.appendChild(el);
-  setTimeout(() => el.remove(), 4000);
+function removeProduct(num) {
+  document.getElementById(`product-item-${num}`)?.remove();
 }
+
+function collectProducts() {
+  const items = document.querySelectorAll('.product-item');
+  return Array.from(items).map(item => {
+    const n = item.id.replace('product-item-', '');
+    return {
+      name:          (document.getElementById(`p-name-${n}`)?.value  || '').trim(),
+      description:   (document.getElementById(`p-desc-${n}`)?.value  || '').trim(),
+      price:         (document.getElementById(`p-price-${n}`)?.value || '').trim(),
+      rating:        (document.getElementById(`p-rating-${n}`)?.value|| '').trim(),
+      emoji:         (document.getElementById(`p-emoji-${n}`)?.value || '').trim(),
+      image:         (document.getElementById(`p-img-${n}`)?.value   || '').trim(),
+      affiliate_url: (document.getElementById(`p-aff-${n}`)?.value   || '').trim(),
+    };
+  }).filter(p => p.name);
+}
+
+/* ============================================================
+   CONTENT EDITOR HELPERS
+============================================================ */
+let previewOn = false;
+
+function ins(tag) {
+  const ta = document.getElementById('f-content');
+  if (!ta) return;
+  ta.focus();
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const sel = ta.value.substring(start, end) || 'Teks di sini';
+  const tags = {
+    h2: `<h2>${sel}</h2>`, h3: `<h3>${sel}</h3>`,
+    p:  `<p>${sel}</p>`,
+    b:  `<b>${sel}</b>`,   i: `<i>${sel}</i>`,
+    ul: `<ul>\n  <li>Item 1</li>\n  <li>Item 2</li>\n</ul>`,
+    li: `<li>${sel}</li>`,
+    bq: `<blockquote>${sel}</blockquote>`,
+    img:`<img src="URL_GAMBAR" alt="${sel}">`,
+    a:  `<a href="URL_LINK">${sel}</a>`,
+  };
+  const snippet = tags[tag] || sel;
+  ta.value = ta.value.substring(0, start) + snippet + ta.value.substring(end);
+  ta.selectionStart = ta.selectionEnd = start + snippet.length;
+  if (previewOn) updatePreview();
+}
+
+function togglePreview() {
+  previewOn = !previewOn;
+  const btn  = document.getElementById('btn-prev-toggle');
+  const box  = document.getElementById('content-preview-box');
+  const ta   = document.getElementById('f-content');
+  if (!box || !ta) return;
+  if (previewOn) {
+    box.style.display = 'block';
+    ta.style.display  = 'none';
+    btn?.classList.add('active');
+    updatePreview();
+  } else {
+    box.style.display = 'none';
+    ta.style.display  = 'block';
+    btn?.classList.remove('active');
+  }
+}
+
+function updatePreview() {
+  const box = document.getElementById('content-preview-box');
+  const ta  = document.getElementById('f-content');
+  if (box && ta) box.innerHTML = ta.value;
+}
+
+/* ============================================================
+   IMAGE PREVIEW
+============================================================ */
+function previewImg(url) {
+  const wrap = document.getElementById('img-prev-wrap');
+  const img  = document.getElementById('img-prev');
+  if (!url) { if (wrap) wrap.style.display = 'none'; return; }
+  if (img)  img.src = url;
+  if (wrap) wrap.style.display = 'inline-block';
+}
+
+function clearImgPreview() {
+  setVal('f-image', '');
+  hide('img-prev-wrap');
+}
+
+/* ============================================================
+   KATEGORI PAGE
+============================================================ */
+async function loadKategoriPage() {
+  const grid = document.getElementById('cat-grid-admin');
+  if (!grid) return;
+  grid.innerHTML = '<div class="tbl-loading">⏳ Memuat...</div>';
+
+  const data = await supaGet('categories', '?select=id,name,slug,icon,description&order=name.asc');
+  const cats = Array.isArray(data) ? data : [];
+
+  if (!cats.length) {
+    grid.innerHTML = '<div class="tbl-loading">Belum ada kategori. Tambahkan sekarang!</div>';
+    return;
+  }
+
+  grid.innerHTML = cats.map(c => `
+    <div class="cat-admin-card">
+      <div class="cat-admin-icon">${c.icon||'📌'}</div>
+      <div class="cat-admin-info">
+        <div class="cat-admin-name">${c.name}</div>
+        <div class="cat-admin-slug">${c.slug}</div>
+      </div>
+      <div class="cat-admin-actions">
+        <button class="btn-tbl btn-tbl-edit" onclick='editKat(${JSON.stringify(c).replace(/"/g,"&quot;")})'>Edit</button>
+        <button class="btn-tbl btn-tbl-del"  onclick='deleteKat(${c.id},"${c.name}")'>Hapus</button>
+      </div>
+    </div>`).join('');
+}
+
+function openKatForm() {
+  ['fk-id','fk-name','fk-icon','fk-slug','fk-desc'].forEach(id => setVal(id,''));
+  document.getElementById('modal-kat-ttl').textContent = 'Tambah Kategori';
+  openModal('modal-kat');
+}
+
+function editKat(c) {
+  if (typeof c === 'string') c = JSON.parse(c);
+  setVal('fk-id',   c.id);
+  setVal('fk-name', c.name);
+  setVal('fk-icon', c.icon);
+  setVal('fk-slug', c.slug);
+  setVal('fk-desc', c.description);
+  document.getElementById('modal-kat-ttl').textContent = 'Edit Kategori';
+  openModal('modal-kat');
+}
+
+async function saveKat() {
+  const id   = val('fk-id');
+  const name = val('fk-name');
+  const slug = val('fk-slug');
+  if (!name || !slug) { toast('Nama dan slug wajib diisi!', 'error'); return; }
+
+  const payload = {
+    name,
+    slug,
+    icon:        val('fk-icon') || '📌',
+    description: val('fk-desc') || null,
+  };
+
+  const result = id ? await supaUpdate('categories', id, payload) : await supaInsert('categories', payload);
+
+  if (result.ok) {
+    toast(id ? 'Kategori diperbarui!' : 'Kategori ditambahkan!');
+    closeModal('modal-kat');
+    loadKategoriPage();
+    loadCategories();
+  } else {
+    toast('Gagal menyimpan: ' + (result.data?.message || 'Error'), 'error');
+  }
+}
+
+async function deleteKat(id, name) {
+  confirmDelete(`Hapus kategori "${name}"?`, async () => {
+    const ok = await supaDelete('categories', id);
+    if (ok) { toast('Kategori dihapus'); loadKategoriPage(); loadCategories(); }
+    else toast('Gagal menghapus', 'error');
+  });
+}
+
+/* ============================================================
+   TOKOH PAGE
+============================================================ */
+async function loadTokoh() {
+  const tbody = document.getElementById('tokoh-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" class="tbl-loading">⏳ Memuat...</td></tr>';
+
+  const search = val('tokoh-search');
+  let q = '?select=id,name,slug,profession,is_published,is_featured,views,created_at&order=created_at.desc&limit=50';
+  if (search) q += `&name=ilike.*${encodeURIComponent(search)}*`;
+
+  const data  = await supaGet('tokoh', q);
+  const items = Array.isArray(data) ? data : [];
+
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="tbl-loading">Belum ada tokoh</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = items.map(t => `
+    <tr>
+      <td>
+        <span class="tbl-title-main">${t.name}</span>
+        <span class="tbl-title-slug">${t.slug}</span>
+      </td>
+      <td>${t.profession || '–'}</td>
+      <td><span class="badge-status ${t.is_published?'bs-pub':'bs-draft'}">${t.is_published?'✅ Published':'⬜ Draft'}</span></td>
+      <td>${fmtViews(t.views)}</td>
+      <td>${timeAgo(t.created_at)}</td>
+      <td>
+        <div class="tbl-actions">
+          <button class="btn-tbl btn-tbl-edit" onclick="editTokoh(${t.id})">Edit</button>
+          <button class="btn-tbl btn-tbl-toggle" onclick="toggleTokohPublish(${t.id},${t.is_published})">${t.is_published?'Unpublish':'Publish'}</button>
+          <button class="btn-tbl btn-tbl-del" onclick='deleteTokoh(${t.id},"${t.name}")'>Hapus</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openTokohForm() {
+  ['ft-id','ft-name','ft-slug','ft-prof','ft-nation','ft-image','ft-born','ft-bio','ft-content'].forEach(id => setVal(id,''));
+  setChecked('ft-published', false);
+  setChecked('ft-featured',  false);
+  document.getElementById('modal-tokoh-ttl').textContent = 'Tambah Tokoh';
+  openModal('modal-tokoh');
+}
+
+async function editTokoh(id) {
+  const data = await supaGet('tokoh', `?id=eq.${id}&limit=1`);
+  const t    = Array.isArray(data) ? data[0] : null;
+  if (!t) { toast('Gagal memuat data', 'error'); return; }
+
+  setVal('ft-id',     t.id);
+  setVal('ft-name',   t.name);
+  setVal('ft-slug',   t.slug);
+  setVal('ft-prof',   t.profession);
+  setVal('ft-nation', t.nationality);
+  setVal('ft-image',  t.image_url);
+  setVal('ft-born',   t.born);
+  setVal('ft-bio',    t.bio);
+  setVal('ft-content',t.content);
+  setChecked('ft-published', t.is_published);
+  setChecked('ft-featured',  t.is_featured);
+  document.getElementById('modal-tokoh-ttl').textContent = 'Edit Tokoh';
+  openModal('modal-tokoh');
+}
+
+async function saveTokoh() {
+  const id = val('ft-id');
+  const payload = {
+    name:        val('ft-name'),
+    slug:        val('ft-slug'),
+    profession:  val('ft-prof')   || null,
+    nationality: val('ft-nation') || null,
+    image_url:   val('ft-image')  || null,
+    born:        val('ft-born')   || null,
+    bio:         val('ft-bio')    || null,
+    content:     val('ft-content')|| null,
+    is_published:isChecked('ft-published'),
+    is_featured: isChecked('ft-featured'),
+  };
+
+  if (!payload.name || !payload.slug) { toast('Nama dan slug wajib!', 'error'); return; }
+
+  const result = id ? await supaUpdate('tokoh', id, payload) : await supaInsert('tokoh', payload);
+
+  if (result.ok) {
+    toast(id ? 'Tokoh diperbarui!' : 'Tokoh ditambahkan!');
+    closeModal('modal-tokoh');
+    loadTokoh();
+  } else {
+    toast('Gagal: ' + (result.data?.message || 'Error'), 'error');
+  }
+}
+
+async function toggleTokohPublish(id, current) {
+  const r = await supaUpdate('tokoh', id, { is_published: !current });
+  if (r.ok) { toast(!current ? 'Tokoh dipublish!' : 'Tokoh di-unpublish'); loadTokoh(); }
+  else toast('Gagal', 'error');
+}
+
+function deleteTokoh(id, name) {
+  confirmDelete(`Hapus tokoh "${name}"?`, async () => {
+    const ok = await supaDelete('tokoh', id);
+    if (ok) { toast('Tokoh dihapus'); loadTokoh(); }
+    else toast('Gagal menghapus', 'error');
+  });
+}
+
+/* ============================================================
+   SEARCH
+============================================================ */
+function initSearch() {
+  let timer;
+  const debounce = (fn) => { clearTimeout(timer); timer = setTimeout(fn, 350); };
+
+  document.getElementById('konten-search')?.addEventListener('input', () => debounce(loadKonten));
+  document.getElementById('konten-filter-status')?.addEventListener('change', loadKonten);
+  document.getElementById('konten-filter-type')?.addEventListener('change',   loadKonten);
+  document.getElementById('tokoh-search')?.addEventListener('input',  () => debounce(loadTokoh));
+  document.getElementById('kat-search')?.addEventListener('input',    () => debounce(loadKategoriPage));
+}
+
+/* ============================================================
+   BOOT
+============================================================ */
+document.addEventListener('DOMContentLoaded', async () => {
+
+  // Login form
+  document.getElementById('btn-login')?.addEventListener('click', login);
+  document.getElementById('login-password')?.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  document.getElementById('toggle-pw')?.addEventListener('click', () => {
+    const inp = document.getElementById('login-password');
+    if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+  });
+
+  // Close modal on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  });
+
+  // Check existing session
+  const loggedIn = await checkSession();
+  if (loggedIn) {
+    const email = localStorage.getItem('rp-admin-email') || currentUser?.email || 'Admin';
+    enterApp(email);
+  }
+});
