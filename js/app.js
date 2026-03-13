@@ -1,617 +1,442 @@
-/* ===== REVPEAK JS - app.js ===== */
-/* Update: Tab Terbaru, Rekomendasi, Trending + List Article */
+/* ===========================================
+   REVPEAK v3 — app.js
+   Tab: Rekomendasi, Trending, Terbaru
+   Support: review, list, video, news
+=========================================== */
 
-const API_BASE = '/api';
-
-// ===== STATE =====
-let currentTab = 'terbaru';
-let currentCat = 'all';
-let currentPage = 0;
+/* ===== CONFIG ===== */
+const LOGO_URL  = ''; // Isi URL logo kamu, contoh: 'https://i.imgur.com/abc.png'
+const API_BASE  = '/api';
 const PAGE_SIZE = 9;
-let hasMore = false;
 
-// ===== UTILITY =====
-const $ = (sel, ctx = document) => ctx.querySelector(sel);
-const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
+/* ===== STATE ===== */
+let currentTab  = 'rekomendasi';
+let currentCat  = 'all';
+let currentPage = 0;
+let isLoading   = false;
+let hasMore     = false;
 
-function starsHTML(rating) {
-  const full = Math.floor(rating);
-  const half = rating % 1 >= 0.5 ? 1 : 0;
-  const empty = 5 - full - half;
-  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+/* ===== UTILS ===== */
+function timeAgo(dateStr) {
+  const s = (Date.now() - new Date(dateStr)) / 1000;
+  if (s < 60)      return 'baru saja';
+  if (s < 3600)    return Math.floor(s / 60) + ' mnt lalu';
+  if (s < 86400)   return Math.floor(s / 3600) + ' jam lalu';
+  if (s < 2592000) return Math.floor(s / 86400) + ' hari lalu';
+  return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function ratingVerdict(r) {
-  if (r >= 4.5) return 'Luar Biasa';
-  if (r >= 4.0) return 'Sangat Bagus';
-  if (r >= 3.5) return 'Bagus';
-  if (r >= 3.0) return 'Cukup';
-  return 'Di Bawah Rata-rata';
+function fmtViews(v) {
+  if (!v) return '';
+  if (v >= 1000000) return (v / 1000000).toFixed(1) + 'jt';
+  if (v >= 1000)    return (v / 1000).toFixed(1) + 'rb';
+  return String(v);
 }
 
-function timeAgo(date) {
-  const diff = (Date.now() - new Date(date)) / 1000;
-  if (diff < 60) return 'baru saja';
-  if (diff < 3600) return Math.floor(diff / 60) + ' menit lalu';
-  if (diff < 86400) return Math.floor(diff / 3600) + ' jam lalu';
-  if (diff < 2592000) return Math.floor(diff / 86400) + ' hari lalu';
-  return new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function showToast(msg, type = 'info') {
-  const icons = { info: 'ℹ️', success: '✅', error: '❌' };
-  let wrap = document.getElementById('toast-container');
+function showToast(msg) {
+  let wrap = document.getElementById('toast-wrap');
   if (!wrap) {
     wrap = document.createElement('div');
-    wrap.id = 'toast-container';
-    wrap.className = 'toast-container';
+    wrap.id = 'toast-wrap';
+    wrap.className = 'toast-wrap';
     document.body.appendChild(wrap);
   }
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
-  wrap.appendChild(toast);
-  setTimeout(() => toast.remove(), 3500);
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
 }
 
-// ===== API =====
+/* ===== API ===== */
 async function fetchAPI(endpoint) {
   try {
-    const res = await fetch(`${API_BASE}${endpoint}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(API_BASE + endpoint);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     return await res.json();
   } catch (err) {
-    console.error('API Error:', err);
+    console.error('[Revpeak API]', err.message);
     return null;
   }
 }
 
-// ===== THEME =====
-const ThemeManager = {
-  init() {
-    const saved = localStorage.getItem('revpeak-theme') || 'light';
-    this.set(saved);
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.addEventListener('click', () => this.toggle());
-  },
-  set(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('revpeak-theme', theme);
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
-  },
-  toggle() {
-    const current = document.documentElement.getAttribute('data-theme');
-    this.set(current === 'dark' ? 'light' : 'dark');
+/* ===== LOGO ===== */
+function initLogo() {
+  if (!LOGO_URL) return;
+  const imgEl     = document.getElementById('logo-img');
+  const letterEl  = document.getElementById('logo-letter');
+  if (imgEl) {
+    imgEl.src = LOGO_URL;
+    imgEl.style.display = 'block';
+    if (letterEl) letterEl.style.display = 'none';
   }
-};
-
-// ===== SCROLL TOP =====
-function initScrollTop() {
-  const btn = document.getElementById('scroll-top');
-  if (!btn) return;
-  window.addEventListener('scroll', () => btn.classList.toggle('show', window.scrollY > 400));
-  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  // Drawer logo
+  const drawerIcon = document.getElementById('drawer-logo-icon');
+  if (drawerIcon) {
+    drawerIcon.innerHTML = `<img src="${LOGO_URL}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:10px">`;
+  }
 }
 
-// ===== MOBILE MENU =====
-function initMobileMenu() {
-  const btn = document.getElementById('hamburger');
-  const nav = document.getElementById('main-nav');
-  if (!btn || !nav) return;
-  btn.addEventListener('click', () => {
-    nav.classList.toggle('open');
-    btn.setAttribute('aria-expanded', nav.classList.contains('open'));
+/* ===== THEME ===== */
+function initTheme() {
+  const saved = localStorage.getItem('rp-theme') || 'light';
+  applyTheme(saved, false);
+}
+
+function applyTheme(theme, animate = true) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('rp-theme', theme);
+  const toggle = document.getElementById('theme-toggle');
+  if (toggle) {
+    toggle.setAttribute('aria-checked', theme === 'dark' ? 'true' : 'false');
+  }
+}
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+}
+
+/* ===== DRAWER ===== */
+function initDrawer() {
+  const overlay   = document.getElementById('drawer-overlay');
+  const drawer    = document.getElementById('drawer');
+  const hamburger = document.getElementById('hamburger');
+  const close     = document.getElementById('drawer-close');
+  const toggle    = document.getElementById('theme-toggle');
+
+  function open() {
+    drawer?.classList.add('open');
+    overlay?.classList.add('open');
+    hamburger?.classList.add('open');
+    hamburger?.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function close_() {
+    drawer?.classList.remove('open');
+    overlay?.classList.remove('open');
+    hamburger?.classList.remove('open');
+    hamburger?.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+
+  hamburger?.addEventListener('click', () => {
+    drawer?.classList.contains('open') ? close_() : open();
+  });
+
+  close?.addEventListener('click', close_);
+  overlay?.addEventListener('click', close_);
+  toggle?.addEventListener('click', toggleTheme);
+
+  // Close on ESC
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close_(); });
+}
+
+/* ===== SEARCH ===== */
+function initSearch() {
+  const input     = document.getElementById('search-input');
+  const clearBtn  = document.getElementById('search-clear');
+  if (!input) return;
+
+  let timer;
+
+  function handleSearch(q) {
+    clearTimeout(timer);
+    if (!q) { loadContent(true); return; }
+    timer = setTimeout(async () => {
+      renderSkeletons(document.getElementById('content-grid'), 6);
+      document.getElementById('load-more-wrap').style.display = 'none';
+      const data  = await fetchAPI(`/reviews?search=${encodeURIComponent(q)}`);
+      const items = data?.data || data || [];
+      const grid  = document.getElementById('content-grid');
+      if (!items.length) {
+        grid.innerHTML = emptyStateHTML('🔍', 'Tidak ditemukan', 'Coba kata kunci lain');
+      } else {
+        grid.innerHTML = items.map(contentCardHTML).join('');
+      }
+    }, 380);
+  }
+
+  input.addEventListener('input', e => {
+    const q = e.target.value.trim();
+    clearBtn?.classList.toggle('visible', q.length > 0);
+    handleSearch(q);
+  });
+
+  clearBtn?.addEventListener('click', () => {
+    input.value = '';
+    clearBtn.classList.remove('visible');
+    loadContent(true);
+    input.focus();
   });
 }
 
-// ===== SKELETON =====
-function renderSkeletons(container, count = 6) {
+/* ===== SCROLL TOP ===== */
+function initScrollTop() {
+  const btn = document.getElementById('scroll-top');
+  if (!btn) return;
+  window.addEventListener('scroll', () => btn.classList.toggle('show', window.scrollY > 380), { passive: true });
+  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+/* ===== CATEGORIES ===== */
+async function loadCategories() {
+  const wrap = document.getElementById('cat-chips');
+  if (!wrap) return;
+  const data = await fetchAPI('/categories');
+  const cats = data?.data || data || [];
+  if (!cats.length) return;
+
+  const all  = `<button class="cat-chip active" data-cat="all">🌟 Semua</button>`;
+  const rest = cats.map(c =>
+    `<button class="cat-chip" data-cat="${c.id}">${c.icon || '📌'} ${c.name}</button>`
+  ).join('');
+  wrap.innerHTML = all + rest;
+
+  // Delegated click
+  wrap.addEventListener('click', e => {
+    const chip = e.target.closest('.cat-chip');
+    if (!chip) return;
+    wrap.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentCat  = chip.dataset.cat;
+    currentPage = 0;
+    loadContent(true);
+  });
+}
+
+/* ===== TABS ===== */
+function initTabs() {
+  const tabLabels = {
+    rekomendasi: '⭐ Rekomendasi',
+    trending:    '🔥 Trending',
+    terbaru:     '🆕 Terbaru',
+  };
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentTab  = btn.dataset.tab;
+      currentPage = 0;
+      currentCat  = 'all';
+
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Reset cat chips
+      document.querySelectorAll('.cat-chip').forEach(c => c.classList.toggle('active', c.dataset.cat === 'all'));
+
+      // Update section title
+      const ttl = document.getElementById('section-title');
+      if (ttl) ttl.textContent = tabLabels[currentTab] || currentTab;
+
+      loadContent(true);
+    });
+  });
+}
+
+/* ===== HERO ===== */
+async function loadHero() {
+  const heroGrid = document.getElementById('hero-grid');
+  if (!heroGrid) return;
+
+  const data  = await fetchAPI('/reviews?limit=4&featured=true');
+  const items = data?.data || data || [];
+  if (!items.length) { heroGrid.style.display = 'none'; return; }
+
+  const main = items[0];
+  const side = items.slice(1, 4);
+
+  const mainImgHTML = main.image_url
+    ? `<img src="${main.image_url}" alt="${main.title}" loading="eager">`
+    : `<div style="font-size:80px;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2D2C29,#444)">${main.emoji || '📱'}</div>`;
+
+  const sideHTML = side.map(s => `
+    <a href="review.html?slug=${s.slug}" class="hero-side-card">
+      <div class="side-thumb">
+        ${s.image_url
+          ? `<img src="${s.image_url}" alt="${s.title}" loading="lazy">`
+          : `<span>${s.emoji || '📌'}</span>`}
+      </div>
+      <div class="side-body">
+        <div class="side-cat">${s.categories?.name || 'Review'}</div>
+        <div class="side-title">${s.title}</div>
+        <div class="side-meta">
+          ${s.rating ? `<span class="rating-star">★ ${s.rating}</span>` : ''}
+          <span>${timeAgo(s.created_at)}</span>
+        </div>
+      </div>
+    </a>`).join('');
+
+  heroGrid.innerHTML = `
+    <a href="review.html?slug=${main.slug}" class="hero-main">
+      <div class="hero-main-img">
+        ${mainImgHTML}
+        <div class="hero-img-overlay"></div>
+        <span class="hero-badge">${main.post_type === 'list' ? '📋 List' : main.post_type === 'video' ? '▶ Video' : '⭐ Unggulan'}</span>
+        ${main.views ? `<span class="hero-views-pill">👁 ${fmtViews(main.views)}</span>` : ''}
+      </div>
+      <div class="hero-main-body">
+        <div class="hero-cat">${main.categories?.name || 'Review'}</div>
+        <h2 class="hero-title">${main.title}</h2>
+        <p class="hero-excerpt">${main.excerpt || ''}</p>
+        <div class="hero-footer">
+          <div class="hero-meta">
+            ${main.rating ? `<span class="rating-star">★ ${main.rating}</span>` : ''}
+            <span>${timeAgo(main.created_at)}</span>
+          </div>
+          <span class="btn-baca">Baca →</span>
+        </div>
+      </div>
+    </a>
+    <div class="hero-sidebar">${sideHTML}</div>`;
+}
+
+/* ===== CONTENT CARD ===== */
+function contentCardHTML(item) {
+  const type = item.post_type || 'review';
+
+  const ribbonMap  = { review: ['ribbon-review', '📝 Review'], list: ['ribbon-list', '📋 List'], video: ['ribbon-video', '▶ Video'], news: ['ribbon-news', '📰 News'] };
+  const [ribbonCls, ribbonTxt] = ribbonMap[type] || ribbonMap.review;
+
+  const mediaHTML = item.video_url && type === 'video'
+    ? `<div class="card-video-wrap" style="width:100%;height:100%;position:relative">
+        <img src="${item.image_url || ''}" alt="${item.title}" loading="lazy" style="width:100%;height:100%;object-fit:cover">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+          <div style="width:48px;height:48px;background:rgba(0,0,0,0.65);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff">▶</div>
+        </div>
+      </div>`
+    : item.image_url
+      ? `<img src="${item.image_url}" alt="${item.title}" loading="lazy">`
+      : `<div style="font-size:44px">${item.emoji || (type === 'list' ? '📋' : type === 'video' ? '▶️' : '📱')}</div>`;
+
+  const showTrending = item.views > 100;
+
+  return `
+    <a href="review.html?slug=${item.slug}" class="content-card" role="listitem">
+      <div class="card-media">
+        ${mediaHTML}
+        <span class="card-ribbon ${ribbonCls}">${ribbonTxt}</span>
+        ${item.rating && type !== 'list' ? `<span class="card-rating-pill">★ ${item.rating}</span>` : ''}
+        ${type === 'video' && item.duration ? `<span class="card-video-badge">${item.duration}</span>` : ''}
+        ${showTrending ? `<span class="card-trending-pill">🔥 ${fmtViews(item.views)}</span>` : ''}
+      </div>
+      <div class="card-body">
+        <div class="card-cat">${item.categories?.name || (type === 'list' ? 'List Produk' : 'Review')}</div>
+        <h3 class="card-title">${item.title}</h3>
+        <p class="card-excerpt">${item.excerpt || ''}</p>
+        <div class="card-footer">
+          <span class="card-time">${timeAgo(item.created_at)}</span>
+          ${item.views ? `<span class="card-views">👁 ${fmtViews(item.views)}</span>` : ''}
+        </div>
+      </div>
+    </a>`;
+}
+
+/* ===== SKELETON ===== */
+function renderSkeletons(container, count) {
+  if (!container) return;
   container.innerHTML = Array(count).fill('').map(() => `
     <div class="skeleton-card">
       <div class="skeleton sk-img"></div>
       <div class="sk-body">
-        <div class="skeleton sk-line" style="width:40%;height:12px;margin-bottom:8px"></div>
-        <div class="skeleton sk-line" style="height:18px;margin-bottom:8px"></div>
-        <div class="skeleton sk-line" style="margin-bottom:6px"></div>
-        <div class="skeleton sk-line" style="width:75%"></div>
+        <div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div>
+        <div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div>
+        <div class="skeleton sk-line" style="width:100%;margin-bottom:6px"></div>
+        <div class="skeleton sk-line" style="width:55%"></div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ===== RENDER REVIEW CARD =====
-// Mendukung 2 tipe: 'review' (normal) dan 'list' (artikel rekomendasi banyak produk)
-function reviewCardHTML(r) {
-  const isListType = r.post_type === 'list';
-  const stars = starsHTML(r.rating || 0);
-
-  // Badge berdasarkan tipe konten
-  const badge = isListType
-    ? `<span class="badge badge-purple">📋 List</span>`
-    : `<span class="badge badge-blue">${r.categories?.name || 'Review'}</span>`;
-
-  // Label trending jika ada views
-  const trendingBadge = r.views > 100
-    ? `<span class="trending-pill">🔥 ${r.views > 999 ? (r.views/1000).toFixed(1)+'rb' : r.views} views</span>`
-    : '';
-
-  const img = r.image_url
-    ? `<img src="${r.image_url}" alt="${r.title}" loading="lazy">`
-    : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#E2E8F0,#CBD5E1);display:flex;align-items:center;justify-content:center;font-size:48px">${r.emoji || (isListType ? '📋' : '📱')}</div>`;
-
-  // Footer berbeda untuk list vs review biasa
-  const cardFooter = isListType
-    ? `<div class="card-footer">
-        <div>
-          <div class="card-meta list-count-badge">📦 ${r.product_count || 'Beberapa'} produk</div>
-          <div class="card-meta">${timeAgo(r.created_at)}</div>
-        </div>
-        <a href="review.html?slug=${r.slug}" class="btn-read-more">Lihat Semua →</a>
-      </div>`
-    : `<div class="card-footer">
-        <div>
-          <div class="card-stars">${stars}</div>
-          <div class="card-meta">${timeAgo(r.created_at)}</div>
-        </div>
-        <a href="review.html?slug=${r.slug}" class="btn-read-more">Baca →</a>
-      </div>`;
-
-  return `
-    <article class="review-card ${isListType ? 'card-list-type' : ''}" role="listitem">
-      <div class="card-img">
-        ${img}
-        ${badge}
-        ${trendingBadge}
-        ${!isListType && r.rating ? `<span class="card-rating-pill"><span class="star">★</span> ${r.rating}</span>` : ''}
-      </div>
-      <div class="card-body">
-        <div class="card-category">${r.categories?.name || (isListType ? 'List Produk' : 'Review')}</div>
-        <h3 class="card-title"><a href="review.html?slug=${r.slug}">${r.title}</a></h3>
-        <p class="card-excerpt">${r.excerpt || ''}</p>
-        ${cardFooter}
-      </div>
-    </article>
-  `;
+/* ===== EMPTY STATE ===== */
+function emptyStateHTML(icon, title, desc) {
+  return `<div class="empty-state">
+    <div class="empty-icon">${icon}</div>
+    <div class="empty-title">${title}</div>
+    <div class="empty-desc">${desc}</div>
+  </div>`;
 }
 
-// ===== SWITCH TAB =====
-function switchTab(tab) {
-  currentTab = tab;
-  currentPage = 0;
-  currentCat = 'all';
+/* ===== LOAD CONTENT ===== */
+async function loadContent(reset = false) {
+  if (isLoading) return;
+  isLoading = true;
 
-  // Update active tab button
-  $$('.main-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.tab === tab);
-    t.setAttribute('aria-selected', t.dataset.tab === tab);
-  });
-
-  // Update tab description
-  $$('[id^="tab-desc-"]').forEach(d => d.style.display = 'none');
-  const desc = document.getElementById('tab-desc-' + tab);
-  if (desc) desc.style.display = 'block';
-
-  // Reset kategori filter ke "Semua"
-  $$('.cat-tab').forEach(t => t.classList.remove('active'));
-  const allTab = document.querySelector('.cat-tab[data-cat="all"]');
-  if (allTab) allTab.classList.add('active');
-
-  // Load konten tab
-  loadReviews(true);
-}
-
-// ===== LOAD REVIEWS =====
-async function loadReviews(reset = false) {
-  const grid = document.getElementById('reviews-grid');
+  const grid    = document.getElementById('content-grid');
+  const lmWrap  = document.getElementById('load-more-wrap');
+  const lmBtn   = document.getElementById('btn-load-more');
   if (!grid) return;
 
   if (reset) {
     currentPage = 0;
     renderSkeletons(grid, 6);
+    if (lmWrap) lmWrap.style.display = 'none';
   }
 
-  const offset = currentPage * PAGE_SIZE;
-  let url = `/reviews?limit=${PAGE_SIZE + 1}&offset=${offset}`;
+  // Build URL
+  let url = `/reviews?limit=${PAGE_SIZE + 1}&offset=${currentPage * PAGE_SIZE}`;
+  if (currentTab === 'rekomendasi') url += '&featured=true';
+  if (currentTab === 'trending')    url += '&sort=trending';
+  if (currentCat !== 'all')         url += `&category=${currentCat}`;
 
-  // Filter berdasarkan tab
-  if (currentTab === 'rekomendasi') {
-    url += '&featured=true';
-  } else if (currentTab === 'trending') {
-    url += '&sort=trending';
-  }
-  // terbaru = default (order by created_at desc)
+  const data  = await fetchAPI(url);
+  const all   = data?.data || data || [];
+  hasMore     = all.length > PAGE_SIZE;
+  const items = hasMore ? all.slice(0, PAGE_SIZE) : all;
 
-  // Filter kategori
-  if (currentCat !== 'all') {
-    url += `&category=${currentCat}`;
-  }
-
-  const data = await fetchAPI(url);
-  const allItems = data?.data || data || [];
-
-  // Cek apakah masih ada halaman berikutnya
-  hasMore = allItems.length > PAGE_SIZE;
-  const reviews = hasMore ? allItems.slice(0, PAGE_SIZE) : allItems;
-
-  // Render
   if (reset) {
-    if (!reviews.length) {
-      grid.innerHTML = `
-        <div class="empty-state" style="grid-column:1/-1">
-          <div class="empty-state-icon">${currentTab === 'trending' ? '📊' : currentTab === 'rekomendasi' ? '⭐' : '📭'}</div>
-          <h3>${currentTab === 'trending' ? 'Belum ada konten trending' : currentTab === 'rekomendasi' ? 'Belum ada rekomendasi' : 'Belum ada konten'}</h3>
-          <p>${currentTab === 'trending' ? 'Konten akan muncul seiring bertambahnya pembaca' : 'Segera hadir!'}</p>
-        </div>`;
+    if (!items.length) {
+      const msgs = {
+        rekomendasi: ['⭐', 'Belum ada rekomendasi', 'Tandai konten sebagai featured di admin panel'],
+        trending:    ['🔥', 'Belum ada trending',    'Konten akan muncul seiring bertambahnya pembaca'],
+        terbaru:     ['🆕', 'Belum ada konten',       'Upload konten pertama lewat admin panel'],
+      };
+      const [icon, title, desc] = msgs[currentTab] || ['📭', 'Belum ada', 'Segera hadir'];
+      grid.innerHTML = emptyStateHTML(icon, title, desc);
     } else {
-      grid.innerHTML = reviews.map(reviewCardHTML).join('');
+      grid.innerHTML = items.map(contentCardHTML).join('');
     }
   } else {
-    // Append untuk load more
-    grid.insertAdjacentHTML('beforeend', reviews.map(reviewCardHTML).join(''));
+    grid.insertAdjacentHTML('beforeend', items.map(contentCardHTML).join(''));
   }
 
-  // Toggle tombol load more
-  const loadMoreWrap = document.getElementById('load-more-wrap');
-  if (loadMoreWrap) loadMoreWrap.style.display = hasMore ? 'flex' : 'none';
+  if (lmWrap) lmWrap.style.display = hasMore ? 'flex' : 'none';
+  if (lmBtn)  { lmBtn.textContent = 'Muat Lebih Banyak'; lmBtn.disabled = false; }
+
+  isLoading = false;
 }
 
-// ===== LOAD MORE =====
-function loadMore() {
-  currentPage++;
+/* ===== LOAD MORE ===== */
+function initLoadMore() {
   const btn = document.getElementById('btn-load-more');
-  if (btn) {
+  btn?.addEventListener('click', async () => {
     btn.textContent = '⏳ Memuat...';
-    btn.disabled = true;
-  }
-  loadReviews(false).then(() => {
-    if (btn) {
-      btn.textContent = 'Muat Lebih Banyak ↓';
-      btn.disabled = false;
-    }
+    btn.disabled    = true;
+    currentPage++;
+    await loadContent(false);
   });
 }
 
-// ===== INDEX PAGE =====
-async function initIndexPage() {
-  const grid = document.getElementById('reviews-grid');
-  const catTabs = document.getElementById('cat-tabs');
-  if (!grid) return;
-
-  // Load categories
-  if (catTabs) {
-    const cats = await fetchAPI('/categories');
-    if (cats) {
-      const list = cats.data || cats;
-      const allBtn = `<button class="cat-tab active" data-cat="all" onclick="filterByCat('all')">
-        <span class="cat-icon">🌟</span> Semua
-      </button>`;
-      const catBtns = list.map(c => `
-        <button class="cat-tab" data-cat="${c.id}" onclick="filterByCat('${c.id}')">
-          <span class="cat-icon">${c.icon || '📌'}</span> ${c.name}
-        </button>
-      `).join('');
-      catTabs.innerHTML = allBtn + catBtns;
-    }
-  }
-
-  // Load hero featured
-  loadFeatured();
-
-  // Load konten tab default (Terbaru)
-  loadReviews(true);
-
-  // Search
-  const searchInput = document.getElementById('search-input');
-  if (searchInput) {
-    let timer;
-    searchInput.addEventListener('input', e => {
-      clearTimeout(timer);
-      const q = e.target.value.trim();
-      if (!q) { loadReviews(true); return; }
-      timer = setTimeout(async () => {
-        renderSkeletons(grid, 6);
-        const data = await fetchAPI(`/reviews?search=${encodeURIComponent(q)}`);
-        const reviews = data?.data || data || [];
-        if (!reviews.length) {
-          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-            <div class="empty-state-icon">🔍</div>
-            <h3>Tidak ditemukan</h3>
-            <p>Coba kata kunci lain</p>
-          </div>`;
-        } else {
-          grid.innerHTML = reviews.map(reviewCardHTML).join('');
-        }
-        document.getElementById('load-more-wrap').style.display = 'none';
-      }, 400);
-    });
-  }
+/* ===== STICKY HEADER SHADOW ===== */
+function initHeaderShadow() {
+  const header = document.getElementById('header');
+  if (!header) return;
+  window.addEventListener('scroll', () => {
+    header.style.boxShadow = window.scrollY > 10 ? 'var(--shadow-md)' : '';
+  }, { passive: true });
 }
 
-// Filter by kategori
-function filterByCat(catId) {
-  currentCat = catId;
-  currentPage = 0;
-  $$('.cat-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === catId));
-  loadReviews(true);
-}
-
-// Load hero featured
-async function loadFeatured() {
-  const heroFeatured = document.getElementById('hero-featured');
-  if (!heroFeatured) return;
-  const data = await fetchAPI('/reviews?limit=1&featured=true');
-  const review = data?.data?.[0] || data?.[0];
-  if (!review) return;
-  heroFeatured.innerHTML = `
-    <div class="hero-featured-img">
-      ${review.image_url
-        ? `<img src="${review.image_url}" alt="${review.title}" loading="lazy">`
-        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:64px;background:linear-gradient(135deg,#1D4ED8,#3B82F6)">${review.emoji || '📱'}</div>`}
-    </div>
-    <div class="hero-featured-body">
-      <span class="badge badge-gold">⭐ ${review.post_type === 'list' ? 'List Unggulan' : 'Review Unggulan'}</span>
-      <h3 class="hero-featured-title"><a href="review.html?slug=${review.slug}">${review.title}</a></h3>
-      <div class="hero-featured-meta">
-        ${review.post_type !== 'list' ? `<span class="stars-display">${starsHTML(review.rating || 0)}</span>` : '<span>📋 List Produk</span>'}
-        <span>${timeAgo(review.created_at)}</span>
-      </div>
-    </div>
-  `;
-}
-
-// ===== REVIEW DETAIL PAGE =====
-async function initReviewPage() {
-  const container = document.getElementById('review-container');
-  if (!container) return;
-
-  const params = new URLSearchParams(window.location.search);
-  const slug = params.get('slug');
-  if (!slug) { window.location.href = '/'; return; }
-
-  container.innerHTML = `<div class="empty-state" style="padding:80px 20px">
-    <div class="empty-state-icon">⏳</div><h3>Memuat...</h3>
-  </div>`;
-
-  // Tracking view
-  fetchAPI(`/track-view?slug=${slug}`).catch(() => {});
-
-  const data = await fetchAPI(`/reviews/${slug}`);
-  const review = data?.data || data;
-
-  if (!review) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">😕</div>
-      <h3>Review tidak ditemukan</h3>
-      <p><a href="/" style="color:var(--primary)">Kembali ke beranda</a></p></div>`;
-    return;
-  }
-
-  document.title = `${review.title} - Revpeak`;
-  const metaDesc = document.querySelector('meta[name="description"]');
-  if (metaDesc) metaDesc.content = review.excerpt || '';
-
-  // Cek tipe konten
-  if (review.post_type === 'list') {
-    renderListArticle(container, review);
-  } else {
-    renderReviewArticle(container, review);
-  }
-
-  loadRelated(review.category_id, review.slug);
-}
-
-// ===== RENDER REVIEW BIASA =====
-function renderReviewArticle(container, review) {
-  let pros = [], cons = [];
-  try { pros = typeof review.pros === 'string' ? JSON.parse(review.pros) : (review.pros || []); } catch(e) {}
-  try { cons = typeof review.cons === 'string' ? JSON.parse(review.cons) : (review.cons || []); } catch(e) {}
-
-  const stars = starsHTML(review.rating || 0);
-
-  container.innerHTML = `
-    <div class="review-layout">
-      <main class="review-main">
-        <header class="review-header">
-          <nav class="review-breadcrumb">
-            <a href="/">Beranda</a> › 
-            <a href="/?cat=${review.category_id}">${review.categories?.name || 'Review'}</a> › 
-            ${review.title}
-          </nav>
-          <h1 class="review-title">${review.title}</h1>
-          <div class="review-meta-bar">
-            <span class="badge badge-blue">${review.categories?.name || 'Review'}</span>
-            <span class="review-meta-date">📅 ${new Date(review.created_at).toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'})}</span>
-            <span class="review-meta-author">✍️ ${review.author || 'Admin'}</span>
-            ${review.views ? `<span class="review-meta-date">👁️ ${review.views} views</span>` : ''}
-          </div>
-        </header>
-
-        ${review.image_url
-          ? `<img class="review-hero-img" src="${review.image_url}" alt="${review.title}">`
-          : `<div class="review-hero-img-placeholder">${review.emoji || '📱'}</div>`}
-
-        <div class="review-score-bar">
-          <div class="review-score-num">${review.rating}<span>/5</span></div>
-          <div class="review-score-details">
-            <div class="review-score-stars">${stars}</div>
-            <div class="review-score-verdict">${ratingVerdict(review.rating || 0)}</div>
-          </div>
-        </div>
-
-        ${(pros.length || cons.length) ? `
-          <div class="pros-cons" style="margin-bottom:28px">
-            ${pros.length ? `<div class="pros"><div class="pros-cons-title">👍 Kelebihan</div>
-              <ul>${pros.map(p => `<li>${p}</li>`).join('')}</ul></div>` : ''}
-            ${cons.length ? `<div class="cons"><div class="pros-cons-title">👎 Kekurangan</div>
-              <ul>${cons.map(c => `<li>${c}</li>`).join('')}</ul></div>` : ''}
-          </div>` : ''}
-
-        <div class="review-content">${review.content || '<p>Konten review sedang ditulis...</p>'}</div>
-      </main>
-
-      <aside class="review-sidebar">
-        <div class="sidebar-sticky">
-          ${review.rating ? `
-            <div class="sidebar-card">
-              <div class="sidebar-title">Penilaian Kami</div>
-              <div class="rating-widget">
-                <div class="rating-score">${review.rating}<span>/5</span></div>
-                <div class="rating-stars-big">${stars}</div>
-                <div class="rating-label">${ratingVerdict(review.rating)}</div>
-              </div>
-            </div>` : ''}
-          ${review.affiliate_url ? `
-            <div class="sidebar-card">
-              <div class="sidebar-title">🛒 Dapatkan Sekarang</div>
-              <a href="${review.affiliate_url}" target="_blank" rel="nofollow noopener" class="btn-affiliate">
-                🛍️ Cek Harga Terbaik
-              </a>
-              <p class="btn-affiliate-note">* Link afiliasi – mendukung kami tanpa biaya tambahan</p>
-            </div>` : ''}
-          <div class="sidebar-card">
-            <div class="sidebar-title">📤 Bagikan</div>
-            <div style="display:flex;gap:8px">
-              <button onclick="shareReview('wa')" class="btn-read-more" style="flex:1;text-align:center">WhatsApp</button>
-              <button onclick="shareReview('copy')" class="btn-read-more" style="flex:1;text-align:center">Copy Link</button>
-            </div>
-          </div>
-        </div>
-      </aside>
-    </div>`;
-}
-
-// ===== RENDER LIST ARTICLE =====
-// Format: "Rekomendasi 5 Baju Lebaran", dll
-function renderListArticle(container, review) {
-  // products disimpan di kolom 'products' sebagai JSON array
-  // Format: [{ name, price, image, affiliate_url, description, rating }]
-  let products = [];
-  try {
-    products = typeof review.products === 'string'
-      ? JSON.parse(review.products)
-      : (review.products || []);
-  } catch(e) {}
-
-  const productsHTML = products.length
-    ? products.map((p, i) => `
-        <div class="list-product-card">
-          <div class="list-product-rank">${i + 1}</div>
-          <div class="list-product-img">
-            ${p.image
-              ? `<img src="${p.image}" alt="${p.name}" loading="lazy">`
-              : `<div class="list-product-img-placeholder">${p.emoji || '🛍️'}</div>`}
-          </div>
-          <div class="list-product-body">
-            <h3 class="list-product-name">${p.name}</h3>
-            ${p.description ? `<p class="list-product-desc">${p.description}</p>` : ''}
-            <div class="list-product-footer">
-              ${p.price ? `<span class="list-product-price">${p.price}</span>` : ''}
-              ${p.rating ? `<span class="list-product-rating">★ ${p.rating}</span>` : ''}
-              ${p.affiliate_url ? `
-                <a href="${p.affiliate_url}" target="_blank" rel="nofollow noopener" class="btn-affiliate-small">
-                  🛍️ Cek Harga
-                </a>` : ''}
-            </div>
-          </div>
-        </div>
-      `).join('')
-    : `<p style="color:var(--text-muted)">Produk sedang dimuat...</p>`;
-
-  container.innerHTML = `
-    <div class="review-layout">
-      <main class="review-main">
-        <header class="review-header">
-          <nav class="review-breadcrumb">
-            <a href="/">Beranda</a> › 
-            <a href="/?cat=${review.category_id}">${review.categories?.name || 'List'}</a> › 
-            ${review.title}
-          </nav>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-            <span class="badge badge-purple">📋 List Produk</span>
-            <span class="badge badge-blue">${review.categories?.name || ''}</span>
-          </div>
-          <h1 class="review-title">${review.title}</h1>
-          <div class="review-meta-bar">
-            <span class="review-meta-date">📅 ${new Date(review.created_at).toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'})}</span>
-            <span class="review-meta-author">✍️ ${review.author || 'Admin'}</span>
-            ${review.views ? `<span class="review-meta-date">👁️ ${review.views} views</span>` : ''}
-          </div>
-        </header>
-
-        ${review.image_url
-          ? `<img class="review-hero-img" src="${review.image_url}" alt="${review.title}">`
-          : `<div class="review-hero-img-placeholder">${review.emoji || '📋'}</div>`}
-
-        ${review.excerpt ? `
-          <div class="list-intro">
-            <p>${review.excerpt}</p>
-          </div>` : ''}
-
-        ${review.content ? `<div class="review-content">${review.content}</div>` : ''}
-
-        <!-- Daftar Produk -->
-        <div class="list-products-section">
-          <h2 class="list-products-title">
-            🛍️ ${products.length ? products.length + ' Produk' : 'Daftar Produk'} Rekomendasi
-          </h2>
-          <div class="list-products-grid">
-            ${productsHTML}
-          </div>
-        </div>
-
-      </main>
-
-      <aside class="review-sidebar">
-        <div class="sidebar-sticky">
-          <div class="sidebar-card">
-            <div class="sidebar-title">📋 Isi Artikel</div>
-            <div class="toc-list">
-              ${products.map((p, i) => `
-                <div class="toc-item">
-                  <span class="toc-num">${i + 1}</span>
-                  <span class="toc-name">${p.name}</span>
-                </div>`).join('')}
-            </div>
-          </div>
-          <div class="sidebar-card">
-            <div class="sidebar-title">📤 Bagikan</div>
-            <div style="display:flex;gap:8px">
-              <button onclick="shareReview('wa')" class="btn-read-more" style="flex:1;text-align:center">WhatsApp</button>
-              <button onclick="shareReview('copy')" class="btn-read-more" style="flex:1;text-align:center">Copy Link</button>
-            </div>
-          </div>
-        </div>
-      </aside>
-    </div>`;
-}
-
-// ===== RELATED =====
-async function loadRelated(categoryId, currentSlug) {
-  const section = document.getElementById('related-section');
-  if (!section || !categoryId) return;
-  const data = await fetchAPI(`/reviews?category=${categoryId}&limit=4`);
-  const reviews = (data?.data || data || []).filter(r => r.slug !== currentSlug).slice(0, 3);
-  if (!reviews.length) { section.style.display = 'none'; return; }
-  const grid = section.querySelector('.reviews-grid');
-  if (grid) grid.innerHTML = reviews.map(reviewCardHTML).join('');
-}
-
-// ===== SHARE =====
-function shareReview(method) {
-  const url = window.location.href;
-  const title = document.title;
-  if (method === 'wa') {
-    window.open(`https://wa.me/?text=${encodeURIComponent(title + '\n' + url)}`, '_blank');
-  } else {
-    navigator.clipboard.writeText(url).then(() => showToast('Link berhasil disalin! ✅', 'success'));
-  }
-}
-
-// ===== INIT =====
+/* ===== INIT ===== */
 document.addEventListener('DOMContentLoaded', () => {
-  ThemeManager.init();
+  initTheme();
+  initLogo();
+  initDrawer();
+  initSearch();
   initScrollTop();
-  initMobileMenu();
-  initIndexPage();
-  initReviewPage();
+  initTabs();
+  initLoadMore();
+  initHeaderShadow();
+  loadCategories();
+  loadHero();
+  loadContent(true);
 });
