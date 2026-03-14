@@ -1,0 +1,414 @@
+/* ===========================================
+   REVPEAK — pages.css
+   Dipakai oleh: tokoh, tentang, kontak,
+                 kebijakan, disclaimer
+=========================================== */
+
+/* Page Hero */
+.page-hero {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 28px 0 24px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.breadcrumb a { color: var(--accent); }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { color: var(--text-light); }
+
+.page-hero-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.page-hero-desc {
+  font-size: 15px;
+  color: var(--text-muted);
+  max-width: 560px;
+  line-height: 1.6;
+}
+
+/* ===========================
+   TOKOH PAGE
+=========================== */
+.tokoh-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+.tokoh-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: block;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.tokoh-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.tokoh-card-img {
+  width: 100%;
+  height: 190px;
+  overflow: hidden;
+  background: var(--surface2);
+  position: relative;
+}
+
+.tokoh-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  transition: transform 0.4s;
+}
+
+.tokoh-card:hover .tokoh-card-img img { transform: scale(1.05); }
+
+.tokoh-img-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  background: linear-gradient(135deg, var(--surface2), var(--border));
+}
+
+.tokoh-card-body { padding: 14px 16px 16px; }
+
+.tokoh-profession {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}
+
+.tokoh-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 5px;
+  line-height: 1.3;
+}
+
+.tokoh-nation {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.tokoh-bio {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* ===========================
+   TENTANG PAGE
+=========================== */
+.about-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px;
+  padding: 40px 0 56px;
+}
+
+.about-main h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 32px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+}
+
+.about-main h2:first-child { margin-top: 0; }
+
+.about-main p {
+  font-size: 15px;
+  color: var(--text-muted);
+  line-height: 1.75;
+  margin-bottom: 16px;
+}
+
+.about-main ul {
+  margin: 0 0 16px 20px;
+}
+
+.about-main li {
+  font-size: 15px;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 6px;
+}
+
+.about-values {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 20px 0 28px;
+}
+
+.value-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.value-icon { font-size: 28px; margin-bottom: 10px; }
+.value-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+.value-desc { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+
+.about-sidebar {}
+
+.about-sidebar-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  position: sticky;
+  top: 170px;
+}
+
+.about-sidebar-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.contact-item a { color: var(--accent); }
+.contact-item a:hover { text-decoration: underline; }
+
+/* ===========================
+   KONTAK PAGE
+=========================== */
+.kontak-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 40px;
+  padding: 40px 0 56px;
+  align-items: start;
+}
+
+.kontak-form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+}
+
+.kontak-form-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.kontak-form-desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.form-group-k { margin-bottom: 18px; }
+.form-label-k {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 7px;
+}
+
+.form-input-k {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-input-k:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.form-input-k::placeholder { color: var(--text-light); }
+
+textarea.form-input-k { resize: vertical; line-height: 1.6; }
+
+.btn-kirim {
+  width: 100%;
+  padding: 13px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  transition: background 0.2s, transform 0.2s;
+  margin-top: 4px;
+}
+
+.btn-kirim:hover { background: var(--accent-dark); transform: translateY(-1px); }
+
+.form-success {
+  text-align: center;
+  padding: 32px 20px;
+  display: none;
+}
+
+.form-success-icon { font-size: 48px; margin-bottom: 14px; }
+.form-success-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.form-success-desc  { font-size: 14px; color: var(--text-muted); }
+
+.kontak-info-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kontak-info-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.kontak-info-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.kontak-info-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.kontak-info-val {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.kontak-info-val a { color: var(--accent); }
+
+/* ===========================
+   STATIC PAGES (kebijakan, disclaimer)
+=========================== */
+.static-layout {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 0 60px;
+}
+
+.static-content h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 32px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.static-content h2:first-child { margin-top: 0; }
+
+.static-content p {
+  font-size: 15px;
+  color: var(--text-muted);
+  line-height: 1.8;
+  margin-bottom: 14px;
+}
+
+.static-content ul {
+  margin: 0 0 16px 22px;
+}
+
+.static-content li {
+  font-size: 15px;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 6px;
+}
+
+.static-content a { color: var(--accent); }
+.static-content a:hover { text-decoration: underline; }
+
+.static-last-updated {
+  display: inline-block;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 28px;
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+@media (max-width: 900px) {
+  .tokoh-grid { grid-template-columns: repeat(2, 1fr); }
+  .about-layout { grid-template-columns: 1fr; }
+  .about-sidebar { display: none; }
+  .kontak-layout { grid-template-columns: 1fr; }
+  .about-values { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .tokoh-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .page-hero-title { font-size: 22px; }
+  .kontak-form-card { padding: 20px; }
+}
