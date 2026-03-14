@@ -3,180 +3,222 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Hubungi Revpeak – Kirim pesan, saran, atau pertanyaan kepada tim kami.">
+  <meta name="description" content="Hubungi tim Revpeak untuk pertanyaan, saran, atau kolaborasi.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://revpeak.web.id/kontak.html">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
-  <title>Kontak – Revpeak</title>
-  <style>
-    .page-hero { background: linear-gradient(135deg, var(--primary) 0%, #1E40AF 100%); padding: 48px 0; color: white; text-align: center; }
-    .page-hero h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; }
-    .page-hero p { color: rgba(255,255,255,0.85); }
-    .contact-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 900px; margin: 0 auto; padding: 56px 20px; }
-    .contact-info h2 { font-size: 22px; font-weight: 800; margin-bottom: 16px; }
-    .contact-info p { font-size: 15px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 24px; }
-    .contact-item { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 20px; }
-    .contact-item-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
-    .contact-item-label { font-size: 13px; color: var(--text-muted); margin-bottom: 2px; }
-    .contact-item-value { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-    .contact-form { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; }
-    .contact-form h2 { font-size: 20px; font-weight: 800; margin-bottom: 24px; }
-    .form-group { margin-bottom: 18px; }
-    .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary); }
-    .form-group input, .form-group select, .form-group textarea {
-      width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm); background: var(--bg); color: var(--text-primary);
-      font-size: 14px; font-family: inherit; transition: border-color 0.2s;
-    }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-      outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
-    }
-    .form-group textarea { resize: vertical; min-height: 120px; }
-    .btn-submit {
-      width: 100%; padding: 12px; background: var(--primary); color: white;
-      border-radius: var(--radius-sm); font-weight: 700; font-size: 15px;
-      transition: background 0.2s, transform 0.2s; border: none; cursor: pointer;
-    }
-    .btn-submit:hover { background: var(--primary-dark); transform: translateY(-1px); }
-    @media (max-width: 768px) { .contact-layout { grid-template-columns: 1fr; } }
-  </style>
+  <link rel="stylesheet" href="css/pages.css">
+  <title>Dukungan – Revpeak</title>
 </head>
 <body>
 
-  <header class="header">
-    <div class="container">
-      <div class="header-inner">
-        <a href="/" class="logo">⚡ Rev<span>peak</span></a>
-        <div class="search-wrap">
-          <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input type="search" placeholder="Cari review..." aria-label="Cari"
-            onkeydown="if(event.key==='Enter')window.location.href='/?q='+encodeURIComponent(this.value)">
-        </div>
-        <nav id="main-nav" class="nav">
-          <a href="/">Beranda</a>
-          <a href="kategori.html">Kategori</a>
-          <a href="tentang.html">Tentang</a>
-        </nav>
-        <button id="theme-toggle" class="theme-toggle" aria-label="Ganti tema">🌙</button>
-        <button id="hamburger" class="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
-      </div>
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="drawer-logo"><div class="logo-icon">R</div><span class="logo-text">Rev<span>peak</span></span></div>
+      <button class="drawer-close" id="drawer-close"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
+    <nav class="drawer-nav">
+      <a href="/" class="drawer-link"><span class="drawer-link-icon">🏠</span><span>Beranda</span></a>
+      <a href="tokoh.html" class="drawer-link"><span class="drawer-link-icon">👤</span><span>Tokoh</span></a>
+      <a href="tentang.html" class="drawer-link"><span class="drawer-link-icon">ℹ️</span><span>Tentang</span></a>
+      <a href="kontak.html" class="drawer-link active"><span class="drawer-link-icon">💬</span><span>Dukungan</span></a>
+    </nav>
+    <div class="drawer-footer">
+      <div class="drawer-theme-row">
+        <span class="drawer-theme-label">Mode Gelap</span>
+        <button class="theme-toggle-pill" id="theme-toggle" role="switch" aria-checked="false"><span class="theme-toggle-thumb"></span></button>
+      </div>
+      <p class="drawer-version">Revpeak v2.0</p>
+    </div>
+  </aside>
+
+  <header class="header" id="header">
+    <div class="header-top"><div class="header-top-inner container">
+      <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      <a href="/" class="header-logo">
+        <div class="logo-icon"><img src="" id="logo-img" alt="Logo" onerror="this.style.display='none'"><span id="logo-letter">R</span></div>
+        <div class="header-logo-text"><span class="logo-text">Rev<span>peak</span></span><span class="logo-tagline">Review Jujur & Terpercaya</span></div>
+      </a>
+    </div></div>
+    <div class="header-search-wrap"><div class="container"><div class="header-search-inner">
+      <svg class="search-icon-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" id="search-input" class="search-input" placeholder="Cari review, produk..." autocomplete="off">
+      <button class="search-clear" id="search-clear">✕</button>
+    </div></div></div>
   </header>
 
   <div class="page-hero">
     <div class="container">
-      <h1>📬 Hubungi Kami</h1>
-      <p>Ada pertanyaan, saran, atau ingin kolaborasi? Kami siap membantu!</p>
+      <nav class="breadcrumb"><a href="/">Beranda</a><span>›</span><span>Dukungan</span></nav>
+      <h1 class="page-hero-title">💬 Hubungi Kami</h1>
+      <p class="page-hero-desc">Ada pertanyaan, saran, atau ingin berkolaborasi? Kami siap mendengar dan membantu kamu.</p>
     </div>
   </div>
 
-  <main class="container">
-    <div class="contact-layout">
+  <main>
+    <div class="container">
+      <div class="kontak-layout">
 
-      <!-- Info -->
-      <div class="contact-info">
-        <h2>Mari Terhubung</h2>
-        <p>Kami senang mendengar dari kamu. Apakah itu pertanyaan tentang review, saran konten, atau peluang kolaborasi – jangan ragu untuk menghubungi kami.</p>
+        <!-- Form -->
+        <div class="kontak-form-card">
+          <h2 class="kontak-form-title">Kirim Pesan</h2>
+          <p class="kontak-form-desc">Isi formulir di bawah dan kami akan membalas melalui email dalam 1–2 hari kerja.</p>
 
-        <div class="contact-item">
-          <span class="contact-item-icon">📧</span>
-          <div>
-            <div class="contact-item-label">Email</div>
-            <div class="contact-item-value">hello@revpeak.web.id</div>
+          <div id="form-wrap">
+            <div class="form-group-k">
+              <label class="form-label-k">Nama Lengkap</label>
+              <input type="text" id="k-nama" class="form-input-k" placeholder="Masukkan nama kamu...">
+            </div>
+            <div class="form-group-k">
+              <label class="form-label-k">Alamat Email</label>
+              <input type="email" id="k-email" class="form-input-k" placeholder="email@contoh.com">
+            </div>
+            <div class="form-group-k">
+              <label class="form-label-k">Subjek</label>
+              <select id="k-subjek" class="form-input-k">
+                <option value="">Pilih subjek pesan...</option>
+                <option value="Pertanyaan Umum">Pertanyaan Umum</option>
+                <option value="Saran & Masukan">Saran & Masukan</option>
+                <option value="Kolaborasi / Afiliasi">Kolaborasi / Afiliasi</option>
+                <option value="Permintaan Review">Permintaan Review</option>
+                <option value="Laporkan Masalah">Laporkan Masalah</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+            <div class="form-group-k">
+              <label class="form-label-k">Pesan</label>
+              <textarea id="k-pesan" class="form-input-k" rows="5" placeholder="Tulis pesan kamu di sini..."></textarea>
+            </div>
+            <button class="btn-kirim" onclick="kirimPesan()">✉️ Kirim Pesan</button>
+          </div>
+
+          <div class="form-success" id="form-success">
+            <div class="form-success-icon">✅</div>
+            <div class="form-success-title">Pesan Terkirim!</div>
+            <div class="form-success-desc">Terima kasih telah menghubungi kami. Kami akan membalas email kamu dalam 1–2 hari kerja.</div>
           </div>
         </div>
 
-        <div class="contact-item">
-          <span class="contact-item-icon">✈️</span>
-          <div>
-            <div class="contact-item-label">Telegram</div>
-            <div class="contact-item-value">@revpeak</div>
+        <!-- Info Cards -->
+        <div class="kontak-info-cards">
+          <div class="kontak-info-card">
+            <div class="kontak-info-icon">📧</div>
+            <div>
+              <div class="kontak-info-title">Email</div>
+              <div class="kontak-info-val"><a href="/cdn-cgi/l/email-protection#5038353c3c3f102235262035313b7e2735327e3934"><span class="__cf_email__" data-cfemail="2b434e4747446b594e5d5b4e4a40055c4e4905424f">[email&#160;protected]</span></a></div>
+            </div>
+          </div>
+          <div class="kontak-info-card">
+            <div class="kontak-info-icon">⏰</div>
+            <div>
+              <div class="kontak-info-title">Waktu Respons</div>
+              <div class="kontak-info-val">Kami biasanya membalas dalam 1–2 hari kerja. Untuk urusan mendesak, kirim email langsung.</div>
+            </div>
+          </div>
+          <div class="kontak-info-card">
+            <div class="kontak-info-icon">🤝</div>
+            <div>
+              <div class="kontak-info-title">Kolaborasi</div>
+              <div class="kontak-info-val">Tertarik bekerja sama? Kami terbuka untuk kolaborasi review produk, afiliasi, dan sponsorship yang relevan.</div>
+            </div>
+          </div>
+          <div class="kontak-info-card">
+            <div class="kontak-info-icon">📝</div>
+            <div>
+              <div class="kontak-info-title">Permintaan Review</div>
+              <div class="kontak-info-val">Ingin produkmu diulas? Kirim detail produk melalui formulir atau email kami.</div>
+            </div>
+          </div>
+          <div class="kontak-info-card">
+            <div class="kontak-info-icon">🌐</div>
+            <div>
+              <div class="kontak-info-title">Ikuti Kami</div>
+              <div class="kontak-info-val" style="display:flex;gap:14px;margin-top:8px;align-items:center">
+                <!-- Instagram -->
+                <a href="#" aria-label="Instagram" class="social-icon-link" title="Instagram">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <radialGradient id="ig-grad" cx="30%" cy="107%" r="150%">
+                        <stop offset="0%" stop-color="#fdf497"/>
+                        <stop offset="5%" stop-color="#fdf497"/>
+                        <stop offset="45%" stop-color="#fd5949"/>
+                        <stop offset="60%" stop-color="#d6249f"/>
+                        <stop offset="90%" stop-color="#285AEB"/>
+                      </radialGradient>
+                    </defs>
+                    <rect width="24" height="24" rx="6" fill="url(#ig-grad)"/>
+                    <path d="M12 7.5A4.5 4.5 0 1 0 12 16.5 4.5 4.5 0 0 0 12 7.5zm0 7.4A2.9 2.9 0 1 1 12 9.1 2.9 2.9 0 0 1 12 14.9z" fill="white"/>
+                    <circle cx="16.8" cy="7.2" r="1.05" fill="white"/>
+                    <rect x="3.5" y="3.5" width="17" height="17" rx="4.5" stroke="white" stroke-width="1.5" fill="none"/>
+                  </svg>
+                </a>
+                <!-- YouTube -->
+                <a href="#" aria-label="YouTube" class="social-icon-link" title="YouTube">
+                  <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="24" height="24" rx="6" fill="#FF0000"/>
+                    <path d="M19.6 8.2s-.2-1.3-.8-1.9c-.7-.8-1.6-.8-2-.8C14.6 5.4 12 5.4 12 5.4s-2.6 0-4.8.1c-.4 0-1.3.1-2 .8-.6.6-.8 1.9-.8 1.9S4.2 9.6 4.2 11v1.3c0 1.4.2 2.8.2 2.8s.2 1.3.8 1.9c.7.8 1.7.7 2.2.8C8.8 18 12 18 12 18s2.6 0 4.8-.1c.4 0 1.3-.1 2-.8.6-.6.8-1.9.8-1.9s.2-1.4.2-2.8V11c0-1.4-.2-2.8-.2-2.8zM10.2 14V9.8l5.4 2.1-5.4 2.1z" fill="white"/>
+                  </svg>
+                </a>
+                <!-- Telegram -->
+                <a href="#" aria-label="Telegram" class="social-icon-link" title="Telegram">
+                  <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="24" height="24" rx="6" fill="#2AABEE"/>
+                    <path d="M5.2 11.7 18.3 6.5c.6-.2 1.2.1 1 .9l-2.2 10.4c-.2.7-.6.9-1.1.6l-3-2.3-1.5 1.4c-.2.2-.3.3-.6.3l.2-3.1 5.2-4.7c.2-.2 0-.3-.3-.1l-6.4 4-2.8-.9c-.6-.2-.6-.6.4-1z" fill="white"/>
+                  </svg>
+                </a>
+                <!-- Email -->
+                <a href="mailto:hello@revpeak.web.id" aria-label="Email" class="social-icon-link" title="Email">
+                  <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="24" height="24" rx="6" fill="#E03E0B"/>
+                    <path d="M5 8a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8z" fill="none" stroke="white" stroke-width="1.2"/>
+                    <path d="M5.5 8.5 12 13l6.5-4.5" stroke="white" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+                  </svg>
+                </a>
+              </div>
+              <style>
+                .social-icon-link { display:inline-flex; align-items:center; justify-content:center; transition:transform 0.2s, opacity 0.2s; }
+                .social-icon-link:hover { transform:scale(1.15); opacity:0.85; }
+              </style>
+            </div>
           </div>
         </div>
 
-        <div class="contact-item">
-          <span class="contact-item-icon">📸</span>
-          <div>
-            <div class="contact-item-label">Instagram</div>
-            <div class="contact-item-value">@revpeak.id</div>
-          </div>
-        </div>
-
-        <div class="contact-item">
-          <span class="contact-item-icon">⏱️</span>
-          <div>
-            <div class="contact-item-label">Waktu Respons</div>
-            <div class="contact-item-value">1–3 hari kerja</div>
-          </div>
-        </div>
       </div>
-
-      <!-- Form -->
-      <div class="contact-form">
-        <h2>Kirim Pesan</h2>
-        <div class="form-group">
-          <label for="nama">Nama</label>
-          <input type="text" id="nama" placeholder="Nama kamu" required>
-        </div>
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" placeholder="email@kamu.com" required>
-        </div>
-        <div class="form-group">
-          <label for="topik">Topik</label>
-          <select id="topik">
-            <option value="">Pilih topik...</option>
-            <option value="pertanyaan">Pertanyaan tentang Review</option>
-            <option value="saran">Saran Konten</option>
-            <option value="kolaborasi">Kolaborasi / Kerja Sama</option>
-            <option value="bug">Laporan Bug</option>
-            <option value="lainnya">Lainnya</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="pesan">Pesan</label>
-          <textarea id="pesan" placeholder="Tulis pesanmu di sini..." required></textarea>
-        </div>
-        <button class="btn-submit" onclick="kirimPesan()">Kirim Pesan ✉️</button>
-      </div>
-
     </div>
   </main>
 
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-bottom">
-        <p>© 2025 Revpeak. Semua hak dilindungi.</p>
-        <div class="social-links">
-          <a href="#" aria-label="Instagram">📸</a>
-          <a href="#" aria-label="YouTube">▶️</a>
-          <a href="#" aria-label="Telegram">✈️</a>
-        </div>
+  <footer class="footer"><div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo"><div class="logo-icon">R</div><span class="logo-text">Rev<span>peak</span></span></div>
+        <p class="footer-desc">Review jujur dan mendalam untuk membantu kamu membuat keputusan belanja yang lebih cerdas.</p>
+        <a href="/cdn-cgi/l/email-protection#f49c9198989bb48691828491959fda839196da9d90" class="footer-email">📧 <span class="__cf_email__" data-cfemail="f79f929b9b98b78592818792969cd9809295d99e93">[email&#160;protected]</span></a>
       </div>
+      <div class="footer-col"><h4>Navigasi</h4><a href="/">Beranda</a><a href="tokoh.html">Tokoh</a><a href="tentang.html">Tentang</a><a href="kontak.html">Dukungan</a></div>
+      <div class="footer-col"><h4>Kategori</h4><a href="kategori.html">Semua Kategori</a><a href="kategori.html?cat=smartphone">Smartphone</a><a href="kategori.html?cat=laptop">Laptop</a></div>
+      <div class="footer-col"><h4>Legal</h4><a href="kebijakan.html">Kebijakan Privasi</a><a href="disclaimer.html">Disclaimer</a><a href="sitemap.xml">Sitemap</a></div>
     </div>
-  </footer>
+    <div class="footer-bottom"><p>© 2025 Revpeak. Semua hak dilindungi.</p><div class="social-links"><a href="#" aria-label="Instagram">📸</a><a href="#" aria-label="YouTube">▶️</a><a href="#" aria-label="Telegram">✈️</a></div></div>
+  </div></footer>
 
-  <button id="scroll-top" class="scroll-top" aria-label="Kembali ke atas">↑</button>
-  <script src="js/app.js"></script>
+  <button class="scroll-top" id="scroll-top">↑</button>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="js/app.js"></script>
   <script>
     function kirimPesan() {
-      const nama = document.getElementById('nama').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const pesan = document.getElementById('pesan').value.trim();
+      const nama   = document.getElementById('k-nama')?.value.trim();
+      const email  = document.getElementById('k-email')?.value.trim();
+      const subjek = document.getElementById('k-subjek')?.value;
+      const pesan  = document.getElementById('k-pesan')?.value.trim();
+
       if (!nama || !email || !pesan) {
-        showToast('Mohon lengkapi semua field yang wajib diisi.', 'error');
+        alert('Nama, email, dan pesan wajib diisi!');
         return;
       }
-      // Kirim via mailto (bisa diganti dengan API Worker nanti)
-      const subject = encodeURIComponent('Pesan dari ' + nama + ' - Revpeak');
-      const body = encodeURIComponent(`Nama: ${nama}\nEmail: ${email}\n\nPesan:\n${pesan}`);
-      window.location.href = `mailto:hello@revpeak.web.id?subject=${subject}&body=${body}`;
-      showToast('Membuka aplikasi email kamu... 📧', 'success');
-    }
-  </script>
-</body>
-</html>
+
+      const subject = encodeURIComponent(`[Revpeak] ${subjek || 'Pesan dari Website'} – ${nama}`);
+   

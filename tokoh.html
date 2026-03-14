@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Profil tokoh inspiratif – pengusaha, atlet, ilmuwan, dan lebih banyak lagi di Revpeak.">
+  <meta property="og:title" content="Tokoh – Revpeak">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://revpeak.web.id/tokoh.html">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <title>Tokoh – Revpeak</title>
+</head>
+<body>
+
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="drawer-logo"><div class="logo-icon" id="drawer-logo-icon">R</div><span class="logo-text">Rev<span>peak</span></span></div>
+      <button class="drawer-close" id="drawer-close"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <nav class="drawer-nav">
+      <a href="/" class="drawer-link"><span class="drawer-link-icon">🏠</span><span>Beranda</span></a>
+      <a href="tokoh.html" class="drawer-link active"><span class="drawer-link-icon">👤</span><span>Tokoh</span></a>
+      <a href="tentang.html" class="drawer-link"><span class="drawer-link-icon">ℹ️</span><span>Tentang</span></a>
+      <a href="kontak.html" class="drawer-link"><span class="drawer-link-icon">💬</span><span>Dukungan</span></a>
+    </nav>
+    <div class="drawer-footer">
+      <div class="drawer-theme-row">
+        <span class="drawer-theme-label">Mode Gelap</span>
+        <button class="theme-toggle-pill" id="theme-toggle" role="switch" aria-checked="false"><span class="theme-toggle-thumb"></span></button>
+      </div>
+      <p class="drawer-version">Revpeak v2.0</p>
+    </div>
+  </aside>
+
+  <header class="header" id="header">
+    <div class="header-top"><div class="header-top-inner container">
+      <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      <a href="/" class="header-logo">
+        <div class="logo-icon"><img src="" id="logo-img" alt="Logo" onerror="this.style.display='none'"><span id="logo-letter">R</span></div>
+        <div class="header-logo-text"><span class="logo-text">Rev<span>peak</span></span><span class="logo-tagline">Review Jujur & Terpercaya</span></div>
+      </a>
+    </div></div>
+    <div class="header-search-wrap"><div class="container"><div class="header-search-inner">
+      <svg class="search-icon-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" id="search-input" class="search-input" placeholder="Cari tokoh..." autocomplete="off">
+      <button class="search-clear" id="search-clear">✕</button>
+    </div></div></div>
+  </header>
+
+  <!-- Page Header -->
+  <div class="page-hero">
+    <div class="container">
+      <nav class="breadcrumb"><a href="/">Beranda</a><span>›</span><span>Tokoh</span></nav>
+      <h1 class="page-hero-title">👤 Tokoh Inspiratif</h1>
+      <p class="page-hero-desc">Profil lengkap tokoh-tokoh berpengaruh dari dunia bisnis, olahraga, sains, dan budaya.</p>
+    </div>
+  </div>
+
+  <main class="main-section">
+    <div class="container">
+
+      <!-- Filter chips -->
+      <div class="cat-chips-scroll" id="filter-chips">
+        <button class="cat-chip active" data-filter="all">🌟 Semua</button>
+        <button class="cat-chip" data-filter="pengusaha">💼 Pengusaha</button>
+        <button class="cat-chip" data-filter="atlet">🏆 Atlet</button>
+        <button class="cat-chip" data-filter="ilmuwan">🔬 Ilmuwan</button>
+        <button class="cat-chip" data-filter="seniman">🎨 Seniman</button>
+        <button class="cat-chip" data-filter="politisi">🏛️ Politisi</button>
+      </div>
+
+      <!-- Section header -->
+      <div class="section-header">
+        <h2 class="section-title" id="tokoh-section-title">Semua Tokoh</h2>
+      </div>
+
+      <!-- Tokoh Grid -->
+      <div class="tokoh-grid" id="tokoh-grid">
+        <div class="skeleton-card"><div class="skeleton" style="height:180px;border-radius:12px 12px 0 0"></div><div class="sk-body"><div class="skeleton sk-line" style="width:60%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:40%"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton" style="height:180px;border-radius:12px 12px 0 0"></div><div class="sk-body"><div class="skeleton sk-line" style="width:60%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:40%"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton" style="height:180px;border-radius:12px 12px 0 0"></div><div class="sk-body"><div class="skeleton sk-line" style="width:60%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:40%"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton" style="height:180px;border-radius:12px 12px 0 0"></div><div class="sk-body"><div class="skeleton sk-line" style="width:60%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:40%"></div></div></div>
+      </div>
+
+      <div class="load-more-wrap" id="load-more-wrap" style="display:none">
+        <button class="btn-load-more" id="btn-load-more">Muat Lebih Banyak</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer"><div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo"><div class="logo-icon">R</div><span class="logo-text">Rev<span>peak</span></span></div>
+        <p class="footer-desc">Review jujur dan mendalam untuk membantu kamu membuat keputusan belanja yang lebih cerdas.</p>
+        <a href="mailto:hello@revpeak.web.id" class="footer-email">📧 hello@revpeak.web.id</a>
+      </div>
+      <div class="footer-col"><h4>Navigasi</h4><a href="/">Beranda</a><a href="tokoh.html">Tokoh</a><a href="tentang.html">Tentang</a><a href="kontak.html">Dukungan</a></div>
+      <div class="footer-col"><h4>Kategori</h4><a href="kategori.html">Semua Kategori</a><a href="kategori.html?cat=smartphone">Smartphone</a><a href="kategori.html?cat=laptop">Laptop</a></div>
+      <div class="footer-col"><h4>Legal</h4><a href="kebijakan.html">Kebijakan Privasi</a><a href="disclaimer.html">Disclaimer</a><a href="sitemap.xml">Sitemap</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2025 Revpeak. Semua hak dilindungi.</p><div class="social-links"><a href="#" aria-label="Instagram">📸</a><a href="#" aria-label="YouTube">▶️</a><a href="#" aria-label="Telegram">✈️</a></div></div>
+  </div></footer>
+
+  <button class="scroll-top" id="scroll-top">↑</button>
+
+  <script src="js/app.js"></script>
+  <script>
+    const API = '/api';
+    let tokohPage = 0, tokohFilter = 'all', hasMoreTokoh = false;
+
+    async function loadTokoh(reset = false) {
+      if (reset) tokohPage = 0;
+      const grid = document.getElementById('tokoh-grid');
+      const offset = tokohPage * 12;
+
+      if (reset) {
+        grid.innerHTML = Array(4).fill('').map(() => `
+          <div class="skeleton-card"><div class="skeleton" style="height:180px;border-radius:12px 12px 0 0"></div>
+          <div class="sk-body"><div class="skeleton sk-line" style="width:60%;height:16px;margin-bottom:8px"></div>
+          <div class="skeleton sk-line" style="width:40%"></div></div></div>`).join('');
+      }
+
+      try {
+        let url = `${SUPABASE_URL}/rest/v1/tokoh?select=id,name,slug,profession,bio,image_url,emoji,nationality,is_published&is_published=eq.true&order=name.asc&limit=13&offset=${offset}`;
+        if (tokohFilter !== 'all') url += `&profession=ilike.*${tokohFilter}*`;
+
+        const r = await fetch(url, { headers: { 'apikey': SUPABASE_ANON_KEY } });
+        const items = await r.json();
+        hasMoreTokoh = items.length > 12;
+        const show = hasMoreTokoh ? items.slice(0,12) : items;
+
+        if (reset) {
+          if (!show.length) {
+            grid.innerHTML = `<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Belum ada tokoh</div><div class="empty-desc">Segera hadir!</div></div>`;
+          } else {
+            grid.innerHTML = show.map(tokohCard).join('');
+          }
+        } else {
+          grid.insertAdjacentHTML('beforeend', show.map(tokohCard).join(''));
+        }
+        document.getElementById('load-more-wrap').style.display = hasMoreTokoh ? 'flex' : 'none';
+      } catch(e) {
+        grid.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Gagal memuat</div><div class="empty-desc">Coba refresh halaman</div></div>`;
+      }
+    }
+
+    function tokohCard(t) {
+      return `
+        <a href="tokoh-detail.html?slug=${t.slug}" class="tokoh-card">
+          <div class="tokoh-card-img">
+            ${t.image_url ? `<img src="${t.image_url}" alt="${t.name}" loading="lazy">` : `<div class="tokoh-img-placeholder">${t.emoji||'👤'}</div>`}
+          </div>
+          <div class="tokoh-card-body">
+            <div class="tokoh-profession">${t.profession||'Tokoh'}</div>
+            <h3 class="tokoh-name">${t.name}</h3>
+            ${t.nationality ? `<div class="tokoh-nation">🌍 ${t.nationality}</div>` : ''}
+            ${t.bio ? `<p class="tokoh-bio">${t.bio.substring(0,80)}${t.bio.length>80?'...':''}</p>` : ''}
+          </div>
+        </a>`;
+    }
+
+    // Filter chips
+    document.getElementById('filter-chips').addEventListener('click', e => {
+      const chip = e.target.closest('.cat-chip');
+      if (!chip) return;
+      document.querySelectorAll('#filter-chips .cat-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      tokohFilter = chip.dataset.filter;
+      const ttl = document.getElementById('tokoh-section-title');
+      if (ttl) ttl.textContent = chip.textContent.trim();
+      loadTokoh(true);
+    });
+
+    document.getElementById('btn-load-more')?.addEventListener('click', () => {
+      tokohPage++;
+      loadTokoh(false);
+    });
+
+    // Search
+    const sinp = document.getElementById('search-input');
+    let stimer;
+    sinp?.addEventListener('input', e => {
+      clearTimeout(stimer);
+      stimer = setTimeout(() => {
+        const q = e.target.value.trim();
+        if (!q) { loadTokoh(true); return; }
+        const grid = document.getElementById('tokoh-grid');
+        grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">Mencari...</div></div>`;
+      }, 400);
+    });
+
+    // Get Supabase config from admin.js pattern — fallback to API
+    const SUPABASE_URL      = typeof window.SUPABASE_URL !== 'undefined' ? window.SUPABASE_URL : '';
+    const SUPABASE_ANON_KEY = typeof window.SUPABASE_ANON_KEY !== 'undefined' ? window.SUPABASE_ANON_KEY : '';
+
+    document.addEventListener('DOMContentLoaded', () => { loadTokoh(true); });
+  </script>
+</body>
+</html>
