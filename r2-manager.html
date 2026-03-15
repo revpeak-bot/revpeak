@@ -8,571 +8,197 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0c;
-    --surface: #111116;
-    --surface2: #18181f;
-    --surface3: #1e1e27;
-    --border: #2a2a38;
-    --border2: #353548;
-    --orange: #f6821f;
-    --orange-dim: rgba(246,130,31,0.12);
-    --orange-glow: rgba(246,130,31,0.25);
-    --text: #e8e8f0;
-    --muted: #7a7a96;
-    --muted2: #4a4a62;
-    --green: #2dd4a0;
-    --green-dim: rgba(45,212,160,0.1);
-    --red: #f25c5c;
-    --red-dim: rgba(242,92,92,0.1);
-    --blue: #5c9ef2;
-    --blue-dim: rgba(92,158,242,0.1);
-    --yellow: #f2c94c;
-    --radius: 8px;
-    --radius-lg: 12px;
-    --mono: 'Space Mono', monospace;
-    --sans: 'Syne', sans-serif;
+    --bg:#0a0a0c; --surface:#111116; --surface2:#18181f; --surface3:#1e1e27;
+    --border:#2a2a38; --border2:#353548;
+    --orange:#f6821f; --orange-dim:rgba(246,130,31,.12); --orange-glow:rgba(246,130,31,.25);
+    --text:#e8e8f0; --muted:#7a7a96; --muted2:#4a4a62;
+    --green:#2dd4a0; --green-dim:rgba(45,212,160,.1);
+    --red:#f25c5c; --red-dim:rgba(242,92,92,.1);
+    --blue:#5c9ef2; --blue-dim:rgba(92,158,242,.1);
+    --yellow:#f2c94c;
+    --r:8px; --rl:12px;
+    --mono:'Space Mono',monospace; --sans:'Syne',sans-serif;
   }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: var(--sans);
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    overflow: hidden;
-  }
-
-  /* ── SIDEBAR ── */
-  #sidebar {
-    width: 220px;
-    min-width: 220px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    position: relative;
-    z-index: 10;
-  }
-
-  .logo {
-    padding: 24px 20px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .logo-icon {
-    width: 32px; height: 32px;
-    background: var(--orange);
-    border-radius: 8px;
-    display: grid; place-items: center;
-    font-size: 16px;
-  }
-  .logo-text { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.1; }
-  .logo-sub { font-size: 10px; color: var(--muted); font-family: var(--mono); font-weight: 400; }
-
-  .nav-section { padding: 12px 12px 0; }
-  .nav-label { font-size: 10px; font-family: var(--mono); color: var(--muted2); letter-spacing: 0.08em; padding: 0 8px 6px; }
-  .nav-btn {
-    display: flex; align-items: center; gap: 10px;
-    width: 100%; padding: 9px 10px;
-    border-radius: var(--radius); border: none;
-    background: transparent; color: var(--muted);
-    font-family: var(--sans); font-size: 13px; font-weight: 600;
-    cursor: pointer; transition: all .15s;
-    text-align: left;
-  }
-  .nav-btn:hover { background: var(--surface2); color: var(--text); }
-  .nav-btn.active { background: var(--orange-dim); color: var(--orange); }
-  .nav-btn .icon { font-size: 15px; width: 18px; text-align: center; }
-  .nav-divider { height: 1px; background: var(--border); margin: 10px 12px; }
-
-  .bucket-list-nav { padding: 0 12px; flex: 1; overflow-y: auto; }
-  .bucket-list-nav::-webkit-scrollbar { width: 4px; }
-  .bucket-list-nav::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-  .bucket-nav-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 10px; border-radius: var(--radius);
-    cursor: pointer; transition: all .15s; font-size: 12px;
-    color: var(--muted); border: none; background: transparent;
-    width: 100%; text-align: left; font-family: var(--sans); font-weight: 600;
-  }
-  .bucket-nav-item:hover { background: var(--surface2); color: var(--text); }
-  .bucket-nav-item.active { background: var(--orange-dim); color: var(--orange); }
-  .bucket-nav-item .bname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  .sidebar-footer {
-    padding: 14px 16px;
-    border-top: 1px solid var(--border);
-    font-size: 11px; color: var(--muted); font-family: var(--mono);
-  }
-  .conn-dot {
-    display: inline-block; width: 6px; height: 6px;
-    border-radius: 50%; background: var(--muted2);
-    margin-right: 6px; vertical-align: middle;
-    transition: background .3s;
-  }
-  .conn-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
-
-  /* ── MAIN ── */
-  #main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-  }
-
-  /* ── TOPBAR ── */
-  #topbar {
-    display: flex; align-items: center; gap: 12px;
-    padding: 0 24px;
-    height: 56px; min-height: 56px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .topbar-title { font-size: 16px; font-weight: 700; flex: 1; }
-  .breadcrumb { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-  .breadcrumb span { color: var(--orange); }
-
-  .btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 14px; border-radius: var(--radius);
-    font-family: var(--sans); font-size: 12px; font-weight: 700;
-    cursor: pointer; border: none; transition: all .15s;
-    letter-spacing: 0.02em;
-  }
-  .btn-primary { background: var(--orange); color: #fff; }
-  .btn-primary:hover { background: #e07518; transform: translateY(-1px); box-shadow: 0 4px 14px var(--orange-glow); }
-  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
-  .btn-ghost:hover { color: var(--text); border-color: var(--border2); background: var(--surface2); }
-  .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid rgba(242,92,92,0.2); }
-  .btn-danger:hover { background: rgba(242,92,92,0.2); }
-  .btn-sm { padding: 5px 10px; font-size: 11px; }
-  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
-
-  /* ── CONTENT AREA ── */
-  #content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px;
-  }
-  #content::-webkit-scrollbar { width: 6px; }
-  #content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-
-  /* ── VIEWS ── */
-  .view { display: none; }
-  .view.active { display: block; }
-
-  /* ── SETUP VIEW ── */
-  .setup-card {
-    max-width: 520px; margin: 40px auto;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-  }
-  .setup-header {
-    background: linear-gradient(135deg, #1a1008 0%, #1a1220 100%);
-    padding: 28px 28px 24px;
-    border-bottom: 1px solid var(--border);
-  }
-  .setup-header h2 { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
-  .setup-header p { font-size: 13px; color: var(--muted); line-height: 1.5; }
-  .setup-body { padding: 24px 28px 28px; }
-
-  .form-row { margin-bottom: 16px; }
-  .form-label {
-    display: block; font-size: 11px; font-family: var(--mono);
-    color: var(--muted); margin-bottom: 6px; letter-spacing: 0.05em;
-  }
-  .form-input {
-    width: 100%; background: var(--surface2);
-    border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 9px 12px; color: var(--text);
-    font-family: var(--mono); font-size: 12px;
-    outline: none; transition: border .15s;
-  }
-  .form-input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-dim); }
-  .form-input::placeholder { color: var(--muted2); }
-  .form-hint { font-size: 10px; color: var(--muted2); font-family: var(--mono); margin-top: 4px; line-height: 1.4; }
-
-  .alert {
-    padding: 10px 14px; border-radius: var(--radius);
-    font-size: 12px; font-family: var(--mono);
-    margin-bottom: 14px; display: none;
-  }
-  .alert.show { display: flex; gap: 8px; align-items: flex-start; }
-  .alert-error { background: var(--red-dim); border: 1px solid rgba(242,92,92,0.2); color: var(--red); }
-  .alert-success { background: var(--green-dim); border: 1px solid rgba(45,212,160,0.2); color: var(--green); }
-  .alert-info { background: var(--blue-dim); border: 1px solid rgba(92,158,242,0.2); color: var(--blue); }
-
-  /* ── STATS ROW ── */
-  .stats-row {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 14px; margin-bottom: 20px;
-  }
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-  }
-  .stat-label { font-size: 10px; font-family: var(--mono); color: var(--muted); margin-bottom: 6px; letter-spacing: 0.06em; }
-  .stat-val { font-size: 24px; font-weight: 800; font-family: var(--mono); }
-  .stat-val.orange { color: var(--orange); }
-  .stat-val.green { color: var(--green); }
-  .stat-val.blue { color: var(--blue); }
-
-  /* ── TABLE ── */
-  .table-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-  }
-  .table-head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--border);
-  }
-  .table-head-title { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-  .badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    padding: 2px 8px; border-radius: 99px;
-    font-size: 10px; font-family: var(--mono); font-weight: 700;
-    background: var(--surface2); color: var(--muted);
-    border: 1px solid var(--border);
-  }
-
-  .search-box {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 6px 10px;
-    transition: border .15s;
-  }
-  .search-box:focus-within { border-color: var(--orange); }
-  .search-box input {
-    background: none; border: none; color: var(--text);
-    font-family: var(--mono); font-size: 11px; outline: none;
-    width: 160px;
-  }
-  .search-box input::placeholder { color: var(--muted2); }
-
-  table { width: 100%; border-collapse: collapse; }
-  thead th {
-    font-size: 10px; font-family: var(--mono); font-weight: 700;
-    color: var(--muted); letter-spacing: 0.07em;
-    padding: 10px 18px; text-align: left;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
-  }
-  tbody tr { transition: background .12s; }
-  tbody tr:hover { background: var(--surface2); }
-  tbody tr:not(:last-child) td { border-bottom: 1px solid var(--border); }
-  td { padding: 12px 18px; font-size: 13px; vertical-align: middle; }
-  td.mono { font-family: var(--mono); font-size: 11px; }
-
-  .empty-state {
-    text-align: center; padding: 60px 20px;
-    color: var(--muted);
-  }
-  .empty-state .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: .4; }
-  .empty-state p { font-size: 13px; }
-
-  /* ── FILE TYPE ICON ── */
-  .filetype {
-    display: inline-flex; align-items: center; gap: 8px;
-  }
-  .filetype-icon {
-    width: 28px; height: 28px; border-radius: 6px;
-    display: grid; place-items: center;
-    font-size: 13px; font-family: var(--mono); font-weight: 700;
-    font-size: 10px;
-  }
-  .ft-img { background: rgba(92,158,242,.15); color: var(--blue); }
-  .ft-vid { background: rgba(242,92,92,.15); color: var(--red); }
-  .ft-doc { background: rgba(245,212,76,.12); color: var(--yellow); }
-  .ft-zip { background: rgba(45,212,160,.12); color: var(--green); }
-  .ft-other { background: var(--surface3); color: var(--muted); }
-
-  /* ── ACTIONS BAR ── */
-  .actions-bar {
-    display: flex; align-items: center; gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  /* ── MODAL ── */
-  .modal-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
-    z-index: 100; display: none; place-items: center;
-  }
-  .modal-backdrop.show { display: grid; }
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    width: 90%; max-width: 440px;
-    animation: modalIn .2s ease;
-  }
-  @keyframes modalIn {
-    from { transform: translateY(16px) scale(.97); opacity: 0; }
-    to   { transform: translateY(0) scale(1);    opacity: 1; }
-  }
-  .modal-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 18px 20px; border-bottom: 1px solid var(--border);
-  }
-  .modal-title { font-size: 15px; font-weight: 700; }
-  .modal-close {
-    width: 28px; height: 28px; border-radius: 6px;
-    display: grid; place-items: center;
-    background: transparent; border: none; color: var(--muted);
-    cursor: pointer; font-size: 18px; line-height: 1;
-    transition: all .15s;
-  }
-  .modal-close:hover { background: var(--surface2); color: var(--text); }
-  .modal-body { padding: 20px; }
-  .modal-footer { padding: 0 20px 20px; display: flex; gap: 8px; justify-content: flex-end; }
-
-  /* ── UPLOAD ZONE ── */
-  .upload-zone {
-    border: 2px dashed var(--border2);
-    border-radius: var(--radius);
-    padding: 30px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all .2s;
-    position: relative;
-  }
-  .upload-zone:hover, .upload-zone.drag-over {
-    border-color: var(--orange);
-    background: var(--orange-dim);
-  }
-  .upload-zone input[type=file] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer;
-  }
-  .upload-zone-icon { font-size: 28px; margin-bottom: 10px; }
-  .upload-zone p { font-size: 12px; color: var(--muted); }
-  .upload-zone strong { color: var(--orange); }
-
-  /* ── PROGRESS ── */
-  .progress-wrap {
-    background: var(--surface2); border-radius: 99px;
-    height: 4px; overflow: hidden; margin-top: 8px;
-  }
-  .progress-bar {
-    height: 100%; background: var(--orange);
-    border-radius: 99px; transition: width .3s;
-    width: 0%;
-  }
-
-  /* ── BREADCRUMB NAV ── */
-  .path-nav {
-    display: flex; align-items: center; gap: 4px;
-    font-family: var(--mono); font-size: 11px; color: var(--muted);
-    padding: 8px 18px; border-bottom: 1px solid var(--border);
-    background: var(--surface2); flex-wrap: wrap;
-  }
-  .path-part {
-    cursor: pointer; color: var(--muted);
-    transition: color .12s; padding: 2px 4px; border-radius: 4px;
-  }
-  .path-part:hover { color: var(--orange); background: var(--orange-dim); }
-  .path-sep { color: var(--muted2); }
-  .path-part.current { color: var(--text); cursor: default; }
-  .path-part.current:hover { background: transparent; }
-
-  /* ── TOOLTIP ── */
-  .copy-btn {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 11px; font-family: var(--mono);
-    background: transparent; border: none;
-    color: var(--muted); cursor: pointer;
-    padding: 4px 6px; border-radius: 4px;
-    transition: all .12s;
-  }
-  .copy-btn:hover { color: var(--orange); background: var(--orange-dim); }
-  .copy-btn.copied { color: var(--green); }
-
-  /* ── SPINNER ── */
-  .spinner {
-    display: inline-block;
-    width: 14px; height: 14px;
-    border: 2px solid var(--border2);
-    border-top-color: var(--orange);
-    border-radius: 50%;
-    animation: spin .7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── LOADING OVERLAY ── */
-  .loading-row td {
-    text-align: center; padding: 40px;
-    color: var(--muted); font-family: var(--mono); font-size: 12px;
-  }
-
-  /* ── FOLDER/FILE BREADCRUMB ── */
-  .back-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 12px; color: var(--muted);
-    background: transparent; border: none; cursor: pointer;
-    padding: 5px 8px; border-radius: var(--radius);
-    transition: all .12s; font-family: var(--sans); font-weight: 600;
-  }
-  .back-btn:hover { color: var(--orange); background: var(--orange-dim); }
-
-  /* ── SIZE CHIP ── */
-  .size-chip {
-    font-family: var(--mono); font-size: 10px;
-    color: var(--muted); background: var(--surface2);
-    padding: 2px 6px; border-radius: 4px;
-    border: 1px solid var(--border);
-  }
-
-  /* ── TOAST ── */
-  #toast-container {
-    position: fixed; bottom: 24px; right: 24px;
-    display: flex; flex-direction: column; gap: 8px;
-    z-index: 9999;
-  }
-  .toast {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px 16px;
-    font-size: 12px; font-family: var(--mono);
-    display: flex; align-items: center; gap: 10px;
-    min-width: 240px; max-width: 340px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.4);
-    animation: toastIn .2s ease;
-  }
-  @keyframes toastIn {
-    from { transform: translateX(20px); opacity: 0; }
-    to   { transform: translateX(0);    opacity: 1; }
-  }
-  .toast.fadeout { animation: toastOut .3s ease forwards; }
-  @keyframes toastOut {
-    to { transform: translateX(20px); opacity: 0; }
-  }
-  .toast-success { border-left: 3px solid var(--green); }
-  .toast-error   { border-left: 3px solid var(--red); }
-  .toast-info    { border-left: 3px solid var(--blue); }
-
-  /* ── SCROLLBAR ── */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-
-  /* ── RESPONSIVE ── */
-  @media (max-width: 700px) {
-    #sidebar { display: none; }
-    .stats-row { grid-template-columns: 1fr; }
-  }
-
-  /* ── SETTINGS VIEW ── */
-  .settings-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    margin-bottom: 16px; overflow: hidden;
-  }
-  .settings-section-head {
-    padding: 14px 20px; border-bottom: 1px solid var(--border);
-    font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px;
-    background: var(--surface2);
-  }
-  .settings-section-body { padding: 20px; }
-
-  .token-display {
-    font-family: var(--mono); font-size: 11px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 8px 12px;
-    color: var(--muted); word-break: break-all;
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  }
-
-  /* Grid layout for object detail */
-  .obj-meta-grid {
-    display: grid; grid-template-columns: 120px 1fr;
-    gap: 6px 12px; font-size: 12px; font-family: var(--mono);
-  }
-  .obj-meta-label { color: var(--muted); }
-  .obj-meta-value { color: var(--text); word-break: break-all; }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;overflow:hidden}
+  #sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;z-index:10}
+  .logo{padding:22px 18px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .logo-icon{width:32px;height:32px;background:var(--orange);border-radius:8px;display:grid;place-items:center;font-size:16px}
+  .logo-text{font-size:15px;font-weight:800;letter-spacing:-.3px;line-height:1.1}
+  .logo-sub{font-size:10px;color:var(--muted);font-family:var(--mono)}
+  .nav-section{padding:12px 12px 0}
+  .nav-label{font-size:10px;font-family:var(--mono);color:var(--muted2);letter-spacing:.08em;padding:0 8px 6px}
+  .nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:var(--r);border:none;background:transparent;color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;text-align:left}
+  .nav-btn:hover{background:var(--surface2);color:var(--text)}
+  .nav-btn.active{background:var(--orange-dim);color:var(--orange)}
+  .nav-btn .icon{font-size:15px;width:18px;text-align:center}
+  .nav-divider{height:1px;background:var(--border);margin:10px 12px}
+  .bucket-list-nav{padding:0 12px;flex:1;overflow-y:auto}
+  .bucket-list-nav::-webkit-scrollbar{width:4px}
+  .bucket-list-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+  .bucket-nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r);cursor:pointer;transition:all .15s;font-size:12px;color:var(--muted);border:none;background:transparent;width:100%;text-align:left;font-family:var(--sans);font-weight:600}
+  .bucket-nav-item:hover{background:var(--surface2);color:var(--text)}
+  .bucket-nav-item.active{background:var(--orange-dim);color:var(--orange)}
+  .bucket-nav-item .bname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sidebar-footer{padding:14px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);font-family:var(--mono)}
+  .conn-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted2);margin-right:6px;vertical-align:middle;transition:background .3s}
+  .conn-dot.connected{background:var(--green);box-shadow:0 0 6px var(--green)}
+  #main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  #topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;min-height:56px;border-bottom:1px solid var(--border);background:var(--surface)}
+  .topbar-title{font-size:16px;font-weight:700;flex:1}
+  #content{flex:1;overflow-y:auto;padding:24px}
+  #content::-webkit-scrollbar{width:6px}
+  #content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+  .view{display:none}.view.active{display:block}
+  .setup-card{max-width:520px;margin:40px auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+  .setup-header{background:linear-gradient(135deg,#1a1008,#1a1220);padding:28px 28px 22px;border-bottom:1px solid var(--border)}
+  .setup-header h2{font-size:20px;font-weight:800;margin-bottom:6px}
+  .setup-header p{font-size:13px;color:var(--muted);line-height:1.5}
+  .setup-body{padding:24px 28px 28px}
+  .form-row{margin-bottom:16px}
+  .form-label{display:block;font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px;letter-spacing:.05em}
+  .form-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border .15s}
+  .form-input:focus{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-dim)}
+  .form-input::placeholder{color:var(--muted2)}
+  .form-hint{font-size:10px;color:var(--muted2);font-family:var(--mono);margin-top:4px;line-height:1.4}
+  .alert{padding:10px 14px;border-radius:var(--r);font-size:12px;font-family:var(--mono);margin-bottom:14px}
+  .alert-error{background:var(--red-dim);border:1px solid rgba(242,92,92,.25);color:var(--red)}
+  .alert-success{background:var(--green-dim);border:1px solid rgba(45,212,160,.25);color:var(--green)}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r);font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;border:none;transition:all .15s}
+  .btn-primary{background:var(--orange);color:#fff}
+  .btn-primary:hover{background:#e07518;transform:translateY(-1px);box-shadow:0 4px 14px var(--orange-glow)}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
+  .btn-ghost:hover{color:var(--text);background:var(--surface2)}
+  .btn-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(242,92,92,.2)}
+  .btn-danger:hover{background:rgba(242,92,92,.2)}
+  .btn-sm{padding:5px 10px;font-size:11px}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+  .stat-label{font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:6px;letter-spacing:.06em}
+  .stat-val{font-size:24px;font-weight:800;font-family:var(--mono)}
+  .stat-val.orange{color:var(--orange)}.stat-val.green{color:var(--green)}.stat-val.blue{color:var(--blue)}
+  .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+  .table-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+  .table-head-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:99px;font-size:10px;font-family:var(--mono);font-weight:700;background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+  .search-box{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:6px 10px;transition:border .15s}
+  .search-box:focus-within{border-color:var(--orange)}
+  .search-box input{background:none;border:none;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;width:130px}
+  .search-box input::placeholder{color:var(--muted2)}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:10px;font-family:var(--mono);font-weight:700;color:var(--muted);letter-spacing:.07em;padding:10px 18px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2)}
+  tbody tr{transition:background .12s}
+  tbody tr:hover{background:var(--surface2)}
+  tbody tr:not(:last-child) td{border-bottom:1px solid var(--border)}
+  td{padding:11px 18px;font-size:13px;vertical-align:middle}
+  td.mono{font-family:var(--mono);font-size:11px}
+  .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+  .empty-state .empty-icon{font-size:36px;margin-bottom:12px;opacity:.4}
+  .filetype{display:inline-flex;align-items:center;gap:8px}
+  .filetype-icon{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;font-size:10px;font-family:var(--mono);font-weight:700}
+  .ft-img{background:rgba(92,158,242,.15);color:var(--blue)}
+  .ft-vid{background:rgba(242,92,92,.15);color:var(--red)}
+  .ft-doc{background:rgba(245,212,76,.12);color:var(--yellow)}
+  .ft-zip{background:rgba(45,212,160,.12);color:var(--green)}
+  .ft-other{background:var(--surface3);color:var(--muted)}
+  .actions-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:100;display:none;place-items:center}
+  .modal-backdrop.show{display:grid}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);width:90%;max-width:440px;animation:modalIn .2s ease}
+  @keyframes modalIn{from{transform:translateY(16px) scale(.97);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
+  .modal-title{font-size:15px;font-weight:700}
+  .modal-close{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:18px;transition:all .15s}
+  .modal-close:hover{background:var(--surface2);color:var(--text)}
+  .modal-body{padding:20px}
+  .modal-footer{padding:0 20px 20px;display:flex;gap:8px;justify-content:flex-end}
+  .upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+  .upload-zone:hover,.upload-zone.drag-over{border-color:var(--orange);background:var(--orange-dim)}
+  .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+  .upload-zone-icon{font-size:28px;margin-bottom:8px}
+  .upload-zone p{font-size:12px;color:var(--muted)}
+  .progress-wrap{background:var(--surface2);border-radius:99px;height:4px;overflow:hidden;margin-top:8px}
+  .progress-bar{height:100%;background:var(--orange);border-radius:99px;transition:width .3s;width:0}
+  .path-nav{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:11px;color:var(--muted);padding:8px 18px;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap}
+  .path-part{cursor:pointer;color:var(--muted);transition:color .12s;padding:2px 4px;border-radius:4px}
+  .path-part:hover{color:var(--orange);background:var(--orange-dim)}
+  .path-sep{color:var(--muted2)}
+  .path-part.current{color:var(--text);cursor:default}
+  .path-part.current:hover{background:transparent}
+  .copy-btn{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-family:var(--mono);background:transparent;border:none;color:var(--muted);cursor:pointer;padding:4px 6px;border-radius:4px;transition:all .12s}
+  .copy-btn:hover{color:var(--orange);background:var(--orange-dim)}
+  .copy-btn.copied{color:var(--green)}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-row td{text-align:center;padding:40px;color:var(--muted);font-family:var(--mono);font-size:12px}
+  .back-btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:transparent;border:none;cursor:pointer;padding:5px 8px;border-radius:var(--r);transition:all .12s;font-family:var(--sans);font-weight:600}
+  .back-btn:hover{color:var(--orange);background:var(--orange-dim)}
+  .size-chip{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border)}
+  #toast-container{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+  .toast{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;font-size:12px;font-family:var(--mono);display:flex;align-items:center;gap:10px;min-width:220px;max-width:340px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:toastIn .2s ease}
+  @keyframes toastIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+  .toast.fadeout{animation:toastOut .3s ease forwards}
+  @keyframes toastOut{to{transform:translateX(20px);opacity:0}}
+  .toast-success{border-left:3px solid var(--green)}
+  .toast-error{border-left:3px solid var(--red)}
+  .toast-info{border-left:3px solid var(--blue)}
+  .settings-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:16px;overflow:hidden}
+  .settings-section-head{padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;background:var(--surface2)}
+  .settings-section-body{padding:20px}
+  .obj-meta-grid{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:12px;font-family:var(--mono)}
+  .obj-meta-label{color:var(--muted)}
+  .obj-meta-value{color:var(--text);word-break:break-all}
+  @media(max-width:700px){#sidebar{display:none}.stats-row{grid-template-columns:1fr}.table-head{flex-direction:column;align-items:flex-start}}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
 </style>
 </head>
 <body>
 
-<!-- SIDEBAR -->
 <aside id="sidebar">
   <div class="logo">
     <div class="logo-icon">☁️</div>
-    <div>
-      <div class="logo-text">R2 Manager</div>
-      <div class="logo-sub">Cloudflare Storage</div>
-    </div>
+    <div><div class="logo-text">R2 Manager</div><div class="logo-sub">Cloudflare Storage</div></div>
   </div>
-
   <div class="nav-section">
     <div class="nav-label">NAVIGASI</div>
-    <button class="nav-btn active" data-view="buckets" onclick="switchView('buckets')">
-      <span class="icon">🗄️</span> Bucket List
-    </button>
-    <button class="nav-btn" data-view="settings" onclick="switchView('settings')">
-      <span class="icon">⚙️</span> Pengaturan
-    </button>
+    <button class="nav-btn active" data-view="buckets" onclick="switchView('buckets')"><span class="icon">🗄️</span> Bucket List</button>
+    <button class="nav-btn" data-view="settings" onclick="switchView('settings')"><span class="icon">⚙️</span> Pengaturan</button>
   </div>
-
   <div class="nav-divider"></div>
-
-  <div class="nav-section">
-    <div class="nav-label">BUCKET SAYA</div>
-  </div>
+  <div class="nav-section"><div class="nav-label">BUCKET SAYA</div></div>
   <div class="bucket-list-nav" id="sidebar-buckets">
-    <div style="font-size:11px;color:var(--muted2);font-family:var(--mono);padding:8px 10px;">Belum terhubung</div>
+    <div style="font-size:11px;color:var(--muted2);font-family:var(--mono);padding:8px 10px">Belum terhubung</div>
   </div>
-
   <div class="sidebar-footer">
-    <span class="conn-dot" id="conn-dot"></span>
-    <span id="conn-label">Tidak terhubung</span>
+    <span class="conn-dot" id="conn-dot"></span><span id="conn-label">Tidak terhubung</span>
   </div>
 </aside>
 
-<!-- MAIN -->
 <div id="main">
-
-  <!-- TOPBAR -->
   <header id="topbar">
     <div class="topbar-title" id="topbar-title">Dashboard R2</div>
-    <div class="breadcrumb" id="topbar-crumb"></div>
-    <div class="actions-bar" id="topbar-actions">
+    <div class="actions-bar">
       <button class="btn btn-ghost btn-sm" onclick="switchView('settings')">⚙️ Pengaturan</button>
     </div>
   </header>
-
-  <!-- CONTENT -->
   <main id="content">
 
-    <!-- VIEW: SETUP -->
+    <!-- SETUP -->
     <div class="view active" id="view-setup">
       <div class="setup-card">
         <div class="setup-header">
-          <div style="font-size:28px;margin-bottom:10px;">☁️</div>
+          <div style="font-size:28px;margin-bottom:10px">☁️</div>
           <h2>Hubungkan ke Cloudflare R2</h2>
           <p>Masukkan kredensial R2 Anda untuk mulai mengelola bucket dan file penyimpanan.</p>
         </div>
         <div class="setup-body">
-          <div class="alert alert-error" id="setup-error">
-            <span>⚠️</span><span id="setup-error-msg"></span>
-          </div>
+          <div class="alert alert-error" id="setup-error" style="display:none"></div>
           <div class="form-row">
             <label class="form-label">ACCOUNT ID</label>
             <input class="form-input" id="s-account" type="text" placeholder="abc123def456...">
-            <div class="form-hint">Temukan di Cloudflare Dashboard → R2 Overview → Account ID</div>
+            <div class="form-hint">Cloudflare Dashboard → R2 Overview → Account ID</div>
           </div>
           <div class="form-row">
             <label class="form-label">ACCESS KEY ID</label>
@@ -584,150 +210,89 @@
           </div>
           <div class="form-row">
             <label class="form-label">PUBLIC URL DOMAIN (opsional)</label>
-            <input class="form-input" id="s-pub" type="text" placeholder="https://pub-xxx.r2.dev  atau  https://assets.domain.com">
-            <div class="form-hint">URL publik untuk mengakses file. Kosongkan jika bucket tidak dipublikasi.</div>
+            <input class="form-input" id="s-pub" type="text" placeholder="https://pub-xxx.r2.dev">
+            <div class="form-hint">URL publik bucket. Kosongkan jika belum diaktifkan.</div>
           </div>
-          <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doConnect()" id="btn-connect">
-            🔗 Hubungkan Sekarang
-          </button>
-          <div style="margin-top:12px;font-size:10px;color:var(--muted2);font-family:var(--mono);line-height:1.5;text-align:center;">
-            Kredensial disimpan di localStorage browser Anda saja.<br>
-            Pastikan CORS dikonfigurasi di R2 bucket untuk akses browser.
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doConnect()" id="btn-connect">🔗 Hubungkan Sekarang</button>
+          <div style="margin-top:12px;font-size:10px;color:var(--muted2);font-family:var(--mono);line-height:1.5;text-align:center">
+            Kredensial tersimpan hanya di localStorage browser Anda.<br>Pastikan CORS dikonfigurasi di bucket R2.
           </div>
         </div>
       </div>
     </div>
 
-    <!-- VIEW: BUCKETS -->
+    <!-- BUCKETS -->
     <div class="view" id="view-buckets">
-      <div class="stats-row" id="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">TOTAL BUCKET</div>
-          <div class="stat-val orange" id="stat-buckets">–</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">TOTAL OBJEK</div>
-          <div class="stat-val green" id="stat-objects">–</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">STATUS KONEKSI</div>
-          <div class="stat-val blue" style="font-size:14px;padding-top:4px;" id="stat-status">–</div>
-        </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">TOTAL BUCKET</div><div class="stat-val orange" id="stat-buckets">–</div></div>
+        <div class="stat-card"><div class="stat-label">TOTAL FILE</div><div class="stat-val green" id="stat-objects">–</div></div>
+        <div class="stat-card"><div class="stat-label">STATUS</div><div class="stat-val blue" style="font-size:14px;padding-top:4px" id="stat-status">–</div></div>
       </div>
-
       <div class="table-card">
         <div class="table-head">
-          <div class="table-head-title">
-            🗄️ Daftar Bucket
-            <span class="badge" id="bucket-count">0</span>
-          </div>
+          <div class="table-head-title">🗄️ Daftar Bucket <span class="badge" id="bucket-count">0</span></div>
           <div class="actions-bar">
-            <div class="search-box">
-              <span>🔍</span>
-              <input type="text" placeholder="Cari bucket..." id="bucket-search" oninput="filterBuckets()">
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="loadBuckets()" id="btn-refresh-buckets">
-              🔄 Refresh
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="showModal('modal-create-bucket')">
-              + Buat Bucket
-            </button>
+            <div class="search-box"><span>🔍</span><input type="text" placeholder="Cari bucket..." id="bucket-search" oninput="filterBuckets()"></div>
+            <button class="btn btn-ghost btn-sm" onclick="loadBuckets()">🔄 Refresh</button>
+            <button class="btn btn-primary btn-sm" onclick="showModal('modal-create-bucket')">+ Buat Bucket</button>
           </div>
         </div>
         <table>
-          <thead>
-            <tr>
-              <th>NAMA BUCKET</th>
-              <th>TANGGAL DIBUAT</th>
-              <th>REGION</th>
-              <th>AKSI</th>
-            </tr>
-          </thead>
-          <tbody id="bucket-table-body">
-            <tr class="loading-row"><td colspan="4"><div class="spinner"></div> Memuat...</td></tr>
-          </tbody>
+          <thead><tr><th>NAMA BUCKET</th><th>TANGGAL DIBUAT</th><th>REGION</th><th>AKSI</th></tr></thead>
+          <tbody id="bucket-table-body"><tr class="loading-row"><td colspan="4"><div class="spinner"></div> Memuat...</td></tr></tbody>
         </table>
       </div>
     </div>
 
-    <!-- VIEW: OBJECTS -->
+    <!-- OBJECTS -->
     <div class="view" id="view-objects">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
         <button class="back-btn" onclick="switchView('buckets')">← Kembali</button>
-        <div style="flex:1;font-size:14px;font-weight:700;" id="obj-bucket-name"></div>
+        <div style="flex:1;font-size:14px;font-weight:700" id="obj-bucket-name"></div>
         <div class="actions-bar">
-          <div class="search-box">
-            <span>🔍</span>
-            <input type="text" placeholder="Cari file..." id="obj-search" oninput="filterObjects()">
-          </div>
-          <button class="btn btn-ghost btn-sm" onclick="loadObjects(currentBucket, currentPrefix)">🔄 Refresh</button>
-          <button class="btn btn-primary btn-sm" onclick="showModal('modal-upload')">⬆️ Upload File</button>
-          <button class="btn btn-ghost btn-sm" onclick="showModal('modal-create-folder')">📁 Folder Baru</button>
+          <div class="search-box"><span>🔍</span><input type="text" placeholder="Cari file..." id="obj-search" oninput="filterObjects()"></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadObjects(currentBucket,currentPrefix)">🔄</button>
+          <button class="btn btn-primary btn-sm" onclick="showModal('modal-upload')">⬆️ Upload</button>
+          <button class="btn btn-ghost btn-sm" onclick="showModal('modal-create-folder')">📁 Folder</button>
         </div>
       </div>
-
       <div class="table-card">
-        <div class="path-nav" id="path-nav">
-          <span class="path-part" onclick="loadObjects(currentBucket,'')">🗄️</span>
-        </div>
+        <div class="path-nav" id="path-nav"></div>
         <table>
-          <thead>
-            <tr>
-              <th>NAMA FILE / FOLDER</th>
-              <th>UKURAN</th>
-              <th>TERAKHIR DIUBAH</th>
-              <th>AKSI</th>
-            </tr>
-          </thead>
-          <tbody id="obj-table-body">
-            <tr class="loading-row"><td colspan="4"><div class="spinner"></div> Memuat...</td></tr>
-          </tbody>
+          <thead><tr><th>NAMA FILE / FOLDER</th><th>UKURAN</th><th>TERAKHIR DIUBAH</th><th>AKSI</th></tr></thead>
+          <tbody id="obj-table-body"><tr class="loading-row"><td colspan="4"><div class="spinner"></div> Memuat...</td></tr></tbody>
         </table>
       </div>
     </div>
 
-    <!-- VIEW: SETTINGS -->
+    <!-- SETTINGS -->
     <div class="view" id="view-settings">
       <div class="settings-section">
         <div class="settings-section-head">🔑 Kredensial R2</div>
         <div class="settings-section-body">
-          <div class="alert alert-success" id="settings-saved" style="display:none;">✅ Pengaturan berhasil disimpan.</div>
-          <div class="form-row">
-            <label class="form-label">ACCOUNT ID</label>
-            <input class="form-input" id="cfg-account" type="text">
-          </div>
-          <div class="form-row">
-            <label class="form-label">ACCESS KEY ID</label>
-            <input class="form-input" id="cfg-akid" type="text">
-          </div>
-          <div class="form-row">
-            <label class="form-label">SECRET ACCESS KEY</label>
-            <input class="form-input" id="cfg-sak" type="password">
-          </div>
-          <div class="form-row">
-            <label class="form-label">PUBLIC URL DOMAIN</label>
-            <input class="form-input" id="cfg-pub" type="text">
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-primary" onclick="saveSettings()">💾 Simpan Pengaturan</button>
+          <div class="alert alert-success" id="settings-saved" style="display:none">✅ Pengaturan berhasil disimpan.</div>
+          <div class="form-row"><label class="form-label">ACCOUNT ID</label><input class="form-input" id="cfg-account" type="text"></div>
+          <div class="form-row"><label class="form-label">ACCESS KEY ID</label><input class="form-input" id="cfg-akid" type="text"></div>
+          <div class="form-row"><label class="form-label">SECRET ACCESS KEY</label><input class="form-input" id="cfg-sak" type="password"></div>
+          <div class="form-row"><label class="form-label">PUBLIC URL DOMAIN</label><input class="form-input" id="cfg-pub" type="text"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="saveSettings()">💾 Simpan</button>
             <button class="btn btn-danger" onclick="clearSettings()">🗑️ Hapus & Logout</button>
           </div>
         </div>
       </div>
       <div class="settings-section">
         <div class="settings-section-head">ℹ️ Cara Mendapatkan Kredensial</div>
-        <div class="settings-section-body" style="font-size:12px;color:var(--muted);line-height:1.8;font-family:var(--mono);">
+        <div class="settings-section-body" style="font-size:12px;color:var(--muted);line-height:1.9;font-family:var(--mono)">
           1. Buka <strong style="color:var(--orange)">dash.cloudflare.com</strong><br>
           2. Pilih akun → <strong style="color:var(--text)">R2 Object Storage</strong><br>
           3. Salin <strong style="color:var(--text)">Account ID</strong> dari halaman Overview<br>
           4. Klik <strong style="color:var(--text)">Manage R2 API Tokens</strong> → Buat token baru<br>
-          5. Pilih permission: <strong style="color:var(--text)">Object Read & Write</strong><br>
+          5. Permission: <strong style="color:var(--text)">Object Read &amp; Write</strong><br>
           6. Salin <strong style="color:var(--text)">Access Key ID</strong> dan <strong style="color:var(--text)">Secret Access Key</strong><br><br>
-          <strong style="color:var(--yellow)">⚠️ CORS:</strong> Tambahkan rule CORS di tiap bucket untuk akses browser:<br>
-          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:8px;word-break:break-all;">
-            AllowedOrigins: [*]<br>
-            AllowedMethods: [GET, PUT, DELETE, HEAD]<br>
-            AllowedHeaders: [*]
+          <strong style="color:var(--yellow)">⚠️ CORS — tambahkan di setiap bucket:</strong>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:8px">
+            AllowedOrigins: ["*"]<br>AllowedMethods: ["GET","PUT","DELETE","HEAD"]<br>AllowedHeaders: ["*"]
           </div>
         </div>
       </div>
@@ -737,20 +302,15 @@
 </div>
 
 <!-- MODALS -->
-
-<!-- Create Bucket -->
 <div class="modal-backdrop" id="modal-create-bucket">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">🗄️ Buat Bucket Baru</div>
-      <button class="modal-close" onclick="hideModal('modal-create-bucket')">×</button>
-    </div>
+    <div class="modal-header"><div class="modal-title">🗄️ Buat Bucket Baru</div><button class="modal-close" onclick="hideModal('modal-create-bucket')">×</button></div>
     <div class="modal-body">
-      <div class="alert alert-error" id="cb-error" style="display:none;"><span id="cb-error-msg"></span></div>
+      <div class="alert alert-error" id="cb-error" style="display:none"></div>
       <div class="form-row">
         <label class="form-label">NAMA BUCKET</label>
-        <input class="form-input" id="cb-name" type="text" placeholder="nama-bucket-anda" oninput="sanitizeBucketName()">
-        <div class="form-hint">Hanya huruf kecil, angka, dan tanda hubung. 3–63 karakter.</div>
+        <input class="form-input" id="cb-name" type="text" placeholder="nama-bucket-anda" oninput="sanitizeBucket()">
+        <div class="form-hint">Huruf kecil, angka, tanda hubung. 3–63 karakter.</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -760,45 +320,34 @@
   </div>
 </div>
 
-<!-- Delete Bucket -->
 <div class="modal-backdrop" id="modal-delete-bucket">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" style="color:var(--red)">⚠️ Hapus Bucket</div>
-      <button class="modal-close" onclick="hideModal('modal-delete-bucket')">×</button>
-    </div>
+    <div class="modal-header"><div class="modal-title" style="color:var(--red)">⚠️ Hapus Bucket</div><button class="modal-close" onclick="hideModal('modal-delete-bucket')">×</button></div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Hapus bucket <strong style="color:var(--text)" id="del-bucket-name-display"></strong>? Tindakan ini tidak dapat dibatalkan. Bucket harus kosong untuk dihapus.</p>
-      <div class="form-row">
-        <label class="form-label">KETIK NAMA BUCKET UNTUK KONFIRMASI</label>
-        <input class="form-input" id="del-bucket-confirm" type="text" placeholder="">
-      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Hapus bucket <strong style="color:var(--text)" id="del-bucket-disp"></strong>? Bucket harus kosong.</p>
+      <div class="form-row"><label class="form-label">KETIK NAMA BUCKET UNTUK KONFIRMASI</label><input class="form-input" id="del-bucket-confirm" type="text"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="hideModal('modal-delete-bucket')">Batal</button>
-      <button class="btn btn-danger" onclick="doDeleteBucket()">Hapus Bucket</button>
+      <button class="btn btn-danger" onclick="doDeleteBucket()">Hapus</button>
     </div>
   </div>
 </div>
 
-<!-- Upload File -->
 <div class="modal-backdrop" id="modal-upload">
-  <div class="modal" style="max-width:500px;">
-    <div class="modal-header">
-      <div class="modal-title">⬆️ Upload File</div>
-      <button class="modal-close" onclick="hideModal('modal-upload')">×</button>
-    </div>
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header"><div class="modal-title">⬆️ Upload File</div><button class="modal-close" onclick="hideModal('modal-upload')">×</button></div>
     <div class="modal-body">
       <div class="upload-zone" id="upload-zone">
         <input type="file" id="upload-file" multiple onchange="onFilesSelected()">
         <div class="upload-zone-icon">📁</div>
-        <p><strong>Klik atau seret file</strong> ke sini untuk upload</p>
-        <p style="margin-top:4px;">Mendukung semua jenis file</p>
+        <p><strong>Klik atau seret file</strong> ke sini</p>
+        <p style="margin-top:4px">Semua jenis file didukung</p>
       </div>
-      <div id="upload-file-list" style="margin-top:12px;display:none;"></div>
-      <div id="upload-progress-wrap" style="display:none;margin-top:12px;">
-        <div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px;" id="upload-progress-label">Mengupload...</div>
-        <div class="progress-wrap"><div class="progress-bar" id="upload-progress-bar"></div></div>
+      <div id="upload-file-list" style="margin-top:12px;display:none"></div>
+      <div id="upload-prog-wrap" style="display:none;margin-top:12px">
+        <div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px" id="upload-prog-label">Mengupload...</div>
+        <div class="progress-wrap"><div class="progress-bar" id="upload-prog-bar"></div></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -808,636 +357,651 @@
   </div>
 </div>
 
-<!-- Create Folder -->
 <div class="modal-backdrop" id="modal-create-folder">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">📁 Buat Folder Baru</div>
-      <button class="modal-close" onclick="hideModal('modal-create-folder')">×</button>
-    </div>
+    <div class="modal-header"><div class="modal-title">📁 Buat Folder Baru</div><button class="modal-close" onclick="hideModal('modal-create-folder')">×</button></div>
     <div class="modal-body">
-      <div class="form-row">
-        <label class="form-label">NAMA FOLDER</label>
-        <input class="form-input" id="new-folder-name" type="text" placeholder="nama-folder">
-        <div class="form-hint">Folder dibuat sebagai prefix objek di R2.</div>
-      </div>
+      <div class="form-row"><label class="form-label">NAMA FOLDER</label><input class="form-input" id="new-folder-name" type="text" placeholder="nama-folder"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="hideModal('modal-create-folder')">Batal</button>
-      <button class="btn btn-primary" onclick="doCreateFolder()">Buat Folder</button>
+      <button class="btn btn-primary" onclick="doCreateFolder()">Buat</button>
     </div>
   </div>
 </div>
 
-<!-- Delete Object -->
 <div class="modal-backdrop" id="modal-delete-obj">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" style="color:var(--red)">⚠️ Hapus File</div>
-      <button class="modal-close" onclick="hideModal('modal-delete-obj')">×</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:var(--muted);">Hapus file <strong style="color:var(--text);font-family:var(--mono)" id="del-obj-name-display"></strong>?<br>Tindakan ini tidak dapat dibatalkan.</p>
-    </div>
+    <div class="modal-header"><div class="modal-title" style="color:var(--red)">⚠️ Hapus File</div><button class="modal-close" onclick="hideModal('modal-delete-obj')">×</button></div>
+    <div class="modal-body"><p style="font-size:13px;color:var(--muted)">Hapus <strong style="color:var(--text);font-family:var(--mono)" id="del-obj-disp"></strong>?</p></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="hideModal('modal-delete-obj')">Batal</button>
-      <button class="btn btn-danger" onclick="doDeleteObject()">Hapus File</button>
+      <button class="btn btn-danger" onclick="doDeleteObject()">Hapus</button>
     </div>
   </div>
 </div>
 
-<!-- Object Info -->
 <div class="modal-backdrop" id="modal-obj-info">
-  <div class="modal" style="max-width:500px;">
-    <div class="modal-header">
-      <div class="modal-title" id="obj-info-title">📄 Detail File</div>
-      <button class="modal-close" onclick="hideModal('modal-obj-info')">×</button>
-    </div>
-    <div class="modal-body">
-      <div id="obj-info-content"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="hideModal('modal-obj-info')">Tutup</button>
-    </div>
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header"><div class="modal-title" id="obj-info-title">📄 Detail File</div><button class="modal-close" onclick="hideModal('modal-obj-info')">×</button></div>
+    <div class="modal-body" id="obj-info-content"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="hideModal('modal-obj-info')">Tutup</button></div>
   </div>
 </div>
 
-<!-- TOAST CONTAINER -->
 <div id="toast-container"></div>
 
-<!-- AWS SDK v3 via CDN -->
-<script type="module">
-import { S3Client, ListBucketsCommand, CreateBucketCommand, DeleteBucketCommand,
-         ListObjectsV2Command, PutObjectCommand, DeleteObjectCommand,
-         HeadObjectCommand, GetObjectCommand } from 'https://esm.sh/@aws-sdk/client-s3';
-import { getSignedUrl } from 'https://esm.sh/@aws-sdk/s3-request-presigner';
+<script>
+// ═══════════════════════════════════════════════
+//  AWS SIGNATURE V4 — Pure WebCrypto (no Node.js)
+// ═══════════════════════════════════════════════
+const enc = new TextEncoder();
 
-// ─── STATE ─────────────────────────────────────────────────────────────────
-let s3 = null;
-let config = {};
-let allBuckets = [];
-let allObjects = [];
-let currentBucket = '';
-let currentPrefix = '';
-let pendingDeleteBucket = '';
-let pendingDeleteObject = '';
-let selectedFiles = [];
+async function hmacSha256(keyData, msg) {
+  const key = await crypto.subtle.importKey(
+    'raw', typeof keyData === 'string' ? enc.encode(keyData) : keyData,
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(msg)));
+}
 
-window.currentBucket = '';
-window.currentPrefix = '';
+async function sha256(data) {
+  const buf = (data instanceof Uint8Array || data instanceof ArrayBuffer)
+    ? data : enc.encode(data);
+  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', buf)))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
+}
 
-// ─── INIT ──────────────────────────────────────────────────────────────────
+function toHex(u8) {
+  return Array.from(u8).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function amzDate(d) { return d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
+function dateStamp(d) { return d.toISOString().slice(0,10).replace(/-/g,''); }
+
+async function buildAuth({ method, url, extraHeaders={}, bodyBytes=new Uint8Array(0) }) {
+  const { accountId, accessKeyId, secretAccessKey } = CFG;
+  const region = 'auto', service = 's3';
+  const now = new Date();
+  const xAmzDate = amzDate(now);
+  const dStamp   = dateStamp(now);
+
+  const parsed = new URL(url);
+  const host   = parsed.host;
+
+  // sort query params
+  const qEntries = [...parsed.searchParams.entries()].sort((a,b) => a[0] < b[0] ? -1 : 1);
+  const cqs = qEntries.map(([k,v]) => encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
+
+  const payloadHash = await sha256(bodyBytes);
+
+  const allH = {
+    'host': host,
+    'x-amz-content-sha256': payloadHash,
+    'x-amz-date': xAmzDate,
+    ...extraHeaders
+  };
+  // lowercase and sort
+  const sortedKeys = Object.keys(allH).map(k => k.toLowerCase()).sort();
+  const uniqueKeys = [...new Set(sortedKeys)];
+  const lowerH = {};
+  for (const [k,v] of Object.entries(allH)) lowerH[k.toLowerCase()] = v.trim();
+
+  const canonicalHeaders = uniqueKeys.map(k => k+':'+lowerH[k]).join('\n') + '\n';
+  const signedHeaders    = uniqueKeys.join(';');
+  const path = parsed.pathname || '/';
+
+  const canonicalReq = [method, path, cqs, canonicalHeaders, signedHeaders, payloadHash].join('\n');
+  const credScope = `${dStamp}/${region}/${service}/aws4_request`;
+  const strToSign = ['AWS4-HMAC-SHA256', xAmzDate, credScope, await sha256(canonicalReq)].join('\n');
+
+  let sigKey = await hmacSha256('AWS4' + secretAccessKey, dStamp);
+  sigKey = await hmacSha256(sigKey, region);
+  sigKey = await hmacSha256(sigKey, service);
+  sigKey = await hmacSha256(sigKey, 'aws4_request');
+  const sig = toHex(await hmacSha256(sigKey, strToSign));
+
+  return {
+    ...lowerH,
+    'authorization': `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${credScope}, SignedHeaders=${signedHeaders}, Signature=${sig}`
+  };
+}
+
+async function r2Fetch(method, path, opts={}) {
+  const { accountId } = CFG;
+  const url = `https://${accountId}.r2.cloudflarestorage.com${path}${opts.qs ? '?'+opts.qs : ''}`;
+
+  let bodyBytes = new Uint8Array(0);
+  if (opts.body) {
+    if (opts.body instanceof ArrayBuffer) bodyBytes = new Uint8Array(opts.body);
+    else if (opts.body instanceof Uint8Array) bodyBytes = opts.body;
+    else bodyBytes = enc.encode(opts.body);
+  }
+
+  const extraHeaders = {};
+  if (opts.contentType) extraHeaders['content-type'] = opts.contentType;
+
+  const signedHeaders = await buildAuth({ method, url, extraHeaders, bodyBytes });
+
+  const res = await fetch(url, {
+    method,
+    headers: signedHeaders,
+    body: bodyBytes.length ? bodyBytes : undefined,
+    mode: 'cors',
+  });
+  return res;
+}
+
+// ═══════════════════════════════════════════════
+//  PRESIGNED URL
+// ═══════════════════════════════════════════════
+async function makePresignedUrl(bucket, key, expiresIn=3600) {
+  const { accountId, accessKeyId, secretAccessKey } = CFG;
+  const region='auto', service='s3';
+  const now = new Date();
+  const xAmzDate = amzDate(now);
+  const dStamp   = dateStamp(now);
+  const credScope = `${dStamp}/${region}/${service}/aws4_request`;
+  const host = `${accountId}.r2.cloudflarestorage.com`;
+  const encodedPath = '/' + bucket + '/' + key.split('/').map(encodeURIComponent).join('/');
+
+  const qp = new URLSearchParams({
+    'X-Amz-Algorithm':     'AWS4-HMAC-SHA256',
+    'X-Amz-Credential':    `${accessKeyId}/${credScope}`,
+    'X-Amz-Date':          xAmzDate,
+    'X-Amz-Expires':       String(expiresIn),
+    'X-Amz-SignedHeaders': 'host',
+  });
+  const sortedQS = [...qp.entries()].sort((a,b)=>a[0]<b[0]?-1:1)
+    .map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
+
+  const canonicalReq = ['GET', encodedPath, sortedQS, 'host:'+host+'\n', 'host', 'UNSIGNED-PAYLOAD'].join('\n');
+  const strToSign = ['AWS4-HMAC-SHA256', xAmzDate, credScope, await sha256(canonicalReq)].join('\n');
+
+  let sigKey = await hmacSha256('AWS4'+secretAccessKey, dStamp);
+  sigKey = await hmacSha256(sigKey, region);
+  sigKey = await hmacSha256(sigKey, service);
+  sigKey = await hmacSha256(sigKey, 'aws4_request');
+  const sig = toHex(await hmacSha256(sigKey, strToSign));
+
+  return `https://${host}${encodedPath}?${sortedQS}&X-Amz-Signature=${sig}`;
+}
+
+// ═══════════════════════════════════════════════
+//  XML helpers
+// ═══════════════════════════════════════════════
+const parseXML = t => new DOMParser().parseFromString(t,'application/xml');
+const xmlArr   = (doc,tag) => [...doc.getElementsByTagName(tag)];
+const xmlText  = (el,tag)  => { const c=el.getElementsByTagName(tag)[0]; return c?c.textContent:''; };
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let CFG={}, allBuckets=[], allObjects=[];
+let currentBucket='', currentPrefix='';
+let pendingDelBucket='', pendingDelObject='';
+let selectedFiles=[];
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
 function init() {
-  const saved = localStorage.getItem('r2cfg');
+  const saved = localStorage.getItem('r2cfg3');
   if (saved) {
-    config = JSON.parse(saved);
-    fillSettingsForms();
-    connectClient();
+    CFG = JSON.parse(saved);
+    fillSettings();
+    setConnected(true);
     switchView('buckets');
   } else {
     switchView('setup');
   }
 }
 
-function fillSettingsForms() {
-  document.getElementById('cfg-account').value = config.accountId || '';
-  document.getElementById('cfg-akid').value    = config.accessKeyId || '';
-  document.getElementById('cfg-sak').value     = config.secretAccessKey || '';
-  document.getElementById('cfg-pub').value     = config.publicUrl || '';
-}
-
-function connectClient() {
-  s3 = new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-  setConnected(true);
+function fillSettings() {
+  document.getElementById('cfg-account').value = CFG.accountId||'';
+  document.getElementById('cfg-akid').value    = CFG.accessKeyId||'';
+  document.getElementById('cfg-sak').value     = CFG.secretAccessKey||'';
+  document.getElementById('cfg-pub').value     = CFG.publicUrl||'';
 }
 
 function setConnected(ok) {
-  document.getElementById('conn-dot').classList.toggle('connected', ok);
-  document.getElementById('conn-label').textContent = ok ? 'Terhubung' : 'Tidak terhubung';
-  document.getElementById('stat-status').textContent = ok ? '✅ Aktif' : '❌ Mati';
+  document.getElementById('conn-dot').classList.toggle('connected',ok);
+  document.getElementById('conn-label').textContent = ok?'Terhubung':'Tidak terhubung';
+  document.getElementById('stat-status').textContent = ok?'✅ Aktif':'❌ Mati';
 }
 
-// ─── VIEW SWITCH ────────────────────────────────────────────────────────────
-window.switchView = function(v) {
-  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-  document.getElementById('view-' + v)?.classList.add('active');
-  document.querySelector(`[data-view="${v}"]`)?.classList.add('active');
+function switchView(v) {
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v)?.classList.add('active');
+  document.querySelector('[data-view="'+v+'"]')?.classList.add('active');
+  document.getElementById('topbar-title').textContent =
+    {buckets:'Daftar Bucket',objects:'Isi Bucket',settings:'Pengaturan',setup:'Hubungkan R2'}[v]||'Dashboard';
+  if (v==='buckets') loadBuckets();
+  if (v==='settings') fillSettings();
+}
 
-  const titles = { buckets:'Daftar Bucket', objects:'Isi Bucket', settings:'Pengaturan', setup:'Hubungkan R2' };
-  document.getElementById('topbar-title').textContent = titles[v] || 'Dashboard';
-  document.getElementById('topbar-crumb').innerHTML = '';
-
-  if (v === 'buckets') {
-    loadBuckets();
-  }
-  if (v === 'settings') {
-    fillSettingsForms();
-  }
-};
-
-// ─── CONNECT ────────────────────────────────────────────────────────────────
-window.doConnect = async function() {
+// ═══════════════════════════════════════════════
+//  CONNECT
+// ═══════════════════════════════════════════════
+async function doConnect() {
   const acct = document.getElementById('s-account').value.trim();
   const akid = document.getElementById('s-akid').value.trim();
   const sak  = document.getElementById('s-sak').value.trim();
   const pub  = document.getElementById('s-pub').value.trim();
-
-  if (!acct || !akid || !sak) {
-    showErr('setup-error','setup-error-msg','Harap isi semua kredensial yang diperlukan.');
-    return;
-  }
-  config = { accountId: acct, accessKeyId: akid, secretAccessKey: sak, publicUrl: pub };
+  if (!acct||!akid||!sak) { showErr('setup-error','Harap isi semua kredensial.'); return; }
+  CFG = { accountId:acct, accessKeyId:akid, secretAccessKey:sak, publicUrl:pub };
   const btn = document.getElementById('btn-connect');
-  btn.textContent = '⏳ Menghubungkan...'; btn.disabled = true;
-
+  btn.textContent='⏳ Menghubungkan...'; btn.disabled=true;
   try {
-    connectClient();
-    await s3.send(new ListBucketsCommand({}));
-    localStorage.setItem('r2cfg', JSON.stringify(config));
-    toast('✅ Berhasil terhubung ke R2!', 'success');
+    const res = await r2Fetch('GET','/');
+    const txt = await res.text();
+    if (!res.ok) throw new Error(xmlText(parseXML(txt),'Message')||`HTTP ${res.status}`);
+    localStorage.setItem('r2cfg3', JSON.stringify(CFG));
+    setConnected(true);
+    toast('✅ Berhasil terhubung!','success');
     switchView('buckets');
   } catch(e) {
-    showErr('setup-error','setup-error-msg', 'Koneksi gagal: ' + e.message);
+    showErr('setup-error','Koneksi gagal: '+e.message);
     setConnected(false);
-  } finally {
-    btn.textContent = '🔗 Hubungkan Sekarang'; btn.disabled = false;
-  }
-};
+  } finally { btn.textContent='🔗 Hubungkan Sekarang'; btn.disabled=false; }
+}
 
-// ─── SETTINGS ───────────────────────────────────────────────────────────────
-window.saveSettings = function() {
-  config.accountId      = document.getElementById('cfg-account').value.trim();
-  config.accessKeyId    = document.getElementById('cfg-akid').value.trim();
-  config.secretAccessKey= document.getElementById('cfg-sak').value.trim();
-  config.publicUrl      = document.getElementById('cfg-pub').value.trim();
-  localStorage.setItem('r2cfg', JSON.stringify(config));
-  connectClient();
-  const el = document.getElementById('settings-saved');
-  el.style.display = 'flex'; setTimeout(() => el.style.display = 'none', 3000);
-  toast('✅ Pengaturan disimpan', 'success');
-};
+function saveSettings() {
+  CFG.accountId=document.getElementById('cfg-account').value.trim();
+  CFG.accessKeyId=document.getElementById('cfg-akid').value.trim();
+  CFG.secretAccessKey=document.getElementById('cfg-sak').value.trim();
+  CFG.publicUrl=document.getElementById('cfg-pub').value.trim();
+  localStorage.setItem('r2cfg3',JSON.stringify(CFG));
+  setConnected(true);
+  const el=document.getElementById('settings-saved'); el.style.display='block';
+  setTimeout(()=>el.style.display='none',3000);
+  toast('✅ Pengaturan disimpan','success');
+}
 
-window.clearSettings = function() {
+function clearSettings() {
   if (!confirm('Hapus semua pengaturan dan logout?')) return;
-  localStorage.removeItem('r2cfg');
-  s3 = null; config = {};
-  setConnected(false);
-  switchView('setup');
-  toast('🗑️ Pengaturan dihapus', 'info');
-};
+  localStorage.removeItem('r2cfg3');
+  CFG={}; setConnected(false); switchView('setup');
+  toast('🗑️ Logout berhasil','info');
+}
 
-// ─── BUCKETS ────────────────────────────────────────────────────────────────
-window.loadBuckets = async function() {
-  const tbody = document.getElementById('bucket-table-body');
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="4"><div class="spinner"></div> Memuat bucket...</td></tr>';
-
+// ═══════════════════════════════════════════════
+//  BUCKETS
+// ═══════════════════════════════════════════════
+async function loadBuckets() {
+  const tbody=document.getElementById('bucket-table-body');
+  tbody.innerHTML='<tr class="loading-row"><td colspan="4"><div class="spinner"></div> Memuat bucket...</td></tr>';
   try {
-    const res = await s3.send(new ListBucketsCommand({}));
-    allBuckets = res.Buckets || [];
+    const res=await r2Fetch('GET','/');
+    const txt=await res.text();
+    if (!res.ok) throw new Error(xmlText(parseXML(txt),'Message')||`HTTP ${res.status}`);
+    const doc=parseXML(txt);
+    allBuckets=xmlArr(doc,'Bucket').map(b=>({Name:xmlText(b,'Name'),CreationDate:xmlText(b,'CreationDate')}));
     renderBuckets(allBuckets);
-    document.getElementById('stat-buckets').textContent = allBuckets.length;
-    document.getElementById('bucket-count').textContent = allBuckets.length;
+    document.getElementById('stat-buckets').textContent=allBuckets.length;
+    document.getElementById('bucket-count').textContent=allBuckets.length;
     renderSidebarBuckets(allBuckets);
   } catch(e) {
-    tbody.innerHTML = `<tr class="loading-row"><td colspan="4" style="color:var(--red)">❌ Gagal memuat: ${e.message}</td></tr>`;
+    tbody.innerHTML=`<tr class="loading-row"><td colspan="4" style="color:var(--red)">❌ ${e.message}</td></tr>`;
+    toast('❌ '+e.message,'error');
   }
-};
+}
 
 function renderBuckets(buckets) {
-  const tbody = document.getElementById('bucket-table-body');
+  const tbody=document.getElementById('bucket-table-body');
   if (!buckets.length) {
-    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">🗄️</div><p>Belum ada bucket. Buat bucket baru untuk mulai.</p></div></td></tr>';
+    tbody.innerHTML='<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">🗄️</div><p>Belum ada bucket.</p></div></td></tr>';
     return;
   }
-  tbody.innerHTML = buckets.map(b => `
+  tbody.innerHTML=buckets.map(b=>`
     <tr>
       <td>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:18px;">🗄️</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">🗄️</span>
           <div>
-            <div style="font-weight:700;font-size:13px;">${b.Name}</div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--muted);">${config.accountId}.r2.cloudflarestorage.com/${b.Name}</div>
+            <div style="font-weight:700;font-size:13px">${escH(b.Name)}</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--muted)">${CFG.accountId}.r2.cloudflarestorage.com/${escH(b.Name)}</div>
           </div>
         </div>
       </td>
-      <td class="mono">${b.CreationDate ? new Date(b.CreationDate).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'}) : '–'}</td>
+      <td class="mono">${b.CreationDate?new Date(b.CreationDate).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):'–'}</td>
       <td><span class="size-chip">auto (apac)</span></td>
       <td>
         <div class="actions-bar">
-          <button class="btn btn-ghost btn-sm" onclick="openBucket('${b.Name}')">📂 Buka</button>
-          <button class="copy-btn" onclick="copyText('${config.accountId}.r2.cloudflarestorage.com/${b.Name}', this)" title="Salin endpoint">📋 Salin Endpoint</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteBucket('${b.Name}')">🗑️ Hapus</button>
+          <button class="btn btn-ghost btn-sm" onclick="openBucket('${escQ(b.Name)}')">📂 Buka</button>
+          <button class="copy-btn" onclick="doCopy('${CFG.accountId}.r2.cloudflarestorage.com/${escQ(b.Name)}',this)">📋 Endpoint</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteBucket('${escQ(b.Name)}')">🗑️</button>
         </div>
       </td>
-    </tr>
-  `).join('');
+    </tr>`).join('');
 }
 
 function renderSidebarBuckets(buckets) {
-  const el = document.getElementById('sidebar-buckets');
-  if (!buckets.length) {
-    el.innerHTML = '<div style="font-size:11px;color:var(--muted2);font-family:var(--mono);padding:8px 10px;">Tidak ada bucket</div>';
-    return;
-  }
-  el.innerHTML = buckets.map(b => `
-    <button class="bucket-nav-item" onclick="openBucket('${b.Name}')" id="snav-${b.Name}">
-      <span>🗄️</span>
-      <span class="bname">${b.Name}</span>
-    </button>
-  `).join('');
+  const el=document.getElementById('sidebar-buckets');
+  if (!buckets.length) { el.innerHTML='<div style="font-size:11px;color:var(--muted2);font-family:var(--mono);padding:8px 10px">Tidak ada bucket</div>'; return; }
+  el.innerHTML=buckets.map(b=>`
+    <button class="bucket-nav-item" onclick="openBucket('${escQ(b.Name)}')" id="snav-${b.Name}">
+      <span>🗄️</span><span class="bname">${escH(b.Name)}</span>
+    </button>`).join('');
 }
 
-window.filterBuckets = function() {
-  const q = document.getElementById('bucket-search').value.toLowerCase();
-  renderBuckets(allBuckets.filter(b => b.Name.toLowerCase().includes(q)));
-};
+function filterBuckets() {
+  const q=document.getElementById('bucket-search').value.toLowerCase();
+  renderBuckets(allBuckets.filter(b=>b.Name.toLowerCase().includes(q)));
+}
 
-// ─── CREATE BUCKET ──────────────────────────────────────────────────────────
-window.sanitizeBucketName = function() {
-  const el = document.getElementById('cb-name');
-  el.value = el.value.toLowerCase().replace(/[^a-z0-9-]/g,'');
-};
+function sanitizeBucket() {
+  const el=document.getElementById('cb-name');
+  el.value=el.value.toLowerCase().replace(/[^a-z0-9-]/g,'');
+}
 
-window.doCreateBucket = async function() {
-  const name = document.getElementById('cb-name').value.trim();
-  if (!name || name.length < 3) {
-    showErr('cb-error','cb-error-msg','Nama bucket minimal 3 karakter.'); return;
-  }
-  const btn = document.getElementById('btn-create-bucket');
-  btn.textContent = '⏳ Membuat...'; btn.disabled = true;
+async function doCreateBucket() {
+  const name=document.getElementById('cb-name').value.trim();
+  if (!name||name.length<3) { showErr('cb-error','Nama bucket minimal 3 karakter.'); return; }
+  const btn=document.getElementById('btn-create-bucket'); btn.textContent='⏳...'; btn.disabled=true;
   try {
-    await s3.send(new CreateBucketCommand({ Bucket: name }));
+    const res=await r2Fetch('PUT','/'+name);
+    if (!res.ok) throw new Error(xmlText(parseXML(await res.text()),'Message')||`HTTP ${res.status}`);
     hideModal('modal-create-bucket');
-    document.getElementById('cb-name').value = '';
-    toast(`✅ Bucket "${name}" berhasil dibuat`, 'success');
+    document.getElementById('cb-name').value='';
+    toast(`✅ Bucket "${name}" dibuat`,'success');
     loadBuckets();
-  } catch(e) {
-    showErr('cb-error','cb-error-msg', e.message);
-  } finally {
-    btn.textContent = 'Buat Bucket'; btn.disabled = false;
-  }
-};
+  } catch(e) { showErr('cb-error',e.message); }
+  finally { btn.textContent='Buat Bucket'; btn.disabled=false; }
+}
 
-// ─── DELETE BUCKET ──────────────────────────────────────────────────────────
-window.confirmDeleteBucket = function(name) {
-  pendingDeleteBucket = name;
-  document.getElementById('del-bucket-name-display').textContent = name;
-  document.getElementById('del-bucket-confirm').value = '';
+function confirmDeleteBucket(name) {
+  pendingDelBucket=name;
+  document.getElementById('del-bucket-disp').textContent=name;
+  document.getElementById('del-bucket-confirm').value='';
   showModal('modal-delete-bucket');
-};
+}
 
-window.doDeleteBucket = async function() {
-  const confirm = document.getElementById('del-bucket-confirm').value.trim();
-  if (confirm !== pendingDeleteBucket) {
-    toast('❌ Nama bucket tidak cocok', 'error'); return;
+async function doDeleteBucket() {
+  if (document.getElementById('del-bucket-confirm').value.trim()!==pendingDelBucket) {
+    toast('❌ Nama bucket tidak cocok','error'); return;
   }
   try {
-    await s3.send(new DeleteBucketCommand({ Bucket: pendingDeleteBucket }));
+    const res=await r2Fetch('DELETE','/'+pendingDelBucket);
+    if (!res.ok&&res.status!==204) throw new Error(`HTTP ${res.status}`);
     hideModal('modal-delete-bucket');
-    toast(`🗑️ Bucket "${pendingDeleteBucket}" dihapus`, 'success');
+    toast(`🗑️ Bucket "${pendingDelBucket}" dihapus`,'success');
     loadBuckets();
-  } catch(e) {
-    toast('❌ Gagal hapus: ' + e.message, 'error');
-  }
-};
+  } catch(e) { toast('❌ '+e.message,'error'); }
+}
 
-// ─── OBJECTS ────────────────────────────────────────────────────────────────
-window.openBucket = function(name) {
-  currentBucket = name;
-  window.currentBucket = name;
-  currentPrefix = '';
-  window.currentPrefix = '';
-  document.querySelectorAll('.bucket-nav-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('snav-' + name)?.classList.add('active');
+// ═══════════════════════════════════════════════
+//  OBJECTS
+// ═══════════════════════════════════════════════
+function openBucket(name) {
+  currentBucket=name; currentPrefix='';
+  document.querySelectorAll('.bucket-nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('snav-'+name)?.classList.add('active');
   switchView('objects');
-  document.getElementById('obj-bucket-name').textContent = '🗄️ ' + name;
-  loadObjects(name, '');
-};
+  document.getElementById('obj-bucket-name').textContent='🗄️ '+name;
+  loadObjects(name,'');
+}
 
-window.loadObjects = async function(bucket, prefix) {
-  currentBucket = bucket;
-  window.currentBucket = bucket;
-  currentPrefix = prefix;
-  window.currentPrefix = prefix;
-  updatePathNav(bucket, prefix);
-
-  const tbody = document.getElementById('obj-table-body');
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="4"><div class="spinner"></div> Memuat...</td></tr>';
-
+async function loadObjects(bucket,prefix) {
+  currentBucket=bucket; currentPrefix=prefix;
+  updatePathNav(bucket,prefix);
+  const tbody=document.getElementById('obj-table-body');
+  tbody.innerHTML='<tr class="loading-row"><td colspan="4"><div class="spinner"></div> Memuat...</td></tr>';
   try {
-    const res = await s3.send(new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: prefix,
-      Delimiter: '/',
+    let qs='list-type=2&delimiter=%2F';
+    if (prefix) qs+='&prefix='+encodeURIComponent(prefix);
+    const res=await r2Fetch('GET','/'+bucket,{qs});
+    const txt=await res.text();
+    if (!res.ok) throw new Error(xmlText(parseXML(txt),'Message')||`HTTP ${res.status}`);
+    const doc=parseXML(txt);
+    const folders=xmlArr(doc,'CommonPrefixes').map(cp=>({isFolder:true,key:xmlText(cp,'Prefix')}));
+    const files=xmlArr(doc,'Contents').filter(c=>xmlText(c,'Key')!==prefix).map(c=>({
+      isFolder:false, Key:xmlText(c,'Key'), Size:parseInt(xmlText(c,'Size'))||0,
+      LastModified:xmlText(c,'LastModified'), ETag:xmlText(c,'ETag')
     }));
-
-    const folders = (res.CommonPrefixes || []).map(cp => ({ isFolder: true, key: cp.Prefix }));
-    const files   = (res.Contents || []).filter(o => o.Key !== prefix).map(o => ({ isFolder: false, ...o }));
-    allObjects = [...folders, ...files];
-    document.getElementById('stat-objects').textContent = files.length + (allObjects.length - files.length > 0 ? '+' : '');
+    allObjects=[...folders,...files];
+    document.getElementById('stat-objects').textContent=files.length;
     renderObjects(allObjects);
   } catch(e) {
-    tbody.innerHTML = `<tr class="loading-row"><td colspan="4" style="color:var(--red)">❌ ${e.message}</td></tr>`;
+    tbody.innerHTML=`<tr class="loading-row"><td colspan="4" style="color:var(--red)">❌ ${e.message}</td></tr>`;
   }
-};
+}
 
 function renderObjects(objs) {
-  const tbody = document.getElementById('obj-table-body');
+  const tbody=document.getElementById('obj-table-body');
   if (!objs.length) {
-    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">📭</div><p>Folder ini kosong.</p></div></td></tr>';
+    tbody.innerHTML='<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">📭</div><p>Folder ini kosong.</p></div></td></tr>';
     return;
   }
-  tbody.innerHTML = objs.map(obj => {
+  tbody.innerHTML=objs.map(obj=>{
     if (obj.isFolder) {
-      const folderName = obj.key.replace(currentPrefix,'').replace(/\/$/, '');
+      const fname=obj.key.replace(currentPrefix,'').replace(/\/$/,'');
       return `<tr>
         <td>
-          <button class="back-btn" style="gap:8px;color:var(--text);" onclick="loadObjects('${currentBucket}','${obj.key}')">
-            <span style="font-size:18px;">📁</span><strong>${folderName}/</strong>
+          <button class="back-btn" style="gap:8px;color:var(--text)" onclick="loadObjects('${escQ(currentBucket)}','${escQ(obj.key)}')">
+            <span style="font-size:18px">📁</span><strong>${escH(fname)}/</strong>
           </button>
         </td>
-        <td class="mono">–</td>
-        <td class="mono">–</td>
-        <td>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteObj('${obj.key}', true)">🗑️ Hapus</button>
-        </td>
+        <td class="mono">–</td><td class="mono">–</td>
+        <td><button class="btn btn-danger btn-sm" onclick="confirmDelObj('${escQ(obj.key)}')">🗑️</button></td>
       </tr>`;
     }
-    const fname = obj.Key.replace(currentPrefix,'');
-    const ext   = fname.split('.').pop().toLowerCase();
-    const ftype = getFileType(ext);
-    const size  = formatSize(obj.Size);
-    const mod   = obj.LastModified ? new Date(obj.LastModified).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '–';
-    const pubUrl= config.publicUrl ? `${config.publicUrl.replace(/\/$/,'')}/${obj.Key}` : '';
-
+    const fname=obj.Key.replace(currentPrefix,'');
+    const ext=fname.split('.').pop().toLowerCase();
+    const ft=getFileType(ext);
+    const pubUrl=CFG.publicUrl?`${CFG.publicUrl.replace(/\/$/,'')}/${obj.Key}`:'';
+    const safeKey=escQ(obj.Key);
+    const safeObj=encodeURIComponent(JSON.stringify(obj));
     return `<tr>
       <td>
         <div class="filetype">
-          <div class="filetype-icon ${ftype.cls}">${ftype.label}</div>
+          <div class="filetype-icon ${ft.cls}">${ft.label}</div>
           <div>
-            <div style="font-weight:600;font-size:12px;">${fname}</div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--muted);">${obj.Key}</div>
+            <div style="font-weight:600;font-size:12px">${escH(fname)}</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--muted)">${escH(obj.Key)}</div>
           </div>
         </div>
       </td>
-      <td><span class="size-chip">${size}</span></td>
-      <td class="mono" style="font-size:11px;">${mod}</td>
+      <td><span class="size-chip">${fmtSize(obj.Size)}</span></td>
+      <td class="mono" style="font-size:11px">${obj.LastModified?new Date(obj.LastModified).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):'–'}</td>
       <td>
         <div class="actions-bar">
-          ${pubUrl ? `<button class="copy-btn" onclick="copyText('${pubUrl}', this)" title="Salin URL publik">🔗 URL Publik</button>` : ''}
-          <button class="copy-btn" onclick="genPresignedUrl('${obj.Key}', this)" title="Buat URL sementara">⏱️ Presigned</button>
-          <button class="btn btn-ghost btn-sm" onclick="showObjInfo(${JSON.stringify(JSON.stringify(obj))})">ℹ️</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteObj('${obj.Key}', false)">🗑️</button>
+          ${pubUrl?`<button class="copy-btn" onclick="doCopy('${pubUrl}',this)">🔗 URL</button>`:''}
+          <button class="copy-btn" onclick="genPresigned('${safeKey}',this)">⏱️ Presigned</button>
+          <button class="btn btn-ghost btn-sm" onclick="showObjInfo('${safeObj}')">ℹ️</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDelObj('${safeKey}')">🗑️</button>
         </div>
       </td>
     </tr>`;
   }).join('');
 }
 
-window.filterObjects = function() {
-  const q = document.getElementById('obj-search').value.toLowerCase();
-  renderObjects(allObjects.filter(o => {
-    const name = o.isFolder ? o.key : o.Key;
-    return name.toLowerCase().includes(q);
-  }));
-};
-
-// ─── PATH NAV ──────────────────────────────────────────────────────────────
-function updatePathNav(bucket, prefix) {
-  const nav = document.getElementById('path-nav');
-  let parts = prefix ? prefix.split('/').filter(Boolean) : [];
-  let html = `<span class="path-part" onclick="loadObjects('${bucket}','')">🗄️ ${bucket}</span>`;
-  let acc = '';
-  parts.forEach((p, i) => {
-    acc += p + '/';
-    const isLast = i === parts.length - 1;
-    html += `<span class="path-sep"> / </span>`;
-    html += isLast
-      ? `<span class="path-part current">${p}</span>`
-      : `<span class="path-part" onclick="loadObjects('${bucket}','${acc}')">${p}</span>`;
-  });
-  nav.innerHTML = html;
+function filterObjects() {
+  const q=document.getElementById('obj-search').value.toLowerCase();
+  renderObjects(allObjects.filter(o=>(o.isFolder?o.key:o.Key).toLowerCase().includes(q)));
 }
 
-// ─── UPLOAD ─────────────────────────────────────────────────────────────────
-window.onFilesSelected = function() {
-  const input = document.getElementById('upload-file');
-  selectedFiles = Array.from(input.files);
-  const listEl = document.getElementById('upload-file-list');
-  if (!selectedFiles.length) { listEl.style.display = 'none'; return; }
-  listEl.style.display = 'block';
-  listEl.innerHTML = selectedFiles.map(f =>
-    `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;font-family:var(--mono);">
+function updatePathNav(bucket,prefix) {
+  const nav=document.getElementById('path-nav');
+  const parts=prefix?prefix.split('/').filter(Boolean):[];
+  let html=`<span class="path-part" onclick="loadObjects('${escQ(bucket)}','')">🗄️ ${escH(bucket)}</span>`;
+  let acc='';
+  parts.forEach((p,i)=>{
+    acc+=p+'/';
+    const isLast=i===parts.length-1;
+    html+=`<span class="path-sep"> / </span>`;
+    html+=isLast?`<span class="path-part current">${escH(p)}</span>`
+      :`<span class="path-part" onclick="loadObjects('${escQ(bucket)}','${acc}')">${escH(p)}</span>`;
+  });
+  nav.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════
+//  UPLOAD
+// ═══════════════════════════════════════════════
+function onFilesSelected() {
+  selectedFiles=Array.from(document.getElementById('upload-file').files);
+  const el=document.getElementById('upload-file-list');
+  if (!selectedFiles.length) { el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML=selectedFiles.map(f=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;font-family:var(--mono)">
       <span>${getFileType(f.name.split('.').pop().toLowerCase()).label}</span>
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span>
-      <span class="size-chip">${formatSize(f.size)}</span>
-    </div>`
-  ).join('');
-  document.getElementById('btn-do-upload').disabled = false;
-};
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(f.name)}</span>
+      <span class="size-chip">${fmtSize(f.size)}</span>
+    </div>`).join('');
+  document.getElementById('btn-do-upload').disabled=false;
+}
 
-// Drag & drop
-document.getElementById('upload-zone').addEventListener('dragover', e => {
-  e.preventDefault();
-  document.getElementById('upload-zone').classList.add('drag-over');
-});
-document.getElementById('upload-zone').addEventListener('dragleave', () => {
-  document.getElementById('upload-zone').classList.remove('drag-over');
-});
-document.getElementById('upload-zone').addEventListener('drop', e => {
-  e.preventDefault();
-  document.getElementById('upload-zone').classList.remove('drag-over');
-  const dt = e.dataTransfer;
-  if (dt.files.length) {
-    document.getElementById('upload-file').files = dt.files;
-    window.onFilesSelected();
-  }
+const uz=document.getElementById('upload-zone');
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag-over')});
+uz.addEventListener('dragleave',()=>uz.classList.remove('drag-over'));
+uz.addEventListener('drop',e=>{
+  e.preventDefault(); uz.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) { document.getElementById('upload-file').files=e.dataTransfer.files; onFilesSelected(); }
 });
 
-window.doUpload = async function() {
+async function doUpload() {
   if (!selectedFiles.length) return;
-  const btn = document.getElementById('btn-do-upload');
-  btn.disabled = true;
-  const progressWrap = document.getElementById('upload-progress-wrap');
-  const progressBar  = document.getElementById('upload-progress-bar');
-  const progressLabel= document.getElementById('upload-progress-label');
-  progressWrap.style.display = 'block';
-
-  let done = 0;
+  const btn=document.getElementById('btn-do-upload'); btn.disabled=true;
+  const pw=document.getElementById('upload-prog-wrap');
+  const pb=document.getElementById('upload-prog-bar');
+  const pl=document.getElementById('upload-prog-label');
+  pw.style.display='block';
+  let done=0;
   for (const file of selectedFiles) {
-    progressLabel.textContent = `Mengupload ${file.name}... (${done+1}/${selectedFiles.length})`;
-    progressBar.style.width = (done / selectedFiles.length * 100) + '%';
+    pl.textContent=`Mengupload ${file.name}... (${done+1}/${selectedFiles.length})`;
+    pb.style.width=(done/selectedFiles.length*100)+'%';
     try {
-      await s3.send(new PutObjectCommand({
-        Bucket: currentBucket,
-        Key: currentPrefix + file.name,
-        Body: file,
-        ContentType: file.type || 'application/octet-stream',
-      }));
+      const ab=await file.arrayBuffer();
+      const res=await r2Fetch('PUT',`/${currentBucket}/${currentPrefix}${file.name}`,{
+        body:ab, contentType:file.type||'application/octet-stream'
+      });
+      if (!res.ok&&res.status!==200&&res.status!==201) throw new Error(`HTTP ${res.status}`);
       done++;
-    } catch(e) {
-      toast(`❌ Gagal upload ${file.name}: ${e.message}`, 'error');
-    }
+    } catch(e) { toast(`❌ ${file.name}: ${e.message}`,'error'); }
   }
-  progressBar.style.width = '100%';
-  progressLabel.textContent = `✅ ${done}/${selectedFiles.length} file berhasil`;
-  toast(`✅ ${done} file diupload ke ${currentBucket}`, 'success');
-  setTimeout(() => {
+  pb.style.width='100%';
+  pl.textContent=`✅ ${done}/${selectedFiles.length} file berhasil`;
+  toast(`✅ ${done} file diupload`,'success');
+  setTimeout(()=>{
     hideModal('modal-upload');
-    progressWrap.style.display = 'none';
-    progressBar.style.width = '0%';
-    selectedFiles = [];
-    document.getElementById('upload-file-list').style.display = 'none';
-    btn.disabled = true;
-    loadObjects(currentBucket, currentPrefix);
-  }, 1000);
-};
+    pw.style.display='none'; pb.style.width='0'; selectedFiles=[];
+    document.getElementById('upload-file-list').style.display='none';
+    btn.disabled=true;
+    loadObjects(currentBucket,currentPrefix);
+  },1200);
+}
 
-// ─── CREATE FOLDER ───────────────────────────────────────────────────────────
-window.doCreateFolder = async function() {
-  const name = document.getElementById('new-folder-name').value.trim();
+async function doCreateFolder() {
+  const name=document.getElementById('new-folder-name').value.trim();
   if (!name) return;
-  const key = currentPrefix + name + '/.keep';
+  const key=currentPrefix+name+'/.keep';
   try {
-    await s3.send(new PutObjectCommand({
-      Bucket: currentBucket, Key: key, Body: new Blob(['']), ContentType: 'application/octet-stream',
-    }));
+    const res=await r2Fetch('PUT',`/${currentBucket}/${key}`,{
+      body:new ArrayBuffer(0), contentType:'application/octet-stream'
+    });
+    if (!res.ok&&res.status!==200&&res.status!==201) throw new Error(`HTTP ${res.status}`);
     hideModal('modal-create-folder');
-    document.getElementById('new-folder-name').value = '';
-    toast(`✅ Folder "${name}" dibuat`, 'success');
-    loadObjects(currentBucket, currentPrefix);
-  } catch(e) {
-    toast('❌ Gagal buat folder: ' + e.message, 'error');
-  }
-};
+    document.getElementById('new-folder-name').value='';
+    toast(`✅ Folder "${name}" dibuat`,'success');
+    loadObjects(currentBucket,currentPrefix);
+  } catch(e) { toast('❌ '+e.message,'error'); }
+}
 
-// ─── DELETE OBJECT ───────────────────────────────────────────────────────────
-window.confirmDeleteObj = function(key) {
-  pendingDeleteObject = key;
-  document.getElementById('del-obj-name-display').textContent = key.split('/').pop() || key;
+function confirmDelObj(key) {
+  pendingDelObject=key;
+  document.getElementById('del-obj-disp').textContent=key.split('/').pop()||key;
   showModal('modal-delete-obj');
-};
+}
 
-window.doDeleteObject = async function() {
+async function doDeleteObject() {
   try {
-    await s3.send(new DeleteObjectCommand({ Bucket: currentBucket, Key: pendingDeleteObject }));
+    const res=await r2Fetch('DELETE',`/${currentBucket}/${pendingDelObject}`);
+    if (!res.ok&&res.status!==204) throw new Error(`HTTP ${res.status}`);
     hideModal('modal-delete-obj');
-    toast(`🗑️ File dihapus`, 'success');
-    loadObjects(currentBucket, currentPrefix);
-  } catch(e) {
-    toast('❌ ' + e.message, 'error');
-  }
-};
+    toast('🗑️ File dihapus','success');
+    loadObjects(currentBucket,currentPrefix);
+  } catch(e) { toast('❌ '+e.message,'error'); }
+}
 
-// ─── PRESIGNED URL ───────────────────────────────────────────────────────────
-window.genPresignedUrl = async function(key, btn) {
+async function genPresigned(key, btn) {
   try {
-    btn.textContent = '⏳...';
-    const cmd = new GetObjectCommand({ Bucket: currentBucket, Key: key });
-    const url = await getSignedUrl(s3, cmd, { expiresIn: 3600 });
+    btn.textContent='⏳...';
+    const url=await makePresignedUrl(currentBucket,key,3600);
     await navigator.clipboard.writeText(url);
-    btn.textContent = '✅ Disalin!';
-    btn.classList.add('copied');
-    toast('⏱️ Presigned URL disalin (valid 1 jam)', 'success');
-    setTimeout(() => { btn.textContent = '⏱️ Presigned'; btn.classList.remove('copied'); }, 2500);
-  } catch(e) {
-    toast('❌ ' + e.message, 'error');
-    btn.textContent = '⏱️ Presigned';
-  }
-};
+    btn.textContent='✅ Disalin!'; btn.classList.add('copied');
+    toast('⏱️ Presigned URL disalin (valid 1 jam)','success');
+    setTimeout(()=>{btn.textContent='⏱️ Presigned';btn.classList.remove('copied');},2500);
+  } catch(e) { toast('❌ '+e.message,'error'); btn.textContent='⏱️ Presigned'; }
+}
 
-// ─── OBJ INFO ────────────────────────────────────────────────────────────────
-window.showObjInfo = function(objStr) {
-  const obj = JSON.parse(JSON.parse(objStr));
-  const pubUrl = config.publicUrl ? `${config.publicUrl.replace(/\/$/,'')}/${obj.Key}` : null;
-  document.getElementById('obj-info-title').textContent = '📄 ' + obj.Key.split('/').pop();
-  document.getElementById('obj-info-content').innerHTML = `
+function showObjInfo(encoded) {
+  const obj=JSON.parse(decodeURIComponent(encoded));
+  const pubUrl=CFG.publicUrl?`${CFG.publicUrl.replace(/\/$/,'')}/${obj.Key}`:'';
+  document.getElementById('obj-info-title').textContent='📄 '+(obj.Key.split('/').pop()||obj.Key);
+  document.getElementById('obj-info-content').innerHTML=`
     <div class="obj-meta-grid">
-      <span class="obj-meta-label">Key</span><span class="obj-meta-value">${obj.Key}</span>
-      <span class="obj-meta-label">Ukuran</span><span class="obj-meta-value">${formatSize(obj.Size)}</span>
-      <span class="obj-meta-label">Terakhir diubah</span><span class="obj-meta-value">${new Date(obj.LastModified).toLocaleString('id-ID')}</span>
-      <span class="obj-meta-label">ETag</span><span class="obj-meta-value" style="word-break:break-all;">${obj.ETag || '–'}</span>
-      ${pubUrl ? `<span class="obj-meta-label">URL Publik</span>
-        <span class="obj-meta-value" style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;">
-          <span style="word-break:break-all;">${pubUrl}</span>
-          <button class="copy-btn" onclick="copyText('${pubUrl}',this)">📋</button>
-        </span>` : ''}
-    </div>
-  `;
+      <span class="obj-meta-label">Key</span><span class="obj-meta-value">${escH(obj.Key)}</span>
+      <span class="obj-meta-label">Ukuran</span><span class="obj-meta-value">${fmtSize(obj.Size)}</span>
+      <span class="obj-meta-label">Terakhir diubah</span><span class="obj-meta-value">${obj.LastModified?new Date(obj.LastModified).toLocaleString('id-ID'):'–'}</span>
+      <span class="obj-meta-label">ETag</span><span class="obj-meta-value">${escH(obj.ETag||'–')}</span>
+      ${pubUrl?`<span class="obj-meta-label">URL Publik</span>
+        <span class="obj-meta-value" style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+          <span style="flex:1;word-break:break-all">${escH(pubUrl)}</span>
+          <button class="copy-btn" onclick="doCopy('${pubUrl}',this)">📋</button>
+        </span>`:''}
+    </div>`;
   showModal('modal-obj-info');
-};
+}
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-window.copyText = async function(text, btn) {
+// ═══════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════
+async function doCopy(text,btn) {
   try {
     await navigator.clipboard.writeText(text);
-    if (btn) {
-      const orig = btn.textContent;
-      btn.textContent = '✅ Disalin!'; btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
-    }
-    toast('📋 Disalin ke clipboard', 'info');
-  } catch(e) { toast('❌ Gagal salin', 'error'); }
-};
+    if (btn) { const o=btn.textContent; btn.textContent='✅'; btn.classList.add('copied'); setTimeout(()=>{btn.textContent=o;btn.classList.remove('copied');},2000); }
+    toast('📋 Disalin ke clipboard','info');
+  } catch { toast('❌ Gagal salin','error'); }
+}
 
-function formatSize(bytes) {
-  if (!bytes && bytes !== 0) return '–';
-  if (bytes === 0) return '0 B';
-  const units = ['B','KB','MB','GB','TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i];
+function fmtSize(bytes) {
+  if (!bytes&&bytes!==0) return '–';
+  if (bytes===0) return '0 B';
+  const u=['B','KB','MB','GB','TB'];
+  const i=Math.floor(Math.log(bytes)/Math.log(1024));
+  return (bytes/Math.pow(1024,i)).toFixed(1)+' '+u[i];
 }
 
 function getFileType(ext) {
-  const img = ['jpg','jpeg','png','gif','webp','svg','avif','bmp','ico'];
-  const vid = ['mp4','mov','avi','mkv','webm','m4v','flv'];
-  const doc = ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','md','csv'];
-  const zip = ['zip','rar','7z','tar','gz','bz2'];
-  if (img.includes(ext)) return { cls:'ft-img', label:'IMG' };
-  if (vid.includes(ext)) return { cls:'ft-vid', label:'VID' };
-  if (doc.includes(ext)) return { cls:'ft-doc', label:'DOC' };
-  if (zip.includes(ext)) return { cls:'ft-zip', label:'ZIP' };
-  return { cls:'ft-other', label: (ext||'???').toUpperCase().slice(0,3) };
+  if (['jpg','jpeg','png','gif','webp','svg','avif','bmp','ico'].includes(ext)) return {cls:'ft-img',label:'IMG'};
+  if (['mp4','mov','avi','mkv','webm','m4v'].includes(ext)) return {cls:'ft-vid',label:'VID'};
+  if (['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','md','csv'].includes(ext)) return {cls:'ft-doc',label:'DOC'};
+  if (['zip','rar','7z','tar','gz','bz2'].includes(ext)) return {cls:'ft-zip',label:'ZIP'};
+  return {cls:'ft-other',label:(ext||'???').toUpperCase().slice(0,3)};
 }
 
-function showErr(alertId, msgId, msg) {
-  const a = document.getElementById(alertId);
-  a.style.display = 'flex';
-  if (msgId) document.getElementById(msgId).textContent = msg;
-  else a.textContent = msg;
-}
+function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escQ(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function showErr(id,msg) { const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
 
-window.showModal = function(id) { document.getElementById(id).classList.add('show'); };
-window.hideModal = function(id) { document.getElementById(id).classList.remove('show'); };
-
-// Close modal on backdrop click
-document.querySelectorAll('.modal-backdrop').forEach(el => {
-  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('show'); });
+document.querySelectorAll('.modal-backdrop').forEach(el=>{
+  el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('show'); });
 });
 
-// Toast
-window.toast = function(msg, type = 'info') {
-  const tc = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  t.className = `toast toast-${type}`;
-  const icons = { success:'✅', error:'❌', info:'ℹ️' };
-  t.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+function toast(msg,type='info') {
+  const tc=document.getElementById('toast-container');
+  const t=document.createElement('div');
+  t.className=`toast toast-${type}`;
+  t.innerHTML=`<span>${{success:'✅',error:'❌',info:'ℹ️'}[type]}</span><span>${msg}</span>`;
   tc.appendChild(t);
-  setTimeout(() => {
-    t.classList.add('fadeout');
-    t.addEventListener('animationend', () => t.remove());
-  }, 3500);
-};
+  setTimeout(()=>{ t.classList.add('fadeout'); t.addEventListener('animationend',()=>t.remove()); },3500);
+}
 
-// ─── START ──────────────────────────────────────────────────────────────────
 init();
 </script>
 </body>
