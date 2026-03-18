@@ -97,6 +97,19 @@
   <main class="main-section">
     <div class="container">
 
+      <!-- Filter Bar -->
+      <div class="filter-bar-wrap" id="filter-bar-wrap">
+        <div class="filter-chips-scroll" id="filter-chips">
+          <button class="filter-chip active" data-id="all">🌟 Semua</button>
+        </div>
+        <div class="filter-sort-wrap" id="filter-sort-wrap" style="display:none">
+          <select class="filter-sort-select" id="sort-select" onchange="onSortChange()">
+            <option value="newest">🕐 Terbaru</option>
+            <option value="popular">🔥 Terpopuler</option>
+          </select>
+        </div>
+      </div>
+
       <!-- Category Grid -->
       <div class="cat-grid" id="cat-grid">
         <!-- Skeleton -->

@@ -145,6 +145,9 @@
               <option value="published">Published</option>
               <option value="draft">Draft</option>
             </select>
+            <select id="konten-filter-cat" class="toolbar-select">
+              <option value="">Semua Kategori</option>
+            </select>
             <select id="konten-filter-type" class="toolbar-select">
               <option value="">Semua Tipe</option>
               <option value="review">Review</option>
@@ -173,7 +176,10 @@
           <div class="toolbar-filters">
             <input type="search" id="kat-search" class="toolbar-search" placeholder="Cari kategori...">
           </div>
-          <button class="btn-primary" onclick="openKatForm()">＋ Tambah Kategori</button>
+          <div class="toolbar-btns">
+            <button class="btn-secondary" onclick="openKatFormBulk()">📦 Tambah Banyak</button>
+            <button class="btn-primary" onclick="openKatForm()">＋ Tambah Kategori</button>
+          </div>
         </div>
         <div class="cat-grid-admin" id="cat-grid-admin">
           <div class="tbl-loading">Memuat...</div>
@@ -368,35 +374,71 @@
 
   <!-- ===== MODAL: KATEGORI FORM ===== -->
   <div class="modal-overlay" id="modal-kat">
-    <div class="modal">
+    <div class="modal modal-kat-wrap">
       <div class="modal-hdr">
         <h3 class="modal-ttl" id="modal-kat-ttl">Tambah Kategori</h3>
         <button class="modal-x" onclick="closeModal('modal-kat')">✕</button>
       </div>
       <div class="modal-bdy">
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Nama <span class="req">*</span></label>
-            <input type="text" id="fk-name" class="form-input" placeholder="Smartphone" oninput="autoSlug(this.value,'fk-slug')">
+
+        <!-- Tab: Single | Bulk -->
+        <div class="kat-tab-bar" id="kat-tab-bar">
+          <button class="kat-tab active" id="kat-tab-single" onclick="switchKatTab('single')">Satu Kategori</button>
+          <button class="kat-tab" id="kat-tab-bulk" onclick="switchKatTab('bulk')">Tambah Banyak</button>
+        </div>
+
+        <!-- ===== SINGLE TAB ===== -->
+        <div id="kat-panel-single">
+          <!-- Preset chips -->
+          <div class="kat-preset-label">Preset Cepat:</div>
+          <div class="kat-preset-chips" id="kat-preset-chips">
+            <button class="kat-preset-chip" onclick="applyPreset('Fashion','👗','fashion','Pakaian, aksesori, gaya hidup')">👗 Fashion</button>
+            <button class="kat-preset-chip" onclick="applyPreset('Elektronik','📱','elektronik','Gadget dan perangkat elektronik')">📱 Elektronik</button>
+            <button class="kat-preset-chip" onclick="applyPreset('Makanan','🍜','makanan','Kuliner, resep, restoran')">🍜 Makanan</button>
+            <button class="kat-preset-chip" onclick="applyPreset('Kecantikan','💄','kecantikan','Skincare, makeup, perawatan diri')">💄 Kecantikan</button>
+            <button class="kat-preset-chip" onclick="applyPreset('Rumah Tangga','🏠','rumah-tangga','Perabotan dan kebutuhan rumah')">🏠 Rumah Tangga</button>
+            <button class="kat-preset-chip" onclick="applyPreset('Buku','📚','buku','Novel, buku teks, komik')">📚 Buku</button>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Nama <span class="req">*</span></label>
+              <input type="text" id="fk-name" class="form-input" placeholder="Smartphone" oninput="autoSlug(this.value,'fk-slug')">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Icon (Emoji)</label>
+              <input type="text" id="fk-icon" class="form-input" placeholder="📱" maxlength="4">
+            </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Icon (Emoji)</label>
-            <input type="text" id="fk-icon" class="form-input" placeholder="📱" maxlength="4">
+            <label class="form-label">Slug <span class="req">*</span></label>
+            <input type="text" id="fk-slug" class="form-input" placeholder="smartphone">
           </div>
+          <div class="form-group">
+            <label class="form-label">Deskripsi</label>
+            <input type="text" id="fk-desc" class="form-input" placeholder="Deskripsi singkat...">
+          </div>
+          <input type="hidden" id="fk-id">
         </div>
-        <div class="form-group">
-          <label class="form-label">Slug <span class="req">*</span></label>
-          <input type="text" id="fk-slug" class="form-input" placeholder="smartphone">
+
+        <!-- ===== BULK TAB ===== -->
+        <div id="kat-panel-bulk" style="display:none">
+          <p class="kat-bulk-hint">Tambah beberapa kategori sekaligus. Setiap baris adalah satu kategori.</p>
+          <div class="kat-bulk-header">
+            <span class="kat-bulk-col">Icon</span>
+            <span class="kat-bulk-col" style="flex:2">Nama *</span>
+            <span class="kat-bulk-col" style="flex:2">Slug *</span>
+            <span class="kat-bulk-col" style="flex:3">Deskripsi</span>
+            <span style="width:32px"></span>
+          </div>
+          <div id="bulk-rows-list"></div>
+          <button class="btn-sm-outline kat-bulk-add-btn" onclick="addBulkRow()">＋ Tambah Baris</button>
         </div>
-        <div class="form-group">
-          <label class="form-label">Deskripsi</label>
-          <input type="text" id="fk-desc" class="form-input" placeholder="Deskripsi singkat...">
-        </div>
-        <input type="hidden" id="fk-id">
+
       </div>
       <div class="modal-ftr">
         <button class="btn-secondary" onclick="closeModal('modal-kat')">Batal</button>
-        <button class="btn-primary" onclick="saveKat()">💾 Simpan</button>
+        <button class="btn-primary" id="btn-save-kat" onclick="saveKat()">💾 Simpan</button>
       </div>
     </div>
   </div>
