@@ -154,7 +154,7 @@ async function loadCatContent(reset = false) {
   }
 
   const offset = katPage * KAT_SIZE;
-  const sortParam = currentSort === 'popular' ? '&sort=popular' : '';
+  const sortParam = currentSort === 'popular' ? '&sort=trending' : '';
   const data   = await fetchK(`/reviews?category=${activeCat}&limit=${KAT_SIZE + 1}&offset=${offset}${sortParam}`);
   const all    = data?.data || data || [];
   katHasMore   = all.length > KAT_SIZE;
