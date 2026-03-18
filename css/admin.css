@@ -237,6 +237,33 @@ select.form-input{cursor:pointer;}
 .btn-sm-outline{padding:5px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-weight:600;color:var(--text-muted);transition:all 0.15s;}
 .btn-sm-outline:hover{border-color:var(--accent);color:var(--accent);}
 
+/* TOOLBAR BTNS */
+.toolbar-btns{display:flex;gap:8px;align-items:center;}
+
+/* KATEGORI MODAL */
+.modal-kat-wrap{width:100%;max-width:600px;}
+
+/* Tab bar */
+.kat-tab-bar{display:flex;gap:4px;background:var(--surface2);border-radius:var(--radius-sm);padding:4px;margin-bottom:18px;}
+.kat-tab{flex:1;padding:8px;border-radius:8px;font-size:13px;font-weight:600;color:var(--text-muted);transition:all 0.2s;font-family:inherit;}
+.kat-tab.active{background:var(--surface);color:var(--accent);box-shadow:var(--shadow);}
+
+/* Preset chips */
+.kat-preset-label{font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;}
+.kat-preset-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+.kat-preset-chip{padding:6px 14px;border-radius:50px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit;}
+.kat-preset-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg);}
+
+/* Bulk rows */
+.kat-bulk-hint{font-size:13px;color:var(--text-muted);margin-bottom:12px;}
+.kat-bulk-header{display:flex;gap:6px;padding:0 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px;}
+.kat-bulk-col{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;flex:1;}
+.bulk-row{display:flex;gap:6px;margin-bottom:6px;align-items:center;}
+.bulk-row .form-input{padding:7px 10px;font-size:13px;flex:1;}
+.bulk-row-del{width:28px;height:28px;flex-shrink:0;border-radius:50%;background:var(--danger-bg);color:var(--danger);font-size:13px;display:flex;align-items:center;justify-content:center;transition:background 0.2s;}
+.bulk-row-del:hover{background:var(--danger);color:#fff;}
+.kat-bulk-add-btn{display:block;margin-top:10px;width:100%;padding:8px;border-style:dashed;}
+
 /* RESPONSIVE */
 @media(max-width:900px){
   .sidebar{transform:translateX(-100%);}
@@ -256,4 +283,7 @@ select.form-input{cursor:pointer;}
   .topbar{padding:0 14px;}
   .modal-bdy{padding:16px;}
   .modal-ftr{padding:12px 16px;}
+  .bulk-row{flex-wrap:wrap;}
+  .kat-bulk-header{display:none;}
+  .toolbar-btns{flex-direction:column;gap:6px;}
 }
