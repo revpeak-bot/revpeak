@@ -7,6 +7,7 @@ let activeCat    = null;
 let katPage      = 0;
 let katHasMore   = false;
 const KAT_SIZE   = 9;
+let currentSort  = 'newest'; // 'newest' | 'popular'
 
 async function fetchK(endpoint) {
   try {
@@ -14,6 +15,35 @@ async function fetchK(endpoint) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
   } catch (e) { console.error(e); return null; }
+}
+
+/* ===========================
+   FILTER CHIPS
+=========================== */
+function renderFilterChips(cats) {
+  const bar = document.getElementById('filter-chips');
+  if (!bar) return;
+  bar.innerHTML =
+    `<button class="filter-chip active" data-id="all" onclick="filterByChip('all',null,null)">🌟 Semua</button>` +
+    cats.map(c =>
+      `<button class="filter-chip" data-id="${c.id}" onclick="filterByChip(${c.id},'${(c.name||'').replace(/'/g,"\\'")}','${c.icon||'📌'}')">${c.icon||'📌'} ${c.name}</button>`
+    ).join('');
+}
+
+function filterByChip(id, name, icon) {
+  document.querySelectorAll('.filter-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.id === String(id));
+  });
+  if (id === 'all') {
+    backToCategories();
+    return;
+  }
+  selectCategory(id, name, icon);
+}
+
+function onSortChange() {
+  currentSort = document.getElementById('sort-select')?.value || 'newest';
+  if (activeCat) loadCatContent(true);
 }
 
 /* ===========================
@@ -55,6 +85,9 @@ async function loadCategoryCards() {
       </div>
     </button>`).join('');
 
+  // Render filter chips
+  renderFilterChips(cats);
+
   // Check URL param
   const urlCat = new URLSearchParams(window.location.search).get('cat');
   if (urlCat) {
@@ -74,6 +107,15 @@ function selectCategory(catId, catName, catIcon) {
   document.querySelectorAll('.cat-card').forEach(c => {
     c.classList.toggle('active', parseInt(c.dataset.id) === catId);
   });
+
+  // Sync filter chips
+  document.querySelectorAll('.filter-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.id === String(catId));
+  });
+
+  // Show sort select
+  const sortWrap = document.getElementById('filter-sort-wrap');
+  if (sortWrap) sortWrap.style.display = 'flex';
 
   // Show content section
   const contentSection = document.getElementById('cat-content-section');
@@ -112,7 +154,8 @@ async function loadCatContent(reset = false) {
   }
 
   const offset = katPage * KAT_SIZE;
-  const data   = await fetchK(`/reviews?category=${activeCat}&limit=${KAT_SIZE + 1}&offset=${offset}`);
+  const sortParam = currentSort === 'popular' ? '&sort=popular' : '';
+  const data   = await fetchK(`/reviews?category=${activeCat}&limit=${KAT_SIZE + 1}&offset=${offset}${sortParam}`);
   const all    = data?.data || data || [];
   katHasMore   = all.length > KAT_SIZE;
   const items  = katHasMore ? all.slice(0, KAT_SIZE) : all;
@@ -141,7 +184,20 @@ async function loadCatContent(reset = false) {
 =========================== */
 function backToCategories() {
   activeCat = null;
+  currentSort = 'newest';
   document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
+
+  // Reset chips to "Semua"
+  document.querySelectorAll('.filter-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.id === 'all');
+  });
+
+  // Reset & hide sort
+  const sortWrap = document.getElementById('filter-sort-wrap');
+  if (sortWrap) sortWrap.style.display = 'none';
+  const sortSel = document.getElementById('sort-select');
+  if (sortSel) sortSel.value = 'newest';
+
   const contentSection = document.getElementById('cat-content-section');
   if (contentSection) contentSection.style.display = 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });

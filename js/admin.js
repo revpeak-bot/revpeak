@@ -293,12 +293,20 @@ async function loadCategories() {
   const data = await supaGet('categories', '?select=id,name,slug,icon&order=name.asc');
   allCategories = Array.isArray(data) ? data : [];
 
-  // Fill select dropdowns
+  // Fill konten form select
   const sel = document.getElementById('f-cat');
   if (sel) {
     sel.innerHTML = '<option value="">Pilih kategori...</option>' +
       allCategories.map(c => `<option value="${c.id}">${c.icon||'📌'} ${c.name}</option>`).join('');
   }
+
+  // Fill konten filter select
+  const filterSel = document.getElementById('konten-filter-cat');
+  if (filterSel) {
+    filterSel.innerHTML = '<option value="">Semua Kategori</option>' +
+      allCategories.map(c => `<option value="${c.id}">${c.icon||'📌'} ${c.name}</option>`).join('');
+  }
+
   return allCategories;
 }
 
@@ -366,12 +374,14 @@ async function loadKonten(page = 0) {
   const search = val('konten-search');
   const status = val('konten-filter-status');
   const type   = val('konten-filter-type');
+  const catId  = val('konten-filter-cat');
 
   let q = `?select=id,title,slug,post_type,is_published,is_featured,views,created_at,category_id,categories(name)&order=created_at.desc&limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`;
   if (status === 'published') q += '&is_published=eq.true';
   if (status === 'draft')     q += '&is_published=eq.false';
   if (type)    q += `&post_type=eq.${type}`;
-  if (search)  q += `&or=(title.ilike.*${encodeURIComponent(search)}*,slug.ilike.*${encodeURIComponent(search)}*)`;
+  if (catId)   q += `&category_id=eq.${catId}`;
+  if (search)  q += `&or=(title.ilike.*${encodeURIComponent(search)}*,slug.ilike.*${encodeURIComponent(search)})` ;
 
   const data  = await supaGet('reviews', q);
   const items = Array.isArray(data) ? data : [];
@@ -762,8 +772,14 @@ async function loadKategoriPage() {
   if (!grid) return;
   grid.innerHTML = '<div class="tbl-loading">⏳ Memuat...</div>';
 
-  const data = await supaGet('categories', '?select=id,name,slug,icon,description&order=name.asc');
-  const cats = Array.isArray(data) ? data : [];
+  const search = val('kat-search');
+  let data = await supaGet('categories', '?select=id,name,slug,icon,description&order=name.asc');
+  let cats = Array.isArray(data) ? data : [];
+
+  if (search) {
+    const q = search.toLowerCase();
+    cats = cats.filter(c => c.name?.toLowerCase().includes(q) || c.slug?.toLowerCase().includes(q));
+  }
 
   if (!cats.length) {
     grid.innerHTML = '<div class="tbl-loading">Belum ada kategori. Tambahkan sekarang!</div>';
@@ -775,7 +791,7 @@ async function loadKategoriPage() {
       <div class="cat-admin-icon">${c.icon||'📌'}</div>
       <div class="cat-admin-info">
         <div class="cat-admin-name">${c.name}</div>
-        <div class="cat-admin-slug">${c.slug}</div>
+        <div class="cat-admin-slug">${c.slug}${c.description ? ' · '+c.description : ''}</div>
       </div>
       <div class="cat-admin-actions">
         <button class="btn-tbl btn-tbl-edit" onclick='editKat(${JSON.stringify(c).replace(/"/g,"&quot;")})'>Edit</button>
@@ -784,46 +800,164 @@ async function loadKategoriPage() {
     </div>`).join('');
 }
 
+/* ===== Kat Modal Tab ===== */
+let _katTab = 'single';
+let _bulkRowCount = 0;
+
+function switchKatTab(tab) {
+  _katTab = tab;
+  const isSingle = tab === 'single';
+  document.getElementById('kat-panel-single').style.display = isSingle ? 'block' : 'none';
+  document.getElementById('kat-panel-bulk').style.display   = isSingle ? 'none'  : 'block';
+  document.getElementById('kat-tab-single').classList.toggle('active', isSingle);
+  document.getElementById('kat-tab-bulk').classList.toggle('active', !isSingle);
+  document.getElementById('modal-kat-ttl').textContent = isSingle ? 'Tambah Kategori' : 'Tambah Banyak Kategori';
+  document.getElementById('btn-save-kat').textContent  = isSingle ? '💾 Simpan' : '💾 Simpan Semua';
+}
+
+/* ===== Preset ===== */
+function applyPreset(name, icon, slug, desc) {
+  if (_katTab !== 'single') return;
+  document.getElementById('fk-name').value = name;
+  document.getElementById('fk-icon').value = icon;
+  document.getElementById('fk-slug').value = slug;
+  document.getElementById('fk-desc').value = desc;
+}
+
+/* ===== Bulk Rows ===== */
+function addBulkRow(data = {}) {
+  _bulkRowCount++;
+  const n = _bulkRowCount;
+  const list = document.getElementById('bulk-rows-list');
+  if (!list) return;
+  const div = document.createElement('div');
+  div.className = 'bulk-row';
+  div.id = `bulk-row-${n}`;
+  div.innerHTML = `
+    <input type="text" id="br-icon-${n}" class="form-input" placeholder="📌" maxlength="4" value="${data.icon||''}">
+    <input type="text" id="br-name-${n}" class="form-input" placeholder="Nama..." style="flex:2" value="${data.name||''}" oninput="autoBulkSlug(${n})">
+    <input type="text" id="br-slug-${n}" class="form-input" placeholder="slug..." style="flex:2" value="${data.slug||''}">
+    <input type="text" id="br-desc-${n}" class="form-input" placeholder="Deskripsi..." style="flex:3" value="${data.desc||''}">
+    <button type="button" class="bulk-row-del" onclick="removeBulkRow(${n})" title="Hapus">✕</button>`;
+  list.appendChild(div);
+}
+
+function removeBulkRow(n) {
+  document.getElementById(`bulk-row-${n}`)?.remove();
+}
+
+function autoBulkSlug(n) {
+  const nameEl = document.getElementById(`br-name-${n}`);
+  const slugEl = document.getElementById(`br-slug-${n}`);
+  if (!nameEl || !slugEl) return;
+  slugEl.value = nameEl.value.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 80);
+}
+
+function collectBulkRows() {
+  const rows = document.querySelectorAll('.bulk-row');
+  return Array.from(rows).map(row => {
+    const n = row.id.replace('bulk-row-', '');
+    return {
+      icon:        (document.getElementById(`br-icon-${n}`)?.value || '').trim() || '📌',
+      name:        (document.getElementById(`br-name-${n}`)?.value || '').trim(),
+      slug:        (document.getElementById(`br-slug-${n}`)?.value || '').trim(),
+      description: (document.getElementById(`br-desc-${n}`)?.value || '').trim() || null,
+    };
+  }).filter(r => r.name && r.slug);
+}
+
+function initBulkDefaults() {
+  const defaults = [
+    { icon:'👗', name:'Fashion',       slug:'fashion',       desc:'Pakaian, aksesori, gaya hidup' },
+    { icon:'📱', name:'Elektronik',    slug:'elektronik',    desc:'Gadget dan perangkat elektronik' },
+    { icon:'🍜', name:'Makanan',       slug:'makanan',       desc:'Kuliner, resep, restoran' },
+    { icon:'💄', name:'Kecantikan',    slug:'kecantikan',    desc:'Skincare, makeup, perawatan diri' },
+    { icon:'🏠', name:'Rumah Tangga',  slug:'rumah-tangga',  desc:'Perabotan dan kebutuhan rumah' },
+    { icon:'📚', name:'Buku',          slug:'buku',          desc:'Novel, buku teks, komik' },
+  ];
+  defaults.forEach(d => addBulkRow(d));
+}
+
+/* ===== Open / Edit ===== */
 function openKatForm() {
+  _bulkRowCount = 0;
+  _katTab = 'single';
   ['fk-id','fk-name','fk-icon','fk-slug','fk-desc'].forEach(id => setVal(id,''));
-  document.getElementById('modal-kat-ttl').textContent = 'Tambah Kategori';
+  document.getElementById('bulk-rows-list').innerHTML = '';
+  document.getElementById('kat-tab-bar').style.display = 'flex';
+  switchKatTab('single');
+  openModal('modal-kat');
+}
+
+function openKatFormBulk() {
+  _bulkRowCount = 0;
+  _katTab = 'bulk';
+  ['fk-id','fk-name','fk-icon','fk-slug','fk-desc'].forEach(id => setVal(id,''));
+  document.getElementById('bulk-rows-list').innerHTML = '';
+  document.getElementById('kat-tab-bar').style.display = 'flex';
+  initBulkDefaults();
+  switchKatTab('bulk');
   openModal('modal-kat');
 }
 
 function editKat(c) {
   if (typeof c === 'string') c = JSON.parse(c);
+  _bulkRowCount = 0;
+  _katTab = 'single';
+  document.getElementById('bulk-rows-list').innerHTML = '';
   setVal('fk-id',   c.id);
   setVal('fk-name', c.name);
   setVal('fk-icon', c.icon);
   setVal('fk-slug', c.slug);
   setVal('fk-desc', c.description);
+  switchKatTab('single');
   document.getElementById('modal-kat-ttl').textContent = 'Edit Kategori';
+  // Hide tab bar when editing
+  document.getElementById('kat-tab-bar').style.display = 'none';
   openModal('modal-kat');
 }
 
+/* ===== Save ===== */
 async function saveKat() {
-  const id   = val('fk-id');
-  const name = val('fk-name');
-  const slug = val('fk-slug');
-  if (!name || !slug) { toast('Nama dan slug wajib diisi!', 'error'); return; }
+  const btn = document.getElementById('btn-save-kat');
+  btn.textContent = '⏳ Menyimpan...';
+  btn.disabled = true;
 
-  const payload = {
-    name,
-    slug,
-    icon:        val('fk-icon') || '📌',
-    description: val('fk-desc') || null,
-  };
-
-  const result = id ? await supaUpdate('categories', id, payload) : await supaInsert('categories', payload);
-
-  if (result.ok) {
-    toast(id ? 'Kategori diperbarui!' : 'Kategori ditambahkan!');
+  if (_katTab === 'bulk') {
+    const rows = collectBulkRows();
+    if (!rows.length) { toast('Isi minimal satu baris dengan Nama dan Slug!', 'error'); btn.textContent = '💾 Simpan Semua'; btn.disabled = false; return; }
+    let ok = 0, fail = 0;
+    for (const row of rows) {
+      const r = await supaInsert('categories', { name: row.name, slug: row.slug, icon: row.icon, description: row.description });
+      if (r.ok) ok++; else fail++;
+    }
+    toast(fail === 0 ? `✅ ${ok} kategori berhasil ditambahkan!` : `${ok} berhasil, ${fail} gagal`, fail ? 'error' : 'success');
     closeModal('modal-kat');
     loadKategoriPage();
     loadCategories();
   } else {
-    toast('Gagal menyimpan: ' + (result.data?.message || 'Error'), 'error');
+    const id   = val('fk-id');
+    const name = val('fk-name');
+    const slug = val('fk-slug');
+    if (!name || !slug) { toast('Nama dan slug wajib diisi!', 'error'); btn.textContent = '💾 Simpan'; btn.disabled = false; return; }
+    const payload = { name, slug, icon: val('fk-icon') || '📌', description: val('fk-desc') || null };
+    const result = id ? await supaUpdate('categories', id, payload) : await supaInsert('categories', payload);
+    if (result.ok) {
+      toast(id ? 'Kategori diperbarui!' : 'Kategori ditambahkan!');
+      closeModal('modal-kat');
+      loadKategoriPage();
+      loadCategories();
+    } else {
+      toast('Gagal menyimpan: ' + (result.data?.message || 'Error'), 'error');
+    }
   }
+
+  btn.textContent = _katTab === 'bulk' ? '💾 Simpan Semua' : '💾 Simpan';
+  btn.disabled = false;
 }
 
 async function deleteKat(id, name) {
@@ -953,6 +1087,7 @@ function initSearch() {
 
   document.getElementById('konten-search')?.addEventListener('input', () => debounce(loadKonten));
   document.getElementById('konten-filter-status')?.addEventListener('change', loadKonten);
+  document.getElementById('konten-filter-cat')?.addEventListener('change',    loadKonten);
   document.getElementById('konten-filter-type')?.addEventListener('change',   loadKonten);
   document.getElementById('tokoh-search')?.addEventListener('input',  () => debounce(loadTokoh));
   document.getElementById('kat-search')?.addEventListener('input',    () => debounce(loadKategoriPage));
