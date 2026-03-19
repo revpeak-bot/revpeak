@@ -412,3 +412,28 @@ textarea.form-input-k { resize: vertical; line-height: 1.6; }
   .page-hero-title { font-size: 22px; }
   .kontak-form-card { padding: 20px; }
 }
+
+/* Upgrade form UI */
+.kontak-form-card {
+  background: linear-gradient(145deg, var(--surface), var(--surface2));
+  box-shadow: var(--shadow-md);
+}
+
+.btn-kirim {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  box-shadow: 0 6px 18px rgba(224,62,11,0.25);
+}
+
+.btn-kirim:hover {
+  transform: translateY(-2px);
+}
+
+.form-success {
+  display: none;
+  animation: fadeInUp 0.4s ease;
+}
+
+@keyframes fadeInUp {
+  from {opacity:0; transform:translateY(10px);}
+  to {opacity:1; transform:translateY(0);}
+}
