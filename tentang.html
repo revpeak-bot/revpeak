@@ -20,7 +20,6 @@
 <body>
 
   <div class="drawer-overlay" id="drawer-overlay"></div>
-
   <aside class="drawer" id="drawer">
     <div class="drawer-header">
       <div class="drawer-logo">
@@ -33,25 +32,42 @@
     </div>
 
     <nav class="drawer-nav">
-      <a href="/" class="drawer-link">🏠 Beranda</a>
-      <a href="tokoh.html" class="drawer-link">👤 Tokoh</a>
-      <a href="tentang.html" class="drawer-link active">ℹ️ Tentang</a>
-      <a href="kontak.html" class="drawer-link">💬 Dukungan</a>
+      <a href="/" class="drawer-link"><span>🏠</span> Beranda</a>
+      <a href="tokoh.html" class="drawer-link"><span>👤</span> Tokoh</a>
+      <a href="tentang.html" class="drawer-link active"><span>ℹ️</span> Tentang</a>
+      <a href="kontak.html" class="drawer-link"><span>💬</span> Dukungan</a>
     </nav>
+
+    <div class="drawer-footer">
+      <p class="drawer-version">RevPeak v2.0</p>
+    </div>
   </aside>
 
-  <header class="header">
-    <div class="container">
-      <a href="/" class="header-logo">
-        <span class="logo-text">Rev<span>Peak</span></span>
-      </a>
+  <header class="header" id="header">
+    <div class="header-top">
+      <div class="header-top-inner container">
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+
+        <a href="/" class="header-logo">
+          <div class="logo-icon">
+            <img src="https://assets.revpeak.web.id/logo-revpeak.webp" alt="RevPeak logo">
+          </div>
+          <div class="header-logo-text">
+            <span class="logo-text">Rev<span>Peak</span></span>
+            <span class="logo-tagline">Review Jujur & Santai</span>
+          </div>
+        </a>
+      </div>
     </div>
   </header>
 
   <div class="page-hero">
     <div class="container">
+      <nav class="breadcrumb">
+        <a href="/">Beranda</a><span>›</span><span>Tentang</span>
+      </nav>
       <h1 class="page-hero-title">Tentang RevPeak</h1>
-      <p class="page-hero-desc">Tempat berbagi review, tips, dan berbagai hal menarik secara santai dan personal.</p>
+      <p class="page-hero-desc">Tempat berbagi review, tips, dan berbagai hal menarik dengan gaya santai.</p>
     </div>
   </div>
 
@@ -59,7 +75,9 @@
     <div class="container">
       <div class="about-layout">
 
+        <!-- ✅ KONTEN UTAMA (SUDAH DIPERBAIKI) -->
         <article class="about-main">
+
           <h2>Halo, saya Asran 👋</h2>
           <p>Selamat datang di RevPeak — sebuah ruang kecil di internet yang saya buat untuk berbagi berbagai hal yang menurut saya menarik dan bermanfaat.</p>
 
@@ -84,7 +102,23 @@
           <h2>Penutup</h2>
           <p>Terima kasih sudah mengunjungi RevPeak 🙌<br>
           Semoga Anda menemukan sesuatu yang bermanfaat di sini.</p>
+
         </article>
+
+        <!-- ✅ SIDEBAR (TIDAK DIUBAH DESIGN) -->
+        <aside class="about-sidebar">
+          <div class="about-sidebar-card">
+            <div class="about-sidebar-title">Kontak</div>
+            <div class="contact-item">🌐 <a href="https://revpeak.web.id">revpeak.web.id</a></div>
+          </div>
+
+          <div class="about-sidebar-card" style="position:sticky;top:170px">
+            <div class="about-sidebar-title">Link Cepat</div>
+            <div class="contact-item">📋 <a href="kebijakan.html">Kebijakan Privasi</a></div>
+            <div class="contact-item">⚠️ <a href="disclaimer.html">Disclaimer</a></div>
+            <div class="contact-item">💬 <a href="kontak.html">Kontak</a></div>
+          </div>
+        </aside>
 
       </div>
     </div>
@@ -92,9 +126,32 @@
 
   <footer class="footer">
     <div class="container">
-      <p>© 2025 RevPeak. Semua hak dilindungi.</p>
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <span class="logo-text">Rev<span>Peak</span></span>
+          <p class="footer-desc">Website sederhana untuk berbagi review dan informasi menarik.</p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navigasi</h4>
+          <a href="/">Beranda</a>
+          <a href="tentang.html">Tentang</a>
+          <a href="kontak.html">Kontak</a>
+        </div>
+
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="kebijakan.html">Privasi</a>
+          <a href="disclaimer.html">Disclaimer</a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© 2025 RevPeak</p>
+      </div>
     </div>
   </footer>
 
+  <script src="js/app.js"></script>
 </body>
 </html>
