@@ -110,11 +110,7 @@ function initDrawer() {
     overlay?.classList.add('open');
     hamburger?.classList.add('open');
     hamburger?.setAttribute('aria-expanded', 'true');
-    // [A11Y] Drawer kini terlihat oleh screen reader
-    drawer?.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    // [A11Y] Pindahkan fokus ke tombol tutup agar keyboard user bisa langsung menutup drawer
-    setTimeout(() => close?.focus(), 50);
   }
 
   function close_() {
@@ -122,11 +118,7 @@ function initDrawer() {
     overlay?.classList.remove('open');
     hamburger?.classList.remove('open');
     hamburger?.setAttribute('aria-expanded', 'false');
-    // [A11Y] Drawer disembunyikan kembali dari screen reader
-    drawer?.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
-    // [A11Y] Kembalikan fokus ke tombol hamburger setelah drawer ditutup
-    hamburger?.focus();
   }
 
   hamburger?.addEventListener('click', () => {
@@ -196,10 +188,9 @@ async function loadCategories() {
   const cats = data?.data || data || [];
   if (!cats.length) return;
 
-  // [A11Y] type="button" ditambahkan pada semua tombol chip yang dibuat dinamis
-  const all  = `<button type="button" class="cat-chip active" data-cat="all">🌟 Semua</button>`;
+  const all  = `<button class="cat-chip active" data-cat="all">🌟 Semua</button>`;
   const rest = cats.map(c =>
-    `<button type="button" class="cat-chip" data-cat="${c.id}">${c.icon || '📌'} ${c.name}</button>`
+    `<button class="cat-chip" data-cat="${c.id}">${c.icon || '📌'} ${c.name}</button>`
   ).join('');
   wrap.innerHTML = all + rest;
 
@@ -229,13 +220,8 @@ function initTabs() {
       currentPage = 0;
       currentCat  = 'all';
 
-      document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('active');
-        // [A11Y] Perbarui aria-selected agar screen reader tahu tab mana yang aktif
-        b.setAttribute('aria-selected', 'false');
-      });
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
 
       // Reset cat chips
       document.querySelectorAll('.cat-chip').forEach(c => c.classList.toggle('active', c.dataset.cat === 'all'));
@@ -326,7 +312,6 @@ function contentCardHTML(item) {
 
   const showTrending = item.views > 100;
 
-  // [A11Y] role="listitem" sudah ada — dipertahankan agar sesuai dengan parent role="list"
   return `
     <a href="review.html?slug=${item.slug}" class="content-card" role="listitem">
       <div class="card-media">
@@ -351,9 +336,8 @@ function contentCardHTML(item) {
 /* ===== SKELETON ===== */
 function renderSkeletons(container, count) {
   if (!container) return;
-  // [A11Y] role="listitem" ditambahkan agar child cocok dengan parent role="list"
   container.innerHTML = Array(count).fill('').map(() => `
-    <div class="skeleton-card" role="listitem">
+    <div class="skeleton-card">
       <div class="skeleton sk-img"></div>
       <div class="sk-body">
         <div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div>
