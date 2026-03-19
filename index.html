@@ -39,38 +39,32 @@
   <div class="drawer-overlay" id="drawer-overlay"></div>
 
   <!-- ===== DRAWER MENU ===== -->
-  <!-- [A11Y] aria-hidden="true" awal — JS akan toggle saat drawer dibuka/ditutup -->
-  <aside class="drawer" id="drawer" aria-label="Menu navigasi" aria-hidden="true">
+  <aside class="drawer" id="drawer" aria-label="Menu navigasi">
     <div class="drawer-header">
       <div class="drawer-logo">
         <div class="logo-icon" id="drawer-logo-icon"><img src="https://assets.revpeak.web.id/logo-revpeak.webp" alt="Revpeak logo" style="width:100%;height:100%;object-fit:contain;"></div>
         <span class="logo-text">Rev<span>peak</span></span>
       </div>
-      <!-- [A11Y] type="button" ditambahkan; SVG dekoratif diberi aria-hidden -->
-      <button type="button" class="drawer-close" id="drawer-close" aria-label="Tutup menu">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <button class="drawer-close" id="drawer-close" aria-label="Tutup menu">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
     </div>
 
     <nav class="drawer-nav">
       <a href="/" class="drawer-link active">
-        <!-- [A11Y] icon emoji dekoratif diberi aria-hidden -->
-        <span class="drawer-link-icon" aria-hidden="true">🏠</span>
+        <span class="drawer-link-icon">🏠</span>
         <span>Beranda</span>
       </a>
       <a href="tokoh.html" class="drawer-link">
-        <!-- [A11Y] icon emoji dekoratif diberi aria-hidden -->
-        <span class="drawer-link-icon" aria-hidden="true">👤</span>
+        <span class="drawer-link-icon">👤</span>
         <span>Tokoh</span>
       </a>
       <a href="tentang.html" class="drawer-link">
-        <!-- [A11Y] icon emoji dekoratif diberi aria-hidden -->
-        <span class="drawer-link-icon" aria-hidden="true">ℹ️</span>
+        <span class="drawer-link-icon">ℹ️</span>
         <span>Tentang</span>
       </a>
       <a href="kontak.html" class="drawer-link">
-        <!-- [A11Y] icon emoji dekoratif diberi aria-hidden -->
-        <span class="drawer-link-icon" aria-hidden="true">💬</span>
+        <span class="drawer-link-icon">💬</span>
         <span>Dukungan</span>
       </a>
     </nav>
@@ -78,8 +72,7 @@
     <div class="drawer-footer">
       <div class="drawer-theme-row">
         <span class="drawer-theme-label">Mode Gelap</span>
-        <!-- [A11Y] type="button" ditambahkan -->
-        <button type="button" class="theme-toggle-pill" id="theme-toggle" role="switch" aria-checked="false" aria-label="Ganti tema">
+        <button class="theme-toggle-pill" id="theme-toggle" role="switch" aria-checked="false" aria-label="Ganti tema">
           <span class="theme-toggle-thumb"></span>
         </button>
       </div>
@@ -91,8 +84,7 @@
   <header class="header" id="header">
     <div class="header-top">
       <div class="header-top-inner container">
-        <!-- [A11Y] type="button" dan aria-controls="drawer" ditambahkan -->
-        <button type="button" class="hamburger" id="hamburger" aria-label="Buka menu" aria-expanded="false" aria-controls="drawer">
+        <button class="hamburger" id="hamburger" aria-label="Buka menu" aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
         <a href="/" class="header-logo">
@@ -112,13 +104,11 @@
     <div class="header-search-wrap">
       <div class="container">
         <div class="header-search-inner">
-          <!-- [A11Y] SVG dekoratif diberi aria-hidden -->
-          <svg class="search-icon-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <svg class="search-icon-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
           <input type="search" id="search-input" class="search-input" placeholder="Cari review, produk, topik..." autocomplete="off" aria-label="Cari konten">
-          <!-- [A11Y] type="button" ditambahkan -->
-          <button type="button" class="search-clear" id="search-clear" aria-label="Hapus pencarian">✕</button>
+          <button class="search-clear" id="search-clear" aria-label="Hapus pencarian">✕</button>
         </div>
       </div>
     </div>
@@ -128,20 +118,16 @@
   <div class="tabs-bar" id="tabs-bar" role="tablist" aria-label="Pilih kategori konten">
     <div class="container">
       <div class="tabs-inner">
-        <!-- [A11Y] type="button" ditambahkan pada semua tombol tab -->
-        <button type="button" class="tab-btn active" data-tab="rekomendasi" role="tab" aria-selected="true">
-          <!-- [A11Y] icon tab dekoratif diberi aria-hidden -->
-          <span class="tab-icon" aria-hidden="true">⭐</span>
+        <button class="tab-btn active" data-tab="rekomendasi" role="tab" aria-selected="true">
+          <span class="tab-icon">⭐</span>
           <span class="tab-label">Rekomendasi</span>
         </button>
-        <button type="button" class="tab-btn" data-tab="trending" role="tab" aria-selected="false">
-          <!-- [A11Y] icon tab dekoratif diberi aria-hidden -->
-          <span class="tab-icon" aria-hidden="true">🔥</span>
+        <button class="tab-btn" data-tab="trending" role="tab" aria-selected="false">
+          <span class="tab-icon">🔥</span>
           <span class="tab-label">Trending</span>
         </button>
-        <button type="button" class="tab-btn" data-tab="terbaru" role="tab" aria-selected="false">
-          <!-- [A11Y] icon tab dekoratif diberi aria-hidden -->
-          <span class="tab-icon" aria-hidden="true">🆕</span>
+        <button class="tab-btn" data-tab="terbaru" role="tab" aria-selected="false">
+          <span class="tab-icon">🆕</span>
           <span class="tab-label">Terbaru</span>
         </button>
       </div>
@@ -177,8 +163,7 @@
 
       <!-- Category chips -->
       <nav class="cat-chips-scroll" id="cat-chips" aria-label="Filter kategori">
-        <!-- [A11Y] type="button" ditambahkan -->
-        <button type="button" class="cat-chip active" data-cat="all">🌟 Semua</button>
+        <button class="cat-chip active" data-cat="all">🌟 Semua</button>
       </nav>
 
       <!-- Section header -->
@@ -188,18 +173,15 @@
       </div>
 
       <!-- Content grid -->
-      <!-- [A11Y] aria-live="polite" ditambahkan agar perubahan konten dinamis diumumkan ke screen reader -->
-      <div class="content-grid" id="content-grid" role="list" aria-label="Daftar review" aria-live="polite">
-        <!-- [A11Y] role="listitem" ditambahkan agar sesuai dengan parent role="list" -->
-        <div class="skeleton-card" role="listitem"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
-        <div class="skeleton-card" role="listitem"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
-        <div class="skeleton-card" role="listitem"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
+      <div class="content-grid" id="content-grid" role="list" aria-label="Daftar review">
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
       </div>
 
       <!-- Load more -->
       <div class="load-more-wrap" id="load-more-wrap" style="display:none">
-        <!-- [A11Y] type="button" ditambahkan -->
-        <button type="button" class="btn-load-more" id="btn-load-more">Muat Lebih Banyak</button>
+        <button class="btn-load-more" id="btn-load-more">Muat Lebih Banyak</button>
       </div>
 
     </div>
@@ -254,8 +236,7 @@
   </footer>
 
   <!-- Scroll to top -->
-  <!-- [A11Y] type="button" ditambahkan -->
-  <button type="button" class="scroll-top" id="scroll-top" aria-label="Kembali ke atas">↑</button>
+  <button class="scroll-top" id="scroll-top" aria-label="Kembali ke atas">↑</button>
 
   <script src="js/app.js"></script>
 </body>
