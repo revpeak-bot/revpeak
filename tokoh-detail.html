@@ -601,11 +601,12 @@
     // ===== Format tanggal lahir =====
     function formatTanggal(dateStr) {
       if (!dateStr) return null;
-      try {
-        return new Date(dateStr).toLocaleDateString('id-ID', {
-          day: 'numeric', month: 'long', year: 'numeric'
-        });
-      } catch { return dateStr; }
+      const d = new Date(dateStr);
+      // Jika hasil parse tidak valid (misal teks "1 Januari 1990"), kembalikan apa adanya
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('id-ID', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      });
     }
 
     // ===== Render Hero =====
