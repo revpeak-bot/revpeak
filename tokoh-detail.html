@@ -396,6 +396,76 @@
       flex-shrink: 0;
     }
 
+    /* ===== ARTICLE HTML CONTENT ===== */
+    .tokoh-article-body {
+      font-family: 'DM Sans', sans-serif;
+      font-size: .97rem;
+      line-height: 1.82;
+      color: var(--text-secondary, #555);
+    }
+    .tokoh-article-body h2,
+    .tokoh-article-body h3,
+    .tokoh-article-body h4 {
+      font-family: 'Syne', sans-serif;
+      color: var(--text-primary, #1a1a1a);
+      margin: 24px 0 10px;
+      line-height: 1.35;
+    }
+    .tokoh-article-body h2 { font-size: 1.25rem; font-weight: 700; }
+    .tokoh-article-body h3 { font-size: 1.08rem; font-weight: 700; }
+    .tokoh-article-body h4 { font-size: .97rem;  font-weight: 600; }
+    .tokoh-article-body p  { margin: 0 0 14px; }
+    .tokoh-article-body ul,
+    .tokoh-article-body ol {
+      padding-left: 22px;
+      margin: 0 0 14px;
+    }
+    .tokoh-article-body li { margin-bottom: 6px; }
+    .tokoh-article-body strong, .tokoh-article-body b { font-weight: 600; color: var(--text-primary, #1a1a1a); }
+    .tokoh-article-body em, .tokoh-article-body i { font-style: italic; }
+    .tokoh-article-body a {
+      color: var(--accent, #2D2C29);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .tokoh-article-body a:hover { opacity: .75; }
+    .tokoh-article-body blockquote {
+      border-left: 3px solid var(--accent, #2D2C29);
+      margin: 18px 0;
+      padding: 10px 18px;
+      background: var(--bg-secondary, #f5f5f5);
+      border-radius: 0 8px 8px 0;
+      font-style: italic;
+    }
+    .tokoh-article-body img {
+      max-width: 100%;
+      border-radius: 10px;
+      margin: 16px 0;
+      display: block;
+    }
+    .tokoh-article-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: .9rem;
+    }
+    .tokoh-article-body th,
+    .tokoh-article-body td {
+      border: 1px solid var(--border, #e8e8e8);
+      padding: 9px 14px;
+      text-align: left;
+    }
+    .tokoh-article-body th {
+      background: var(--bg-secondary, #f5f5f5);
+      font-weight: 600;
+      color: var(--text-primary, #1a1a1a);
+    }
+    .tokoh-article-body hr {
+      border: none;
+      border-top: 1px solid var(--border, #e8e8e8);
+      margin: 24px 0;
+    }
+
     /* Breadcrumb override for dark hero */
     .tokoh-hero .breadcrumb a,
     .tokoh-hero .breadcrumb span {
@@ -528,10 +598,16 @@
           <!-- ===== LEFT: About + Bio ===== -->
           <div class="tokoh-main-col">
 
-            <!-- About -->
+            <!-- About / Bio ringkas -->
             <div class="tokoh-about-card" id="about-card">
               <h2>Tentang</h2>
               <p class="tokoh-bio-text" id="bio-text"></p>
+            </div>
+
+            <!-- Artikel lengkap (field content — HTML) -->
+            <div class="tokoh-about-card tokoh-article-card" id="content-card" style="display:none">
+              <h2 id="content-heading">Profil Lengkap</h2>
+              <div class="tokoh-article-body" id="content-body"></div>
             </div>
 
             <!-- Highlights / facts (jika ada) -->
@@ -677,9 +753,31 @@
     function renderBio(t) {
       const bioText = document.getElementById('bio-text');
       if (t.bio) {
-        bioText.textContent = t.bio;
+        // Gunakan innerHTML agar tag HTML di dalam bio ikut dirender
+        bioText.innerHTML = t.bio;
       } else {
         document.getElementById('about-card').style.display = 'none';
+      }
+    }
+
+    // ===== Render konten artikel HTML lengkap =====
+    function renderContent(t) {
+      const card = document.getElementById('content-card');
+      const body = document.getElementById('content-body');
+
+      // Coba beberapa nama field umum (sesuaikan dengan nama field di tabel anda)
+      const html = t.content || t.article || t.body || t.full_content || '';
+
+      if (!html) { card.style.display = 'none'; return; }
+
+      card.style.display = 'block';
+      body.innerHTML = html;
+
+      // Jika bio juga ada, tampilkan keduanya
+      if (!t.bio) {
+        // Tidak ada bio — sembunyikan section bio, content jadi section utama
+        document.getElementById('about-card').style.display = 'none';
+        document.getElementById('content-heading').textContent = 'Tentang';
       }
     }
 
@@ -841,6 +939,7 @@
       renderHero(t);
       renderStats(t);
       renderBio(t);
+      renderContent(t);
       renderInfo(t);
       renderFacts(t);
       renderSocial(t);
