@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" id="meta-desc" content="Profil lengkap tokoh inspiratif di Revpeak.">
+  <meta property="og:title" id="og-title" content="Tokoh – Revpeak">
+  <meta property="og:description" id="og-desc" content="Profil lengkap tokoh inspiratif di Revpeak.">
+  <meta property="og:image" id="og-image" content="">
+  <meta property="og:type" content="profile">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" id="link-canonical" href="https://revpeak.web.id/tokoh-detail.html">
+  <link rel="icon" type="image/webp" href="https://assets.revpeak.web.id/logo-revpeak.webp">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <title id="page-title">Tokoh – Revpeak</title>
+
+  <style>
+    /* ===== TOKOH DETAIL — page-specific styles ===== */
+
+    /* Hero */
+    .tokoh-hero {
+      position: relative;
+      background: var(--bg-secondary, #f5f5f5);
+      overflow: hidden;
+    }
+    .tokoh-hero-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center top;
+      filter: blur(18px) brightness(0.45);
+      transform: scale(1.08);
+      transition: opacity .4s;
+    }
+    .tokoh-hero-bg.no-img {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    }
+    .tokoh-hero-inner {
+      position: relative;
+      z-index: 1;
+      padding: 48px 0 40px;
+    }
+    .tokoh-hero-layout {
+      display: flex;
+      align-items: flex-end;
+      gap: 32px;
+    }
+
+    /* Photo */
+    .tokoh-photo-wrap {
+      flex-shrink: 0;
+    }
+    .tokoh-photo {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      border: 4px solid rgba(255,255,255,.25);
+      object-fit: cover;
+      background: var(--bg-card, #fff);
+      display: block;
+      box-shadow: 0 8px 32px rgba(0,0,0,.35);
+    }
+    .tokoh-photo-placeholder {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      border: 4px solid rgba(255,255,255,.2);
+      background: linear-gradient(135deg, #2D2C29, #444);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.35);
+    }
+
+    /* Hero info */
+    .tokoh-hero-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .tokoh-hero-profession {
+      display: inline-block;
+      background: rgba(255,255,255,.15);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: .78rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      letter-spacing: .04em;
+      margin-bottom: 10px;
+      backdrop-filter: blur(6px);
+    }
+    .tokoh-hero-name {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.75rem, 4vw, 2.8rem);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.15;
+      margin: 0 0 10px;
+      text-shadow: 0 2px 12px rgba(0,0,0,.4);
+    }
+    .tokoh-hero-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .tokoh-hero-nation,
+    .tokoh-hero-born,
+    .tokoh-hero-known {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,.82);
+      font-size: .88rem;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* Share button */
+    .tokoh-hero-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .btn-share {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.3);
+      color: #fff;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: .85rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      transition: background .2s;
+    }
+    .btn-share:hover { background: rgba(255,255,255,.25); }
+
+    /* ===== CONTENT AREA ===== */
+    .tokoh-content-wrap {
+      padding: 40px 0 60px;
+    }
+    .tokoh-content-grid {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 32px;
+      align-items: start;
+    }
+    @media (max-width: 768px) {
+      .tokoh-content-grid { grid-template-columns: 1fr; }
+      .tokoh-hero-layout  { flex-direction: column; align-items: flex-start; }
+      .tokoh-photo        { width: 110px; height: 110px; }
+      .tokoh-photo-placeholder { width: 110px; height: 110px; font-size: 48px; }
+    }
+
+    /* About section */
+    .tokoh-about-card {
+      background: var(--bg-card, #fff);
+      border-radius: 16px;
+      padding: 28px 32px;
+      box-shadow: var(--shadow-sm, 0 1px 4px rgba(0,0,0,.06));
+      border: 1px solid var(--border, #e8e8e8);
+      margin-bottom: 20px;
+    }
+    .tokoh-about-card h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin: 0 0 16px;
+      color: var(--text-primary, #1a1a1a);
+    }
+    .tokoh-bio-text {
+      font-family: 'DM Sans', sans-serif;
+      font-size: .97rem;
+      line-height: 1.78;
+      color: var(--text-secondary, #555);
+      white-space: pre-wrap;
+    }
+
+    /* Highlights / facts */
+    .tokoh-facts-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .tokoh-fact-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .tokoh-fact-icon {
+      font-size: 1.1rem;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+    .tokoh-fact-body { flex: 1; min-width: 0; }
+    .tokoh-fact-label {
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-muted, #999);
+      font-family: 'DM Sans', sans-serif;
+      margin-bottom: 2px;
+    }
+    .tokoh-fact-value {
+      font-size: .93rem;
+      color: var(--text-primary, #1a1a1a);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+    }
+
+    /* Sidebar card */
+    .tokoh-sidebar-card {
+      background: var(--bg-card, #fff);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: var(--shadow-sm, 0 1px 4px rgba(0,0,0,.06));
+      border: 1px solid var(--border, #e8e8e8);
+      margin-bottom: 20px;
+    }
+    .tokoh-sidebar-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: .95rem;
+      font-weight: 700;
+      margin: 0 0 16px;
+      color: var(--text-primary, #1a1a1a);
+    }
+
+    /* Related tokoh mini cards */
+    .related-tokoh-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .related-tokoh-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+      padding: 8px;
+      border-radius: 10px;
+      transition: background .18s;
+    }
+    .related-tokoh-item:hover {
+      background: var(--bg-secondary, #f5f5f5);
+    }
+    .related-tokoh-thumb {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--bg-secondary, #f5f5f5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .related-tokoh-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .related-tokoh-info { flex: 1; min-width: 0; }
+    .related-tokoh-name {
+      font-family: 'Syne', sans-serif;
+      font-size: .88rem;
+      font-weight: 700;
+      color: var(--text-primary, #1a1a1a);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .related-tokoh-prof {
+      font-size: .78rem;
+      color: var(--text-muted, #999);
+      font-family: 'DM Sans', sans-serif;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Quick stats row */
+    .tokoh-stats-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .tokoh-stat-pill {
+      background: var(--bg-card, #fff);
+      border: 1px solid var(--border, #e8e8e8);
+      border-radius: 10px;
+      padding: 12px 18px;
+      text-align: center;
+      flex: 1;
+      min-width: 90px;
+      box-shadow: var(--shadow-sm, 0 1px 4px rgba(0,0,0,.06));
+    }
+    .tokoh-stat-val {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text-primary, #1a1a1a);
+    }
+    .tokoh-stat-lbl {
+      font-size: .73rem;
+      color: var(--text-muted, #999);
+      font-family: 'DM Sans', sans-serif;
+      margin-top: 2px;
+    }
+
+    /* Social links */
+    .tokoh-social-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .tokoh-social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      text-decoration: none;
+      border: 1px solid var(--border, #e8e8e8);
+      color: var(--text-secondary, #555);
+      background: var(--bg-secondary, #f5f5f5);
+      transition: all .18s;
+    }
+    .tokoh-social-link:hover {
+      background: var(--accent, #2D2C29);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    /* Not found / error */
+    .tokoh-not-found {
+      text-align: center;
+      padding: 80px 20px;
+    }
+    .tokoh-not-found .nf-icon { font-size: 64px; margin-bottom: 16px; }
+    .tokoh-not-found h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+    .tokoh-not-found p {
+      color: var(--text-secondary, #555);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .tokoh-not-found a {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 24px;
+      background: var(--accent, #2D2C29);
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: .9rem;
+    }
+
+    /* Skeleton for detail page */
+    .tokoh-hero-skeleton {
+      min-height: 220px;
+      background: var(--bg-secondary, #f5f5f5);
+      display: flex;
+      align-items: flex-end;
+      padding: 40px 0;
+    }
+    .sk-circle {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Breadcrumb override for dark hero */
+    .tokoh-hero .breadcrumb a,
+    .tokoh-hero .breadcrumb span {
+      color: rgba(255,255,255,.75);
+    }
+    .tokoh-hero .breadcrumb a:hover { color: #fff; }
+    .tokoh-hero .breadcrumb-name { color: #fff; }
+  </style>
+</head>
+<body>
+
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-header">
+      <div class="drawer-logo">
+        <div class="logo-icon" id="drawer-logo-icon">
+          <img src="https://assets.revpeak.web.id/logo-revpeak.webp" alt="Revpeak logo" style="width:100%;height:100%;object-fit:contain;">
+        </div>
+        <span class="logo-text">Rev<span>peak</span></span>
+      </div>
+      <button class="drawer-close" id="drawer-close" aria-label="Tutup menu">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <nav class="drawer-nav">
+      <a href="/" class="drawer-link"><span class="drawer-link-icon">🏠</span><span>Beranda</span></a>
+      <a href="tokoh.html" class="drawer-link active"><span class="drawer-link-icon">👤</span><span>Tokoh</span></a>
+      <a href="tentang.html" class="drawer-link"><span class="drawer-link-icon">ℹ️</span><span>Tentang</span></a>
+      <a href="kontak.html" class="drawer-link"><span class="drawer-link-icon">💬</span><span>Dukungan</span></a>
+    </nav>
+    <div class="drawer-footer">
+      <div class="drawer-theme-row">
+        <span class="drawer-theme-label">Mode Gelap</span>
+        <button class="theme-toggle-pill" id="theme-toggle" role="switch" aria-checked="false">
+          <span class="theme-toggle-thumb"></span>
+        </button>
+      </div>
+      <p class="drawer-version">Revpeak v2.0</p>
+    </div>
+  </aside>
+
+  <header class="header" id="header">
+    <div class="header-top">
+      <div class="header-top-inner container">
+        <button class="hamburger" id="hamburger" aria-expanded="false" aria-label="Buka menu">
+          <span></span><span></span><span></span>
+        </button>
+        <a href="/" class="header-logo">
+          <div class="logo-icon">
+            <img src="https://assets.revpeak.web.id/logo-revpeak.webp" id="logo-img" alt="Revpeak logo" onerror="this.style.display='none'">
+            <span id="logo-letter">R</span>
+          </div>
+          <div class="header-logo-text">
+            <span class="logo-text">Rev<span>peak</span></span>
+            <span class="logo-tagline">Review Jujur & Terpercaya</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== HERO SECTION ===== -->
+  <div class="tokoh-hero" id="tokoh-hero">
+    <!-- Skeleton saat loading -->
+    <div class="tokoh-hero-skeleton" id="hero-skeleton">
+      <div class="container">
+        <div style="display:flex;gap:24px;align-items:flex-end">
+          <div class="skeleton sk-circle"></div>
+          <div style="flex:1">
+            <div class="skeleton sk-line" style="width:120px;height:12px;margin-bottom:12px;border-radius:20px"></div>
+            <div class="skeleton sk-line" style="width:60%;height:28px;margin-bottom:12px"></div>
+            <div class="skeleton sk-line" style="width:40%;height:12px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Konten hero setelah data loaded -->
+    <div id="hero-content" style="display:none">
+      <div class="tokoh-hero-bg" id="hero-bg"></div>
+      <div class="tokoh-hero-inner">
+        <div class="container">
+          <nav class="breadcrumb" style="margin-bottom:20px">
+            <a href="/">Beranda</a>
+            <span>›</span>
+            <a href="tokoh.html">Tokoh</a>
+            <span>›</span>
+            <span class="breadcrumb-name" id="breadcrumb-name">...</span>
+          </nav>
+          <div class="tokoh-hero-layout">
+            <div class="tokoh-photo-wrap" id="hero-photo-wrap"></div>
+            <div class="tokoh-hero-info">
+              <span class="tokoh-hero-profession" id="hero-profession"></span>
+              <h1 class="tokoh-hero-name" id="hero-name"></h1>
+              <div class="tokoh-hero-meta" id="hero-meta"></div>
+              <div class="tokoh-hero-actions">
+                <button class="btn-share" id="btn-share" onclick="sharePage()">
+                  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98M15.41 6.51 8.59 10.49"/></svg>
+                  Bagikan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="tokoh-content-wrap">
+    <div class="container">
+
+      <!-- Not found state -->
+      <div id="not-found-state" style="display:none">
+        <div class="tokoh-not-found">
+          <div class="nf-icon">🔍</div>
+          <h2>Tokoh Tidak Ditemukan</h2>
+          <p>Halaman yang kamu cari tidak ada atau sudah dihapus.</p>
+          <a href="tokoh.html">← Kembali ke Daftar Tokoh</a>
+        </div>
+      </div>
+
+      <!-- Main content (visible after load) -->
+      <div id="main-content" style="display:none">
+
+        <!-- Quick stats row (jika ada data angka) -->
+        <div class="tokoh-stats-row" id="stats-row"></div>
+
+        <div class="tokoh-content-grid">
+
+          <!-- ===== LEFT: About + Bio ===== -->
+          <div class="tokoh-main-col">
+
+            <!-- About -->
+            <div class="tokoh-about-card" id="about-card">
+              <h2>Tentang</h2>
+              <p class="tokoh-bio-text" id="bio-text"></p>
+            </div>
+
+            <!-- Highlights / facts (jika ada) -->
+            <div class="tokoh-about-card" id="facts-card" style="display:none">
+              <h2>Fakta & Pencapaian</h2>
+              <ul class="tokoh-facts-list" id="facts-list"></ul>
+            </div>
+
+            <!-- Social links (jika ada) -->
+            <div class="tokoh-about-card" id="social-card" style="display:none">
+              <h2>Tautan</h2>
+              <div class="tokoh-social-links" id="social-links"></div>
+            </div>
+
+          </div>
+
+          <!-- ===== RIGHT: Sidebar ===== -->
+          <div class="tokoh-sidebar-col">
+
+            <!-- Info card -->
+            <div class="tokoh-sidebar-card">
+              <h3>Informasi</h3>
+              <ul class="tokoh-facts-list" id="info-list"></ul>
+            </div>
+
+            <!-- Related tokoh -->
+            <div class="tokoh-sidebar-card" id="related-card">
+              <h3>Tokoh Serupa</h3>
+              <div class="related-tokoh-list" id="related-list">
+                <!-- skeleton -->
+                <div style="display:flex;gap:12px;align-items:center">
+                  <div class="skeleton sk-circle" style="width:46px;height:46px"></div>
+                  <div style="flex:1"><div class="skeleton sk-line" style="width:80%;height:12px;margin-bottom:6px"></div><div class="skeleton sk-line" style="width:50%;height:10px"></div></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:center">
+                  <div class="skeleton sk-circle" style="width:46px;height:46px"></div>
+                  <div style="flex:1"><div class="skeleton sk-line" style="width:70%;height:12px;margin-bottom:6px"></div><div class="skeleton sk-line" style="width:45%;height:10px"></div></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:center">
+                  <div class="skeleton sk-circle" style="width:46px;height:46px"></div>
+                  <div style="flex:1"><div class="skeleton sk-line" style="width:75%;height:12px;margin-bottom:6px"></div><div class="skeleton sk-line" style="width:55%;height:10px"></div></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer"><div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <div class="logo-icon"><img src="https://assets.revpeak.web.id/logo-revpeak.webp" alt="Revpeak logo" style="width:100%;height:100%;object-fit:contain;"></div>
+          <span class="logo-text">Rev<span>peak</span></span>
+        </div>
+        <p class="footer-desc">Review jujur dan mendalam untuk membantu kamu membuat keputusan belanja yang lebih cerdas.</p>
+      </div>
+      <div class="footer-col"><h4>Navigasi</h4><a href="/">Beranda</a><a href="tokoh.html">Tokoh</a><a href="tentang.html">Tentang</a><a href="kontak.html">Dukungan</a></div>
+      <div class="footer-col"><h4>Kategori</h4><a href="kategori.html">Semua Kategori</a><a href="kategori.html?cat=smartphone">Smartphone</a><a href="kategori.html?cat=laptop">Laptop</a></div>
+      <div class="footer-col"><h4>Legal</h4><a href="kebijakan.html">Kebijakan Privasi</a><a href="disclaimer.html">Disclaimer</a><a href="sitemap.xml">Sitemap</a></div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 Revpeak. Semua hak dilindungi.</p>
+      <div class="social-links"><a href="#" aria-label="Instagram">📸</a><a href="#" aria-label="YouTube">▶️</a><a href="#" aria-label="Telegram">✈️</a></div>
+    </div>
+  </div></footer>
+
+  <button class="scroll-top" id="scroll-top" aria-label="Kembali ke atas">↑</button>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // ============================================================
+    // Tokoh Detail Page — menggunakan fetchAPI dari app.js
+    // ============================================================
+
+    const slug = new URLSearchParams(location.search).get('slug');
+
+    // ===== Render hero =====
+    function renderHero(t) {
+      // Background blur image
+      const heroBg = document.getElementById('hero-bg');
+      if (t.image_url) {
+        heroBg.style.backgroundImage = `url('${t.image_url}')`;
+      } else {
+        heroBg.classList.add('no-img');
+      }
+
+      // Photo
+      const photoWrap = document.getElementById('hero-photo-wrap');
+      if (t.image_url) {
+        photoWrap.innerHTML = `<img class="tokoh-photo" src="${t.image_url}" alt="${t.name}">`;
+      } else {
+        photoWrap.innerHTML = `<div class="tokoh-photo-placeholder">${t.emoji || '👤'}</div>`;
+      }
+
+      // Text
+      document.getElementById('hero-profession').textContent = t.profession || 'Tokoh';
+      document.getElementById('hero-name').textContent       = t.name;
+      document.getElementById('breadcrumb-name').textContent = t.name;
+
+      // Meta row
+      const metaItems = [];
+      if (t.nationality) metaItems.push(`<span class="tokoh-hero-nation">🌍 ${t.nationality}</span>`);
+      if (t.birth_year)  metaItems.push(`<span class="tokoh-hero-born">🎂 Lahir ${t.birth_year}</span>`);
+      if (t.known_for)   metaItems.push(`<span class="tokoh-hero-known">⚡ ${t.known_for}</span>`);
+      document.getElementById('hero-meta').innerHTML = metaItems.join('');
+
+      // Show hero
+      document.getElementById('hero-skeleton').style.display  = 'none';
+      document.getElementById('hero-content').style.display   = 'block';
+    }
+
+    // ===== Render stats row =====
+    function renderStats(t) {
+      const statsRow = document.getElementById('stats-row');
+      const stats    = [];
+
+      if (t.birth_year) {
+        const age = new Date().getFullYear() - parseInt(t.birth_year);
+        if (!isNaN(age) && age > 0 && age < 120) {
+          stats.push({ val: age, lbl: 'Tahun Usia' });
+        }
+      }
+      if (t.achievement_count) stats.push({ val: t.achievement_count, lbl: 'Pencapaian' });
+      if (t.net_worth)         stats.push({ val: t.net_worth,         lbl: 'Kekayaan' });
+      if (t.followers_count)   stats.push({ val: formatNum(t.followers_count), lbl: 'Pengikut' });
+
+      if (!stats.length) { statsRow.style.display = 'none'; return; }
+
+      statsRow.innerHTML = stats.map(s => `
+        <div class="tokoh-stat-pill">
+          <div class="tokoh-stat-val">${s.val}</div>
+          <div class="tokoh-stat-lbl">${s.lbl}</div>
+        </div>`).join('');
+    }
+
+    // ===== Render bio =====
+    function renderBio(t) {
+      const bioText = document.getElementById('bio-text');
+      if (t.bio) {
+        bioText.textContent = t.bio;
+      } else {
+        document.getElementById('about-card').style.display = 'none';
+      }
+    }
+
+    // ===== Render info sidebar =====
+    function renderInfo(t) {
+      const items = [];
+      if (t.profession)   items.push({ icon: '💼', label: 'Profesi',      value: t.profession });
+      if (t.nationality)  items.push({ icon: '🌍', label: 'Kebangsaan',   value: t.nationality });
+      if (t.birth_year)   items.push({ icon: '🎂', label: 'Tahun Lahir',  value: t.birth_year });
+      if (t.birth_place)  items.push({ icon: '📍', label: 'Tempat Lahir', value: t.birth_place });
+      if (t.known_for)    items.push({ icon: '⚡', label: 'Dikenal Karena', value: t.known_for });
+      if (t.education)    items.push({ icon: '🎓', label: 'Pendidikan',   value: t.education });
+      if (t.spouse)       items.push({ icon: '💑', label: 'Pasangan',     value: t.spouse });
+      if (t.children_count !== undefined && t.children_count !== null) {
+        items.push({ icon: '👶', label: 'Anak', value: t.children_count });
+      }
+      if (t.website) {
+        items.push({ icon: '🔗', label: 'Website', value: `<a href="${t.website}" target="_blank" rel="noopener" style="color:inherit">${t.website.replace(/^https?:\/\//, '')}</a>` });
+      }
+
+      if (!items.length) {
+        document.querySelector('.tokoh-sidebar-col .tokoh-sidebar-card').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('info-list').innerHTML = items.map(i => `
+        <li class="tokoh-fact-item">
+          <span class="tokoh-fact-icon">${i.icon}</span>
+          <div class="tokoh-fact-body">
+            <div class="tokoh-fact-label">${i.label}</div>
+            <div class="tokoh-fact-value">${i.value}</div>
+          </div>
+        </li>`).join('');
+    }
+
+    // ===== Render facts / highlights =====
+    function renderFacts(t) {
+      // Coba parse field achievements / highlights jika tersedia
+      let facts = [];
+      if (t.achievements) {
+        try { facts = JSON.parse(t.achievements); } catch { facts = [t.achievements]; }
+      } else if (t.highlights) {
+        try { facts = JSON.parse(t.highlights); } catch { facts = [t.highlights]; }
+      }
+
+      if (!facts.length) return;
+
+      const icons = ['🏆','⭐','🎯','💡','🚀','🔥','✨','🎖️'];
+      document.getElementById('facts-card').style.display = 'block';
+      document.getElementById('facts-list').innerHTML = facts.map((f, i) => `
+        <li class="tokoh-fact-item">
+          <span class="tokoh-fact-icon">${icons[i % icons.length]}</span>
+          <div class="tokoh-fact-body">
+            <div class="tokoh-fact-value">${typeof f === 'object' ? (f.text || JSON.stringify(f)) : f}</div>
+          </div>
+        </li>`).join('');
+    }
+
+    // ===== Render social links =====
+    function renderSocial(t) {
+      const links = [];
+      if (t.instagram_url) links.push({ icon: '📸', label: 'Instagram', href: t.instagram_url });
+      if (t.twitter_url)   links.push({ icon: '🐦', label: 'Twitter/X', href: t.twitter_url });
+      if (t.youtube_url)   links.push({ icon: '▶️', label: 'YouTube',   href: t.youtube_url });
+      if (t.linkedin_url)  links.push({ icon: '💼', label: 'LinkedIn',  href: t.linkedin_url });
+      if (t.website)       links.push({ icon: '🔗', label: 'Website',   href: t.website });
+
+      if (!links.length) return;
+
+      document.getElementById('social-card').style.display = 'block';
+      document.getElementById('social-links').innerHTML = links.map(l => `
+        <a href="${l.href}" target="_blank" rel="noopener noreferrer" class="tokoh-social-link">
+          ${l.icon} ${l.label}
+        </a>`).join('');
+    }
+
+    // ===== Render related tokoh =====
+    async function loadRelated(t) {
+      if (!t.profession) {
+        document.getElementById('related-card').style.display = 'none';
+        return;
+      }
+
+      const data  = await fetchAPI(`/tokoh-related?slug=${encodeURIComponent(t.slug)}&profession=${encodeURIComponent(t.profession)}&limit=4`);
+      const items = data?.data || [];
+
+      if (!items.length) {
+        document.getElementById('related-card').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('related-list').innerHTML = items.map(r => `
+        <a href="tokoh-detail.html?slug=${r.slug}" class="related-tokoh-item">
+          <div class="related-tokoh-thumb">
+            ${r.image_url
+              ? `<img src="${r.image_url}" alt="${r.name}" loading="lazy">`
+              : (r.emoji || '👤')}
+          </div>
+          <div class="related-tokoh-info">
+            <div class="related-tokoh-name">${r.name}</div>
+            <div class="related-tokoh-prof">${r.profession || 'Tokoh'}</div>
+          </div>
+        </a>`).join('');
+    }
+
+    // ===== SEO meta tags =====
+    function updateMeta(t) {
+      const title = `${t.name} – ${t.profession || 'Tokoh'} | Revpeak`;
+      const desc  = t.bio ? t.bio.substring(0, 155) + (t.bio.length > 155 ? '...' : '') : `Profil ${t.name} di Revpeak.`;
+
+      document.title = title;
+      document.getElementById('page-title').textContent       = title;
+      document.getElementById('meta-desc').content            = desc;
+      document.getElementById('og-title').content             = title;
+      document.getElementById('og-desc').content              = desc;
+      document.getElementById('link-canonical').href          = `https://revpeak.web.id/tokoh-detail.html?slug=${t.slug}`;
+      if (t.image_url) document.getElementById('og-image').content = t.image_url;
+    }
+
+    // ===== Helper =====
+    function formatNum(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'jt';
+      if (n >= 1000)    return (n / 1000).toFixed(1) + 'rb';
+      return String(n);
+    }
+
+    function sharePage() {
+      if (navigator.share) {
+        navigator.share({
+          title: document.title,
+          url:   location.href,
+        }).catch(() => {});
+      } else {
+        navigator.clipboard?.writeText(location.href).then(() => {
+          showToast('Link disalin ke clipboard!');
+        });
+      }
+    }
+
+    // ===== MAIN =====
+    async function init() {
+      if (!slug) {
+        document.getElementById('hero-skeleton').style.display = 'none';
+        document.getElementById('not-found-state').style.display = 'block';
+        return;
+      }
+
+      // Fetch data
+      const data = await fetchAPI(`/tokoh/${encodeURIComponent(slug)}`);
+      const t    = data?.data;
+
+      if (!t) {
+        document.getElementById('hero-skeleton').style.display  = 'none';
+        document.getElementById('not-found-state').style.display = 'block';
+        return;
+      }
+
+      // Render semua section
+      renderHero(t);
+      renderStats(t);
+      renderBio(t);
+      renderInfo(t);
+      renderFacts(t);
+      renderSocial(t);
+      updateMeta(t);
+
+      // Tampilkan konten utama
+      document.getElementById('main-content').style.display = 'block';
+
+      // Load related (async, tidak memblokir)
+      loadRelated(t);
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
