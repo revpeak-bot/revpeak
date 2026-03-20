@@ -110,43 +110,55 @@
 
   <button class="scroll-top" id="scroll-top">↑</button>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="js/app.js"></script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+  <script src="js/app.js"></script>
   <script>
-    const API = '/api';
-    let tokohPage = 0, tokohFilter = 'all', hasMoreTokoh = false;
+    // ============================================================
+    // Tokoh Page — menggunakan fetchAPI dari app.js via Worker
+    // ============================================================
+
+    const TOKOH_SIZE = 12;
+    let tokohPage   = 0;
+    let tokohFilter = 'all';
+    let hasMoreTokoh = false;
 
     async function loadTokoh(reset = false) {
       if (reset) tokohPage = 0;
-      const grid = document.getElementById('tokoh-grid');
-      const offset = tokohPage * 12;
+      const grid   = document.getElementById('tokoh-grid');
+      const offset = tokohPage * TOKOH_SIZE;
 
       if (reset) {
         grid.innerHTML = Array(4).fill('').map(() => `
-          <div class="skeleton-card"><div class="skeleton" style="height:180px;border-radius:12px 12px 0 0"></div>
-          <div class="sk-body"><div class="skeleton sk-line" style="width:60%;height:16px;margin-bottom:8px"></div>
-          <div class="skeleton sk-line" style="width:40%"></div></div></div>`).join('');
+          <div class="skeleton-card">
+            <div class="skeleton" style="height:180px;border-radius:12px 12px 0 0"></div>
+            <div class="sk-body">
+              <div class="skeleton sk-line" style="width:60%;height:16px;margin-bottom:8px"></div>
+              <div class="skeleton sk-line" style="width:40%"></div>
+            </div>
+          </div>`).join('');
       }
 
       try {
-        let url = `${SUPABASE_URL}/rest/v1/tokoh?select=id,name,slug,profession,bio,image_url,emoji,nationality,is_published&is_published=eq.true&order=name.asc&limit=13&offset=${offset}`;
-        if (tokohFilter !== 'all') url += `&profession=ilike.*${tokohFilter}*`;
+        // Gunakan fetchAPI (sudah ada di app.js) → lewat Cloudflare Worker /api/tokoh
+        let endpoint = `/tokoh?limit=${TOKOH_SIZE}&offset=${offset}`;
+        if (tokohFilter !== 'all') endpoint += `&filter=${encodeURIComponent(tokohFilter)}`;
 
-        const r = await fetch(url, { headers: { 'apikey': SUPABASE_ANON_KEY } });
-        const items = await r.json();
-        hasMoreTokoh = items.length > 12;
-        const show = hasMoreTokoh ? items.slice(0,12) : items;
+        const data  = await fetchAPI(endpoint);
+        const items = data?.data || [];
+
+        hasMoreTokoh = items.length > TOKOH_SIZE;
+        const show   = hasMoreTokoh ? items.slice(0, TOKOH_SIZE) : items;
 
         if (reset) {
-          if (!show.length) {
-            grid.innerHTML = `<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Belum ada tokoh</div><div class="empty-desc">Segera hadir!</div></div>`;
-          } else {
-            grid.innerHTML = show.map(tokohCard).join('');
-          }
+          grid.innerHTML = show.length
+            ? show.map(tokohCard).join('')
+            : `<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Belum ada tokoh</div><div class="empty-desc">Segera hadir!</div></div>`;
         } else {
           grid.insertAdjacentHTML('beforeend', show.map(tokohCard).join(''));
         }
+
         document.getElementById('load-more-wrap').style.display = hasMoreTokoh ? 'flex' : 'none';
-      } catch(e) {
+      } catch (e) {
         grid.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Gagal memuat</div><div class="empty-desc">Coba refresh halaman</div></div>`;
       }
     }
@@ -155,13 +167,15 @@
       return `
         <a href="tokoh-detail.html?slug=${t.slug}" class="tokoh-card">
           <div class="tokoh-card-img">
-            ${t.image_url ? `<img src="${t.image_url}" alt="${t.name}" loading="lazy">` : `<div class="tokoh-img-placeholder">${t.emoji||'👤'}</div>`}
+            ${t.image_url
+              ? `<img src="${t.image_url}" alt="${t.name}" loading="lazy">`
+              : `<div class="tokoh-img-placeholder">${t.emoji || '👤'}</div>`}
           </div>
           <div class="tokoh-card-body">
-            <div class="tokoh-profession">${t.profession||'Tokoh'}</div>
+            <div class="tokoh-profession">${t.profession || 'Tokoh'}</div>
             <h3 class="tokoh-name">${t.name}</h3>
             ${t.nationality ? `<div class="tokoh-nation">🌍 ${t.nationality}</div>` : ''}
-            ${t.bio ? `<p class="tokoh-bio">${t.bio.substring(0,80)}${t.bio.length>80?'...':''}</p>` : ''}
+            ${t.bio ? `<p class="tokoh-bio">${t.bio.substring(0, 80)}${t.bio.length > 80 ? '...' : ''}</p>` : ''}
           </div>
         </a>`;
     }
@@ -178,29 +192,39 @@
       loadTokoh(true);
     });
 
+    // Load more
     document.getElementById('btn-load-more')?.addEventListener('click', () => {
       tokohPage++;
       loadTokoh(false);
     });
 
-    // Search
+    // Search — pakai fetchAPI ke Worker
     const sinp = document.getElementById('search-input');
     let stimer;
     sinp?.addEventListener('input', e => {
       clearTimeout(stimer);
-      stimer = setTimeout(() => {
-        const q = e.target.value.trim();
-        if (!q) { loadTokoh(true); return; }
+      const q = e.target.value.trim();
+      document.getElementById('search-clear')?.classList.toggle('visible', q.length > 0);
+      stimer = setTimeout(async () => {
         const grid = document.getElementById('tokoh-grid');
+        if (!q) { loadTokoh(true); return; }
         grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">Mencari...</div></div>`;
-      }, 400);
+        document.getElementById('load-more-wrap').style.display = 'none';
+        const data  = await fetchAPI(`/tokoh?search=${encodeURIComponent(q)}&limit=${TOKOH_SIZE}`);
+        const items = data?.data || [];
+        grid.innerHTML = items.length
+          ? items.map(tokohCard).join('')
+          : `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">Tidak ditemukan</div><div class="empty-desc">Coba kata kunci lain</div></div>`;
+      }, 380);
     });
 
-    // Get Supabase config from admin.js pattern — fallback to API
-        const SUPABASE_URL      = typeof window.SUPABASE_URL !== 'undefined' ? window.SUPABASE_URL : '';
-    const SUPABASE_ANON_KEY = typeof window.SUPABASE_ANON_KEY !== 'undefined' ? window.SUPABASE_ANON_KEY : '';
+    document.getElementById('search-clear')?.addEventListener('click', () => {
+      if (sinp) { sinp.value = ''; sinp.focus(); }
+      document.getElementById('search-clear')?.classList.remove('visible');
+      loadTokoh(true);
+    });
 
-    document.addEventListener('DOMContentLoaded', () => { loadTokoh(true); });
+    document.addEventListener('DOMContentLoaded', () => loadTokoh(true));
   </script>
 </body>
 </html>
