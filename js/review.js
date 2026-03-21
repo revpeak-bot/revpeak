@@ -80,17 +80,22 @@ async function initReviewPage() {
   }
 
   // Update meta tags
-  document.title = review.title + ' – Revpeak';
-  const metaDesc  = document.getElementById('meta-desc');
-  const ogTitle   = document.getElementById('og-title');
-  const ogDesc    = document.getElementById('og-desc');
-  const ogImage   = document.getElementById('og-image');
-  const pageTitle = document.getElementById('page-title');
-  if (metaDesc)  metaDesc.content  = review.excerpt || '';
-  if (ogTitle)   ogTitle.content   = review.title + ' – Revpeak';
-  if (ogDesc)    ogDesc.content    = review.excerpt || '';
-  if (ogImage)   ogImage.content   = review.image_url || '';
-  if (pageTitle) pageTitle.textContent = review.title + ' – Revpeak';
+const pageFullTitle = review.title + ' – Revpeak';
+const pageURL       = 'https://revpeak.web.id/review.html?slug=' + slug;
+
+document.title = pageFullTitle;
+
+const metaDesc   = document.getElementById('meta-desc');
+const ogTitle    = document.getElementById('og-title');
+const ogDesc     = document.getElementById('og-desc');
+const ogImage    = document.getElementById('og-image');
+const canonical  = document.getElementById('canonical-url');
+
+if (metaDesc)  metaDesc.setAttribute('content', review.excerpt || '');
+if (ogTitle)   ogTitle.setAttribute('content', pageFullTitle);
+if (ogDesc)    ogDesc.setAttribute('content', review.excerpt || '');
+if (ogImage)   ogImage.setAttribute('content', review.image_url || '');
+if (canonical) canonical.setAttribute('href', pageURL);
 
   // Render berdasarkan post_type
   const type = review.post_type || 'review';
