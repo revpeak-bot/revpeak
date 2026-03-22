@@ -5,7 +5,6 @@
 =========================================== */
 
 /* ===== CONFIG ===== */
-const LOGO_URL  = ''; // Isi URL logo kamu, contoh: 'https://i.imgur.com/abc.png'
 const API_BASE  = '/api';
 const PAGE_SIZE = 9;
 
@@ -57,23 +56,6 @@ async function fetchAPI(endpoint) {
   } catch (err) {
     console.error('[Revpeak API]', err.message);
     return null;
-  }
-}
-
-/* ===== LOGO ===== */
-function initLogo() {
-  if (!LOGO_URL) return;
-  const imgEl     = document.getElementById('logo-img');
-  const letterEl  = document.getElementById('logo-letter');
-  if (imgEl) {
-    imgEl.src = LOGO_URL;
-    imgEl.style.display = 'block';
-    if (letterEl) letterEl.style.display = 'none';
-  }
-  // Drawer logo
-  const drawerIcon = document.getElementById('drawer-logo-icon');
-  if (drawerIcon) {
-    drawerIcon.innerHTML = `<img src="${LOGO_URL}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:10px">`;
   }
 }
 
@@ -445,7 +427,6 @@ function initHeaderShadow() {
 /* ===== INIT ===== */
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
-  initLogo();
   initDrawer();
   initSearch();
   initScrollTop();

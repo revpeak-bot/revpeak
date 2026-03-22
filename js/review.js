@@ -97,6 +97,9 @@ if (ogDesc)    ogDesc.setAttribute('content', review.excerpt || '');
 if (ogImage)   ogImage.setAttribute('content', review.image_url || '');
 if (canonical) canonical.setAttribute('href', pageURL);
 
+  // Update JSON-LD schema dengan data artikel yang sebenarnya
+  updateArticleSchema(review, pageURL);
+
   // Render berdasarkan post_type
   const type = review.post_type || 'review';
   if (type === 'list')  renderListArticle(container, review);
@@ -433,3 +436,80 @@ function scrollToProduct(index) {
 document.addEventListener('DOMContentLoaded', () => {
   initReviewPage();
 });
+
+/* ===========================
+   UPDATE JSON-LD SCHEMA
+=========================== */
+function updateArticleSchema(r, pageURL) {
+  const el = document.getElementById('article-schema');
+  if (!el) return;
+
+  const type = r.post_type || 'review';
+
+  // Base schema yang berlaku untuk semua tipe
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'Review',
+    'name': r.title,
+    'description': r.excerpt || '',
+    'url': pageURL,
+    'inLanguage': 'id',
+    'datePublished': r.created_at || '',
+    'dateModified': r.updated_at || r.created_at || '',
+    'author': {
+      '@type': 'Person',
+      'name': r.author || 'Admin Revpeak'
+    },
+    'publisher': {
+      '@type': 'Organization',
+      'name': 'Revpeak',
+      'url': 'https://revpeak.web.id',
+      'logo': {
+        '@type': 'ImageObject',
+        'url': 'https://assets.revpeak.web.id/logo-revpeak.webp'
+      }
+    }
+  };
+
+  // Tambahkan gambar jika ada
+  if (r.image_url) {
+    schema['image'] = {
+      '@type': 'ImageObject',
+      'url': r.image_url
+    };
+  }
+
+  // Untuk tipe "review": tambahkan rating dan itemReviewed
+  if (type === 'review' && r.rating) {
+    schema['reviewRating'] = {
+      '@type': 'Rating',
+      'ratingValue': parseFloat(r.rating),
+      'bestRating': 5,
+      'worstRating': 1
+    };
+    schema['itemReviewed'] = {
+      '@type': 'Product',
+      'name': r.title,
+      'description': r.excerpt || ''
+    };
+  }
+
+  // Untuk tipe "list": gunakan ItemList
+  if (type === 'list') {
+    schema['@type'] = 'ItemList';
+    const products = (typeof r.products === 'string')
+      ? (() => { try { return JSON.parse(r.products); } catch { return []; } })()
+      : (r.products || []);
+    if (products.length) {
+      schema['numberOfItems'] = products.length;
+      schema['itemListElement'] = products.map((p, i) => ({
+        '@type': 'ListItem',
+        'position': i + 1,
+        'name': p.name,
+        'description': p.description || ''
+      }));
+    }
+  }
+
+  el.textContent = JSON.stringify(schema, null, 2);
+}
