@@ -98,7 +98,7 @@
 </main>
 
 <script>
-function kirimPesan() {
+async function kirimPesan() {
   const nama = document.getElementById('nama').value.trim();
   const email = document.getElementById('email').value.trim();
   const pesan = document.getElementById('pesan').value.trim();
@@ -112,11 +112,35 @@ function kirimPesan() {
   btn.innerText = "Mengirim...";
   btn.disabled = true;
 
-  setTimeout(() => {
-    document.querySelectorAll('.form-group-k').forEach(el => el.style.display = 'none');
-    btn.style.display = 'none';
-    document.getElementById('form-success').style.display = 'block';
-  }, 1200);
+  try {
+    const response = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        access_key: "185e19dd-5b23-401b-9108-b9cb63100058",
+        subject: "Pesan Baru dari " + nama + " – RevPeak",
+        name: nama,
+        email: email,
+        message: pesan
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      document.querySelectorAll('.form-group-k').forEach(el => el.style.display = 'none');
+      btn.style.display = 'none';
+      document.getElementById('form-success').style.display = 'block';
+    } else {
+      alert("Gagal mengirim pesan. Silakan coba lagi.");
+      btn.innerText = "Kirim Pesan";
+      btn.disabled = false;
+    }
+  } catch (error) {
+    alert("Terjadi kesalahan jaringan. Silakan coba lagi.");
+    btn.innerText = "Kirim Pesan";
+    btn.disabled = false;
+  }
 }
 </script>
 
