@@ -19,15 +19,18 @@
   <link rel="stylesheet" href="css/review.css">
   <title id="page-title">Review Produk – Revpeak</title>
 
-  <!-- ✅ FIX: schema dikosongkan agar tidak konflik -->
+  <!-- Schema: Article (diupdate oleh JS) -->
   <script type="application/ld+json" id="article-schema"></script>
 </head>
 <body>
 
+  <!-- ===== READING PROGRESS BAR ===== -->
   <div class="reading-progress-bar" id="reading-progress" role="progressbar" aria-label="Progress membaca" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
 
+  <!-- Drawer Overlay -->
   <div class="drawer-overlay" id="drawer-overlay"></div>
 
+  <!-- Drawer -->
   <aside class="drawer" id="drawer" aria-label="Menu navigasi">
     <div class="drawer-header">
       <div class="drawer-logo">
@@ -55,6 +58,7 @@
     </div>
   </aside>
 
+  <!-- Header -->
   <header class="header" id="header">
     <div class="header-top">
       <div class="header-top-inner container">
@@ -86,35 +90,104 @@
     </div>
   </header>
 
-  <div class="affiliate-disclosure">
+  <!-- ===== AFFILIATE DISCLOSURE ===== -->
+  <div class="affiliate-disclosure" role="note" aria-label="Keterbukaan afiliasi">
     <div class="container">
       <p>
-        <strong>Keterbukaan:</strong> Artikel ini mungkin mengandung tautan afiliasi. Jika Anda melakukan pembelian melalui tautan tersebut, kami mendapat komisi kecil <strong>tanpa biaya tambahan bagi Anda</strong>.
+        <strong>Keterbukaan:</strong> Artikel ini mungkin mengandung tautan afiliasi. Jika Anda melakukan pembelian melalui tautan tersebut, kami mendapat komisi kecil <strong>tanpa biaya tambahan bagi Anda</strong>. Hal ini membantu kami terus menulis review secara independen. Penilaian kami tidak dipengaruhi oleh afiliasi apa pun.
       </p>
     </div>
   </div>
 
+  <!-- Main -->
   <main class="review-main-wrap" id="main-content">
     <div class="container">
-      <div id="review-loading" class="review-loading"></div>
+
+      <!-- Loading state -->
+      <div id="review-loading" class="review-loading" aria-busy="true" aria-label="Sedang memuat review">
+        <div class="review-skeleton">
+          <div class="skeleton" style="height:360px;border-radius:20px;margin-bottom:24px"></div>
+          <div class="skeleton sk-line" style="width:25%;height:12px;margin-bottom:12px"></div>
+          <div class="skeleton sk-line" style="width:85%;height:26px;margin-bottom:10px"></div>
+          <div class="skeleton sk-line" style="width:60%;height:26px;margin-bottom:20px"></div>
+          <div class="skeleton sk-line" style="width:100%;margin-bottom:8px"></div>
+          <div class="skeleton sk-line" style="width:100%;margin-bottom:8px"></div>
+          <div class="skeleton sk-line" style="width:75%"></div>
+        </div>
+      </div>
+
+      <!-- Review content (filled by JS) -->
       <div id="review-container" style="display:none"></div>
+
     </div>
   </main>
 
-  <section class="related-section" id="related-section" style="display:none">
+  <!-- Related Section -->
+  <section class="related-section" id="related-section" style="display:none" aria-label="Konten terkait">
     <div class="container">
-      <div class="content-grid" id="related-grid"></div>
+      <div class="section-header">
+        <h2 class="section-title">Konten Terkait</h2>
+        <a href="kategori.html" class="section-more">Lihat semua →</a>
+      </div>
+      <div class="content-grid" id="related-grid" role="list" aria-label="Review terkait"></div>
     </div>
   </section>
 
+  <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <p>© 2025 Revpeak</p>
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <div class="logo-icon"><img src="https://assets.revpeak.web.id/logo-revpeak.webp" alt="Revpeak logo" style="width:100%;height:100%;object-fit:contain;"></div>
+            <span class="logo-text">Rev<span>peak</span></span>
+          </div>
+          <p class="footer-desc">Review jujur dan mendalam untuk membantu Anda membuat keputusan belanja yang lebih cerdas — bukan lebih impulsif.</p>
+          <a href="/cdn-cgi/l/email-protection#2149444d4d4e615344575144404a0f5644430f4845" class="footer-email">📧 <span class="__cf_email__" data-cfemail="ef878a838380af9d8a999f8a8e84c1988a8dc1868b">[email&#160;protected]</span></a>
+        </div>
+        <div class="footer-col">
+          <h3>Navigasi</h3>
+          <a href="/">Beranda</a>
+          <a href="tokoh.html">Tokoh</a>
+          <a href="tentang.html">Tentang Kami</a>
+          <a href="kontak.html">Dukungan</a>
+        </div>
+        <div class="footer-col">
+          <h3>Legal</h3>
+          <a href="kebijakan.html">Kebijakan Privasi</a>
+          <a href="disclaimer.html">Disclaimer</a>
+          <a href="sitemap.xml">Sitemap</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2025 Revpeak. Semua hak dilindungi.</p>
+        <div class="social-links">
+          <a href="#" aria-label="Instagram Revpeak">📸</a>
+          <a href="#" aria-label="YouTube Revpeak">▶️</a>
+          <a href="#" aria-label="Telegram Revpeak">✈️</a>
+        </div>
+      </div>
     </div>
   </footer>
+
+  <button class="scroll-top" id="scroll-top" aria-label="Kembali ke atas">↑</button>
 
   <script src="js/app.js"></script>
   <script src="js/review.js"></script>
 
+  <script>
+    (function() {
+      const bar = document.getElementById('reading-progress');
+      if (!bar) return;
+      window.addEventListener('scroll', function() {
+        const doc = document.documentElement;
+        const scrollTop = window.scrollY || doc.scrollTop;
+        const scrollHeight = doc.scrollHeight - doc.clientHeight;
+        const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+        bar.style.width = progress + '%';
+        bar.setAttribute('aria-valuenow', Math.round(progress));
+      }, { passive: true });
+    })();
+  </script>
 </body>
 </html>
