@@ -485,7 +485,14 @@ function updateArticleSchema(r, pageURL) {
       'itemReviewed': {
         '@type': 'Product',
         'name': r.title,
-        'description': r.excerpt || ''
+        'description': r.excerpt || '',
+        'aggregateRating': {
+          '@type': 'AggregateRating',
+          'ratingValue': r.rating ? parseFloat(r.rating) : 5,
+          'bestRating': 5,
+          'worstRating': 1,
+          'reviewCount': 1
+        }
       },
       'reviewRating': {
         '@type': 'Rating',
