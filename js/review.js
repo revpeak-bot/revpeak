@@ -483,7 +483,7 @@ function updateArticleSchema(r, pageURL) {
       'author': author,
       'publisher': publisher,
       'itemReviewed': {
-        '@type': 'Thing',
+        '@type': 'Product',
         'name': r.title,
         'description': r.excerpt || ''
       },
@@ -513,6 +513,7 @@ function updateArticleSchema(r, pageURL) {
     };
     if (r.video_url) schema['contentUrl'] = r.video_url;
     if (r.duration)  schema['duration']   = r.duration;
+    if (image)       schema['image']      = image;
   }
 
   // ── LIST / PRODUK ────────────────────────────────────
@@ -538,11 +539,28 @@ function updateArticleSchema(r, pageURL) {
     if (image) schema['image'] = image;
   }
 
-  // ── NEWS / ARTICLE / LAINNYA ─────────────────────────
-  else {
+  // ── NEWS ─────────────────────────────────────────────
+  else if (type === 'news') {
     schema = {
       '@context': 'https://schema.org',
       '@type': 'NewsArticle',
+      'headline': r.title,
+      'description': r.excerpt || '',
+      'url': pageURL,
+      'inLanguage': 'id',
+      'datePublished': r.created_at || '',
+      'dateModified': r.updated_at || r.created_at || '',
+      'author': author,
+      'publisher': publisher
+    };
+    if (image) schema['image'] = image;
+  }
+
+  // ── FALLBACK (tipe tidak dikenal) ────────────────────
+  else {
+    schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
       'headline': r.title,
       'description': r.excerpt || '',
       'url': pageURL,
