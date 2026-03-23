@@ -456,6 +456,17 @@ function updateArticleSchema(r, pageURL) {
     'inLanguage': 'id',
     'datePublished': r.created_at || '',
     'dateModified': r.updated_at || r.created_at || '',
+    'itemReviewed': {
+      '@type': 'Thing',
+      'name': r.title,
+      'description': r.excerpt || ''
+    },
+    'reviewRating': {
+      '@type': 'Rating',
+      'ratingValue': r.rating ? parseFloat(r.rating) : 5,
+      'bestRating': 5,
+      'worstRating': 1
+    },
     'author': {
       '@type': 'Person',
       'name': r.author || 'Admin Revpeak'
@@ -476,32 +487,6 @@ function updateArticleSchema(r, pageURL) {
     schema['image'] = {
       '@type': 'ImageObject',
       'url': r.image_url
-    };
-  }
-
-  // Untuk tipe "review": itemReviewed WAJIB ada (syarat Google), rating opsional
-  if (type === 'review') {
-    schema['itemReviewed'] = {
-      '@type': 'Product',
-      'name': r.title,
-      'description': r.excerpt || ''
-    };
-    if (r.rating) {
-      schema['reviewRating'] = {
-        '@type': 'Rating',
-        'ratingValue': parseFloat(r.rating),
-        'bestRating': 5,
-        'worstRating': 1
-      };
-    }
-  }
-
-  // Untuk tipe "video": itemReviewed juga wajib karena @type tetap Review
-  if (type === 'video') {
-    schema['itemReviewed'] = {
-      '@type': 'Thing',
-      'name': r.title,
-      'description': r.excerpt || ''
     };
   }
 
