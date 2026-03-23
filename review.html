@@ -20,7 +20,39 @@
   <title id="page-title">Review Produk – Revpeak</title>
 
   <!-- Schema: Article (diupdate oleh JS) -->
-  <script type="application/ld+json" id="article-schema"></script>
+  <script type="application/ld+json" id="article-schema">
+  {
+    "@context": "https://schema.org",
+    "@type": "Review",
+    "name": "Review Produk – Revpeak",
+    "description": "Review lengkap dan jujur di Revpeak. Kami sampaikan kelebihan, kekurangan, dan kesimpulan akhir secara transparan.",
+    "url": "https://revpeak.web.id/review.html",
+    "inLanguage": "id",
+    "itemReviewed": {
+      "@type": "Thing",
+      "name": "Review Produk – Revpeak"
+    },
+    "reviewRating": {
+      "@type": "Rating",
+      "ratingValue": "5",
+      "bestRating": "5",
+      "worstRating": "1"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "Admin"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Revpeak",
+      "url": "https://revpeak.web.id",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://assets.revpeak.web.id/logo-revpeak.webp"
+      }
+    }
+  }
+  </script>
 </head>
 <body>
 
@@ -175,6 +207,7 @@
   <script src="js/app.js"></script>
   <script src="js/review.js"></script>
 
+  <!-- Reading progress bar script -->
   <script>
     (function() {
       const bar = document.getElementById('reading-progress');
