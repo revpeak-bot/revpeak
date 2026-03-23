@@ -226,22 +226,73 @@ function initTabs() {
       const ttl = document.getElementById('section-title');
       if (ttl) ttl.textContent = tabLabels[currentTab] || currentTab;
 
+      // Scroll ke atas agar user langsung melihat hero yang berubah
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Reload hero dan content sesuai tab aktif
+      loadHero(currentTab);
       loadContent(true);
     });
   });
 }
 
 /* ===== HERO ===== */
-async function loadHero() {
+async function loadHero(tab = 'rekomendasi') {
   const heroGrid = document.getElementById('hero-grid');
   if (!heroGrid) return;
 
-  const data  = await fetchAPI('/reviews?limit=4&featured=true');
+  // Tampilkan skeleton hero saat loading ulang
+  heroGrid.innerHTML = `
+    <div class="hero-main-skeleton skeleton-card">
+      <div class="skeleton sk-hero-img"></div>
+      <div class="sk-body">
+        <div class="skeleton sk-line" style="width:30%;height:11px;margin-bottom:10px"></div>
+        <div class="skeleton sk-line" style="width:90%;height:20px;margin-bottom:8px"></div>
+        <div class="skeleton sk-line" style="width:100%;margin-bottom:6px"></div>
+        <div class="skeleton sk-line" style="width:70%"></div>
+      </div>
+    </div>
+    <div class="hero-side-skeleton">
+      <div class="skeleton-card sk-side"><div class="skeleton sk-side-img"></div><div class="sk-side-body"><div class="skeleton sk-line" style="width:80%;height:13px;margin-bottom:6px"></div><div class="skeleton sk-line" style="width:55%"></div></div></div>
+      <div class="skeleton-card sk-side"><div class="skeleton sk-side-img"></div><div class="sk-side-body"><div class="skeleton sk-line" style="width:80%;height:13px;margin-bottom:6px"></div><div class="skeleton sk-line" style="width:55%"></div></div></div>
+      <div class="skeleton-card sk-side"><div class="skeleton sk-side-img"></div><div class="sk-side-body"><div class="skeleton sk-line" style="width:80%;height:13px;margin-bottom:6px"></div><div class="skeleton sk-line" style="width:55%"></div></div></div>
+    </div>`;
+
+  // URL dan label badge sesuai tab
+  const urlMap = {
+    rekomendasi: '/reviews?limit=4&featured=true',
+    trending:    '/reviews?limit=4&sort=trending',
+    terbaru:     '/reviews?limit=4',
+  };
+  const badgeMap = {
+    rekomendasi: '⭐ Unggulan',
+    trending:    '🔥 Trending',
+    terbaru:     '🆕 Terbaru',
+  };
+  const labelMap = {
+    rekomendasi: '⭐ Pilihan Rekomendasi',
+    trending:    '🔥 Sedang Trending',
+    terbaru:     '🆕 Konten Terbaru',
+  };
+
+  // Update label di atas hero grid
+  const heroLabel = document.getElementById('hero-tab-label');
+  if (heroLabel) heroLabel.textContent = labelMap[tab] || '';
+
+  const data  = await fetchAPI(urlMap[tab] || urlMap.rekomendasi);
   const items = data?.data || data || [];
   if (!items.length) { heroGrid.style.display = 'none'; return; }
+  heroGrid.style.display = '';
 
   const main = items[0];
   const side = items.slice(1, 4);
+
+  // Badge: list/video tetap pakai label tipe konten, selainnya pakai label tab
+  const heroBadge = main.post_type === 'list'
+    ? '📋 List'
+    : main.post_type === 'video'
+      ? '▶ Video'
+      : badgeMap[tab] || '⭐ Unggulan';
 
   const mainImgHTML = main.image_url
     ? `<img src="${main.image_url}" alt="${main.title}" loading="eager">`
@@ -269,7 +320,7 @@ async function loadHero() {
       <div class="hero-main-img">
         ${mainImgHTML}
         <div class="hero-img-overlay"></div>
-        <span class="hero-badge">${main.post_type === 'list' ? '📋 List' : main.post_type === 'video' ? '▶ Video' : '⭐ Unggulan'}</span>
+        <span class="hero-badge">${heroBadge}</span>
         ${main.views ? `<span class="hero-views-pill">👁 ${fmtViews(main.views)}</span>` : ''}
       </div>
       <div class="hero-main-body">
@@ -434,6 +485,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initLoadMore();
   initHeaderShadow();
   loadCategories();
-  loadHero();
+  loadHero(currentTab);
   loadContent(true);
 });
