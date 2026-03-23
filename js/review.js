@@ -479,19 +479,21 @@ function updateArticleSchema(r, pageURL) {
     };
   }
 
-  // Untuk tipe "review": tambahkan rating dan itemReviewed
-  if (type === 'review' && r.rating) {
-    schema['reviewRating'] = {
-      '@type': 'Rating',
-      'ratingValue': parseFloat(r.rating),
-      'bestRating': 5,
-      'worstRating': 1
-    };
+  // Untuk tipe "review": itemReviewed WAJIB ada (syarat Google), rating opsional
+  if (type === 'review') {
     schema['itemReviewed'] = {
       '@type': 'Product',
       'name': r.title,
       'description': r.excerpt || ''
     };
+    if (r.rating) {
+      schema['reviewRating'] = {
+        '@type': 'Rating',
+        'ratingValue': parseFloat(r.rating),
+        'bestRating': 5,
+        'worstRating': 1
+      };
+    }
   }
 
   // Untuk tipe "list": gunakan ItemList
