@@ -496,6 +496,15 @@ function updateArticleSchema(r, pageURL) {
     }
   }
 
+  // Untuk tipe "video": itemReviewed juga wajib karena @type tetap Review
+  if (type === 'video') {
+    schema['itemReviewed'] = {
+      '@type': 'Thing',
+      'name': r.title,
+      'description': r.excerpt || ''
+    };
+  }
+
   // Untuk tipe "list": gunakan ItemList
   if (type === 'list') {
     schema['@type'] = 'ItemList';
