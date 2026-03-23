@@ -188,7 +188,6 @@ function renderReviewArticle(container, r) {
    VIDEO ARTICLE
 =========================== */
 function renderVideoArticle(container, r) {
-  // Deteksi YouTube embed
   let videoEmbed = '';
   if (r.video_url) {
     const ytMatch = r.video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
@@ -345,7 +344,6 @@ function renderListArticle(container, r) {
 function buildSidebar(r) {
   let html = '';
 
-  // Rating
   if (r.rating) {
     html += `
       <div class="sidebar-card">
@@ -358,7 +356,6 @@ function buildSidebar(r) {
       </div>`;
   }
 
-  // Affiliate
   if (r.affiliate_url) {
     html += `
       <div class="sidebar-card">
@@ -372,7 +369,6 @@ function buildSidebar(r) {
       </div>`;
   }
 
-  // Share
   html += buildShareCard(r);
 
   return html;
@@ -438,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ===========================
-   UPDATE JSON-LD SCHEMA
+   UPDATE JSON-LD SCHEMA (FIXED)
 =========================== */
 function updateArticleSchema(r, pageURL) {
   const el = document.getElementById('article-schema');
@@ -446,27 +442,33 @@ function updateArticleSchema(r, pageURL) {
 
   const type = r.post_type || 'review';
 
-  // Base schema yang berlaku untuk semua tipe
   const schema = {
     '@context': 'https://schema.org',
-    '@type': 'Review',
+    '@type': (type === 'review' ? 'Review' : type === 'video' ? 'VideoObject' : type === 'list' ? 'ItemList' : 'Article'),
+    '@id': pageURL + '#main',
     'name': r.title,
+    'headline': r.title,
     'description': r.excerpt || '',
     'url': pageURL,
     'inLanguage': 'id',
     'datePublished': r.created_at || '',
     'dateModified': r.updated_at || r.created_at || '',
-    'itemReviewed': {
-      '@type': 'Thing',
-      'name': r.title,
-      'description': r.excerpt || ''
-    },
-    'reviewRating': {
-      '@type': 'Rating',
-      'ratingValue': r.rating ? parseFloat(r.rating) : 5,
-      'bestRating': 5,
-      'worstRating': 1
-    },
+    ...(type === 'review' ? {
+      'itemReviewed': {
+        '@type': 'Thing',
+        '@id': pageURL + '#item-reviewed',
+        'name': r.title || 'Item Review Revpeak',
+        'description': r.excerpt || ''
+      }
+    } : {}),
+    ...(type === 'review' ? {
+      'reviewRating': {
+        '@type': 'Rating',
+        'ratingValue': r.rating ? parseFloat(r.rating) : 5,
+        'bestRating': 5,
+        'worstRating': 1
+      }
+    } : {}),
     'author': {
       '@type': 'Person',
       'name': r.author || 'Admin Revpeak'
@@ -482,7 +484,6 @@ function updateArticleSchema(r, pageURL) {
     }
   };
 
-  // Tambahkan gambar jika ada
   if (r.image_url) {
     schema['image'] = {
       '@type': 'ImageObject',
@@ -490,20 +491,27 @@ function updateArticleSchema(r, pageURL) {
     };
   }
 
-  // Untuk tipe "list": gunakan ItemList
   if (type === 'list') {
-    schema['@type'] = 'ItemList';
     const products = (typeof r.products === 'string')
       ? (() => { try { return JSON.parse(r.products); } catch { return []; } })()
       : (r.products || []);
-    if (products.length) {
-      schema['numberOfItems'] = products.length;
-      schema['itemListElement'] = products.map((p, i) => ({
-        '@type': 'ListItem',
-        'position': i + 1,
-        'name': p.name,
-        'description': p.description || ''
-      }));
+
+    schema['numberOfItems'] = products.length;
+    schema['itemListElement'] = products.map((p, i) => ({
+      '@type': 'ListItem',
+      'position': i + 1,
+      'name': p.name,
+      'description': p.description || ''
+    }));
+  }
+
+  if (type === 'video') {
+    if (r.video_url) {
+      schema['contentUrl'] = r.video_url;
+      schema['embedUrl'] = r.video_url;
+    }
+    if (r.duration) {
+      schema['duration'] = r.duration;
     }
   }
 
