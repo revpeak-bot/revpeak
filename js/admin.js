@@ -90,6 +90,7 @@ async function login() {
     AUTH_TOKEN  = data.access_token;
     currentUser = data.user;
     localStorage.setItem('rp-admin-token', AUTH_TOKEN);
+    localStorage.setItem('rp-admin-refresh', data.refresh_token);
     localStorage.setItem('rp-admin-email', email);
     enterApp(email);
 
@@ -109,14 +110,43 @@ async function checkSession() {
     headers: { ...SUPA_HEADERS, 'Authorization': `Bearer ${token}` },
   });
 
-  if (!r.ok) {
+  if (r.ok) {
+    AUTH_TOKEN  = token;
+    currentUser = await r.json();
+    return true;
+  }
+
+  // Token expired — coba refresh otomatis
+  const refreshToken = localStorage.getItem('rp-admin-refresh');
+  if (!refreshToken) {
     localStorage.removeItem('rp-admin-token');
     return false;
   }
 
-  AUTH_TOKEN = token;
-  currentUser = await r.json();
-  return true;
+  try {
+    const rr = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method:  'POST',
+      headers: { ...SUPA_HEADERS },
+      body:    JSON.stringify({ refresh_token: refreshToken }),
+    });
+    const data = await rr.json();
+
+    if (!rr.ok || !data.access_token) {
+      localStorage.removeItem('rp-admin-token');
+      localStorage.removeItem('rp-admin-refresh');
+      return false;
+    }
+
+    AUTH_TOKEN  = data.access_token;
+    currentUser = data.user;
+    localStorage.setItem('rp-admin-token',   AUTH_TOKEN);
+    localStorage.setItem('rp-admin-refresh',  data.refresh_token);
+    return true;
+  } catch {
+    localStorage.removeItem('rp-admin-token');
+    localStorage.removeItem('rp-admin-refresh');
+    return false;
+  }
 }
 
 function enterApp(email) {
@@ -133,6 +163,7 @@ function enterApp(email) {
 
 function logout() {
   localStorage.removeItem('rp-admin-token');
+  localStorage.removeItem('rp-admin-refresh');
   localStorage.removeItem('rp-admin-email');
   AUTH_TOKEN  = null;
   currentUser = null;
