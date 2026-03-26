@@ -203,3 +203,14 @@
   .cat-card { padding: 22px 14px 18px; }
   .cat-card-icon { font-size: 34px; margin-bottom: 10px; }
 }
+
+.social-links a {
+  font-size: 20px;
+  margin-right: 10px;
+  color: #333;
+  text-decoration: none;
+}
+
+.social-links a:hover {
+  color: #007bff;
+}
