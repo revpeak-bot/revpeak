@@ -503,6 +503,7 @@ function fillKontenForm(r) {
   setVal('f-slug',     r.slug);
   setVal('f-excerpt',  r.excerpt);
   setVal('f-image',    r.image_url);
+  setVal('f-image-alt', r.image_alt);
   setVal('f-emoji',    r.emoji);
   setVal('f-rating',   r.rating);
   setVal('f-affiliate',r.affiliate_url);
@@ -553,7 +554,7 @@ function fillKontenForm(r) {
 }
 
 function resetKontenForm() {
-  ['f-id','f-title','f-slug','f-excerpt','f-image','f-emoji','f-rating',
+  ['f-id','f-title','f-slug','f-excerpt','f-image','f-image-alt','f-emoji','f-rating',
    'f-affiliate','f-video-url','f-duration','f-pros','f-cons','f-tags','f-content']
     .forEach(id => setVal(id, ''));
   setVal('f-author', 'Admin');
@@ -604,6 +605,7 @@ async function saveKonten() {
     excerpt:         val('f-excerpt') || null,
     content:         val('f-content') || null,
     image_url:       val('f-image') || null,
+    image_alt:       val('f-image-alt') || null,
     emoji:           val('f-emoji') || '📌',
     post_type:       type,
     author:          val('f-author') || 'Admin',
