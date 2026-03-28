@@ -582,6 +582,19 @@ function onTypeChange() {
   document.getElementById('review-fields').style.display = isReview ? 'block' : 'none';
 }
 
+function toISO8601Duration(input) {
+  if (!input) return null;
+  // Sudah format ISO, kembalikan apa adanya
+  if (/^PT/i.test(input)) return input.toUpperCase();
+  // Format H:MM:SS atau MM:SS
+  const parts = input.split(':').map(s => parseInt(s, 10));
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) { [h, m, s] = parts; }
+  else if (parts.length === 2) { [m, s] = parts; }
+  else return null;
+  return 'PT' + (h ? h + 'H' : '') + (m ? m + 'M' : '') + (s ? s + 'S' : '');
+}
+
 async function saveKonten() {
   const btn = document.getElementById('btn-save-konten');
   btn.textContent = '⏳ Menyimpan...';
@@ -617,7 +630,7 @@ async function saveKonten() {
     pros:            prosArr,
     cons:            consArr,
     video_url:       val('f-video-url') || null,
-    duration:        val('f-duration') || null,
+    duration:        toISO8601Duration(val('f-duration')),
     products:        products,
     product_count:   products.length,
   };
