@@ -50,8 +50,9 @@ function parseJSON(val, fallback = []) {
    MAIN INIT
 =========================== */
 async function initReviewPage() {
-  const params = new URLSearchParams(window.location.search);
-  const slug   = params.get('slug');
+  // ── PERUBAHAN: baca slug dari pathname (clean URL) ──
+  // Sebelumnya: new URLSearchParams(window.location.search).get('slug')
+  const slug = window.location.pathname.slice(1);
 
   if (!slug) { window.location.href = '/'; return; }
 
@@ -80,31 +81,32 @@ async function initReviewPage() {
   }
 
   // Update meta tags
-const pageFullTitle = review.title + ' – Revpeak';
-const pageURL       = 'https://revpeak.web.id/review.html?slug=' + slug;
+  // ── PERUBAHAN: pageURL menggunakan clean URL ──
+  const pageFullTitle = review.title + ' – Revpeak';
+  const pageURL       = 'https://revpeak.web.id/' + slug;
 
-document.title = pageFullTitle;
+  document.title = pageFullTitle;
 
-const metaDesc   = document.getElementById('meta-desc');
-const ogTitle    = document.getElementById('og-title');
-const ogDesc     = document.getElementById('og-desc');
-const ogImage    = document.getElementById('og-image');
-const canonical  = document.getElementById('canonical-url');
+  const metaDesc   = document.getElementById('meta-desc');
+  const ogTitle    = document.getElementById('og-title');
+  const ogDesc     = document.getElementById('og-desc');
+  const ogImage    = document.getElementById('og-image');
+  const canonical  = document.getElementById('canonical-url');
 
-if (metaDesc)  metaDesc.setAttribute('content', review.excerpt || '');
-if (ogTitle)   ogTitle.setAttribute('content', pageFullTitle);
-if (ogDesc)    ogDesc.setAttribute('content', review.excerpt || '');
-if (ogImage)   ogImage.setAttribute('content', review.image_url || '');
-if (canonical) canonical.setAttribute('href', pageURL);
+  if (metaDesc)  metaDesc.setAttribute('content', review.excerpt || '');
+  if (ogTitle)   ogTitle.setAttribute('content', pageFullTitle);
+  if (ogDesc)    ogDesc.setAttribute('content', review.excerpt || '');
+  if (ogImage)   ogImage.setAttribute('content', review.image_url || '');
+  if (canonical) canonical.setAttribute('href', pageURL);
 
-  // Update JSON-LD schema dengan data artikel yang sebenarnya
+  // Update JSON-LD schema
   updateArticleSchema(review, pageURL);
 
   // Render berdasarkan post_type
   const type = review.post_type || 'review';
-  if (type === 'list')  renderListArticle(container, review);
+  if (type === 'list')       renderListArticle(container, review);
   else if (type === 'video') renderVideoArticle(container, review);
-  else renderReviewArticle(container, review);
+  else                       renderReviewArticle(container, review);
 
   // Load related
   if (review.category_id) loadRelated(review.category_id, review.slug);
@@ -188,7 +190,6 @@ function renderReviewArticle(container, r) {
    VIDEO ARTICLE
 =========================== */
 function renderVideoArticle(container, r) {
-  // Deteksi YouTube embed
   let videoEmbed = '';
   if (r.video_url) {
     const ytMatch = r.video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
@@ -251,43 +252,26 @@ function renderVideoArticle(container, r) {
 function renderListArticle(container, r) {
   const products = parseJSON(r.products, []);
 
-  const productsHTML = products.length
-    ? products.map((p, i) => `
-        <div class="list-product-card">
-          <div class="list-rank">${i + 1}</div>
-          <div class="list-product-img">
-            ${p.image
-              ? `<img src="${p.image}" alt="${p.name}" loading="lazy">`
-              : `<span>${p.emoji || '🛍️'}</span>`}
-          </div>
-          <div class="list-product-body">
-            <div class="list-product-name">${p.name}</div>
-            ${p.description ? `<p class="list-product-desc">${p.description}</p>` : ''}
-            <div class="list-product-footer">
-              ${p.price  ? `<span class="list-product-price">${p.price}</span>` : ''}
-              ${p.rating ? `<span class="list-product-rating">★ ${p.rating}</span>` : ''}
-              ${p.affiliate_url ? `
-                <a href="${p.affiliate_url}" target="_blank" rel="nofollow noopener"
-                   class="btn-cek-harga"
-                   onclick="trackAffiliate('${r.slug}')">
-                  🛍️ Cek Harga
-                </a>` : ''}
-            </div>
-          </div>
-        </div>`).join('')
-    : `<p style="color:var(--text-muted);text-align:center;padding:32px">Daftar produk sedang dipersiapkan.</p>`;
-
   const tocHTML = products.length ? `
-    <div class="sidebar-card">
-      <div class="sidebar-title">📋 Daftar Isi</div>
-      <div class="toc-list">
-        ${products.map((p, i) => `
-          <div class="toc-item" onclick="scrollToProduct(${i})">
-            <div class="toc-num">${i + 1}</div>
-            <span>${p.name}</span>
-          </div>`).join('')}
-      </div>
+    <div class="list-toc">
+      <div class="list-toc-title">📋 Daftar Isi</div>
+      <ol class="list-toc-ol">
+        ${products.map((p, i) => `<li><a href="#" onclick="scrollToProduct(${i});return false">${p.name}</a></li>`).join('')}
+      </ol>
     </div>` : '';
+
+  const productsHTML = products.map((p, i) => `
+    <div class="list-product-card" id="product-${i}">
+      ${p.image ? `<img class="list-product-img" src="${p.image}" alt="${p.name}">` : ''}
+      <div class="list-product-body">
+        <div class="list-product-rank">#${i + 1}</div>
+        <h3 class="list-product-name">${p.name}</h3>
+        ${p.description ? `<p class="list-product-desc">${p.description}</p>` : ''}
+        ${p.affiliate_url ? `<a href="${p.affiliate_url}" class="btn-affiliate" target="_blank" rel="nofollow noopener">🛍️ Cek Harga</a>` : ''}
+      </div>
+    </div>`).join('');
+
+  const sidebar = buildSidebar(r);
 
   container.innerHTML = `
     <nav class="review-breadcrumb">
@@ -301,9 +285,8 @@ function renderListArticle(container, r) {
       <article class="review-article">
         <div class="review-header">
           <div class="review-type-badges">
-            <span class="badge badge-list">📋 List Produk</span>
+            <span class="badge badge-list">📋 List</span>
             ${r.categories ? `<span class="badge badge-cat">${r.categories.icon || ''} ${r.categories.name}</span>` : ''}
-            ${products.length ? `<span class="badge badge-cat">${products.length} produk</span>` : ''}
           </div>
           <h1 class="review-title">${r.title}</h1>
           <div class="review-meta-row">
@@ -312,27 +295,14 @@ function renderListArticle(container, r) {
             ${r.views ? `<span class="review-meta-item">👁 ${fmtViews(r.views)} views</span>` : ''}
           </div>
         </div>
-
-        ${r.image_url
-          ? `<img class="review-hero-img" src="${r.image_url}" alt="${r.title}">`
-          : `<div class="review-hero-placeholder">${r.emoji || '📋'}</div>`}
-
-        ${r.excerpt ? `<div class="list-intro">${r.excerpt}</div>` : ''}
-        ${r.content ? `<div class="review-content">${r.content}</div>` : ''}
-
-        <div class="list-products-section">
-          <h2 class="list-products-title">
-            🛍️ ${products.length || 'Daftar'} Produk Rekomendasi
-          </h2>
-          <div class="list-products" id="list-products-wrap">
-            ${productsHTML}
-          </div>
-        </div>
+        ${r.image_url ? `<img class="review-hero-img" src="${r.image_url}" alt="${r.title}">` : ''}
+        ${tocHTML}
+        <div class="review-content">${r.content || ''}</div>
+        <div class="list-products">${productsHTML}</div>
       </article>
-
       <aside class="review-sidebar">
         <div class="sidebar-sticky">
-          ${tocHTML}
+          ${sidebar}
           ${buildShareCard(r)}
         </div>
       </aside>
@@ -345,7 +315,6 @@ function renderListArticle(container, r) {
 function buildSidebar(r) {
   let html = '';
 
-  // Rating
   if (r.rating) {
     html += `
       <div class="sidebar-card">
@@ -358,7 +327,6 @@ function buildSidebar(r) {
       </div>`;
   }
 
-  // Affiliate
   if (r.affiliate_url) {
     html += `
       <div class="sidebar-card">
@@ -372,7 +340,6 @@ function buildSidebar(r) {
       </div>`;
   }
 
-  // Share
   html += buildShareCard(r);
 
   return html;
@@ -439,7 +406,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ===========================
    UPDATE JSON-LD SCHEMA
-   Mendukung: review, video, list, news, article
 =========================== */
 function updateArticleSchema(r, pageURL) {
   const el = document.getElementById('article-schema');
@@ -449,133 +415,128 @@ function updateArticleSchema(r, pageURL) {
 
   const publisher = {
     '@type': 'Organization',
-    'name': 'Revpeak',
-    'url': 'https://revpeak.web.id',
+    'name':  'Revpeak',
+    'url':   'https://revpeak.web.id',
     'logo': {
       '@type': 'ImageObject',
-      'url': 'https://assets.revpeak.web.id/logo-revpeak.webp'
+      'url':   'https://assets.revpeak.web.id/logo-revpeak.webp'
     }
   };
 
   const author = {
     '@type': 'Person',
-    'name': r.author || 'Admin Revpeak'
+    'name':  r.author || 'Admin Revpeak'
   };
 
   const image = r.image_url ? {
     '@type': 'ImageObject',
-    'url': r.image_url
+    'url':   r.image_url
   } : undefined;
 
   let schema = {};
 
-  // ── REVIEW ──────────────────────────────────────────
   if (type === 'review') {
     schema = {
-      '@context': 'https://schema.org',
-      '@type': 'Review',
-      'name': r.title,
+      '@context':    'https://schema.org',
+      '@type':       'Review',
+      'name':        r.title,
       'description': r.excerpt || '',
-      'url': pageURL,
-      'inLanguage': 'id',
+      'url':         pageURL,
+      'inLanguage':  'id',
       'datePublished': r.created_at || '',
-      'dateModified': r.updated_at || r.created_at || '',
-      'author': author,
+      'dateModified':  r.updated_at || r.created_at || '',
+      'author':    author,
       'publisher': publisher,
       'itemReviewed': {
-        '@type': 'Product',
-        'name': r.title,
+        '@type':       'Product',
+        'name':        r.title,
         'description': r.excerpt || '',
         'aggregateRating': {
-          '@type': 'AggregateRating',
+          '@type':       'AggregateRating',
           'ratingValue': r.rating ? parseFloat(r.rating) : 5,
-          'bestRating': 5,
+          'bestRating':  5,
           'worstRating': 1,
           'reviewCount': 1
         }
       },
       'reviewRating': {
-        '@type': 'Rating',
+        '@type':       'Rating',
         'ratingValue': r.rating ? parseFloat(r.rating) : 5,
-        'bestRating': 5,
+        'bestRating':  5,
         'worstRating': 1
       }
     };
     if (image) schema['image'] = image;
   }
 
-  // ── VIDEO ────────────────────────────────────────────
   else if (type === 'video') {
     schema = {
-      '@context': 'https://schema.org',
-      '@type': 'VideoObject',
-      'name': r.title,
-      'description': r.excerpt || '',
+      '@context':     'https://schema.org',
+      '@type':        'VideoObject',
+      'name':         r.title,
+      'description':  r.excerpt || '',
       'thumbnailUrl': r.image_url || '',
-      'uploadDate': r.created_at || '',
-      'url': pageURL,
-      'inLanguage': 'id',
-      'author': author,
-      'publisher': publisher
+      'uploadDate':   r.created_at || '',
+      'url':          pageURL,
+      'inLanguage':   'id',
+      'author':       author,
+      'publisher':    publisher
     };
     if (r.video_url) schema['contentUrl'] = r.video_url;
     if (r.duration)  schema['duration']   = r.duration;
     if (image)       schema['image']      = image;
   }
 
-  // ── LIST / PRODUK ────────────────────────────────────
   else if (type === 'list') {
     const products = (typeof r.products === 'string')
       ? (() => { try { return JSON.parse(r.products); } catch { return []; } })()
       : (r.products || []);
     schema = {
-      '@context': 'https://schema.org',
-      '@type': 'ItemList',
-      'name': r.title,
-      'description': r.excerpt || '',
-      'url': pageURL,
-      'inLanguage': 'id',
+      '@context':     'https://schema.org',
+      '@type':        'ItemList',
+      'name':         r.title,
+      'description':  r.excerpt || '',
+      'url':          pageURL,
+      'inLanguage':   'id',
       'numberOfItems': products.length,
       'itemListElement': products.map((p, i) => ({
-        '@type': 'ListItem',
-        'position': i + 1,
-        'name': p.name,
+        '@type':       'ListItem',
+        'position':    i + 1,
+        'name':        p.name,
         'description': p.description || ''
       }))
     };
     if (image) schema['image'] = image;
   }
 
-  // ── NEWS ─────────────────────────────────────────────
   else if (type === 'news') {
     schema = {
-      '@context': 'https://schema.org',
-      '@type': 'NewsArticle',
-      'headline': r.title,
-      'description': r.excerpt || '',
-      'url': pageURL,
-      'inLanguage': 'id',
+      '@context':      'https://schema.org',
+      '@type':         'NewsArticle',
+      'headline':      r.title,
+      'description':   r.excerpt || '',
+      'url':           pageURL,
+      'inLanguage':    'id',
       'datePublished': r.created_at || '',
-      'dateModified': r.updated_at || r.created_at || '',
-      'author': author,
-      'publisher': publisher
+      'dateModified':  r.updated_at || r.created_at || '',
+      'author':        author,
+      'publisher':     publisher
     };
     if (image) schema['image'] = image;
   }
 
-  // ── FALLBACK (tipe tidak dikenal) ────────────────────
   else {
     schema = {
-      '@context': 'https://schema.org',
-      '@type': 'Article',
-      'headline': r.title,
-      'description': r.excerpt || '',
-      'url': pageURL,
-      'inLanguage': 'id',
+      '@context':      'https://schema.org',
+      '@type':         'Article',
+      'headline':      r.title,
+      'description':   r.excerpt || '',
+      'url':           pageURL,
+      'inLanguage':    'id',
       'datePublished': r.created_at || '',
-      'dateModified': r.updated_at || r.created_at || '',
-      'author': author,
-      'publisher': publisher
+      'dateModified':  r.updated_at || r.created_at || '',
+      'author':        author,
+      'publisher':     publisher
     };
     if (image) schema['image'] = image;
   }

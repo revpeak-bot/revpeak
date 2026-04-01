@@ -299,7 +299,7 @@ async function loadHero(tab = 'rekomendasi') {
     : `<div style="font-size:80px;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2D2C29,#444)">${main.emoji || '📱'}</div>`;
 
   const sideHTML = side.map(s => `
-    <a href="review.html?slug=${s.slug}" class="hero-side-card">
+    <a href="/${s.slug}" class="hero-side-card">
       <div class="side-thumb">
         ${s.image_url
           ? `<img src="${s.image_url}" alt="${s.title}" loading="lazy">`
@@ -316,7 +316,7 @@ async function loadHero(tab = 'rekomendasi') {
     </a>`).join('');
 
   heroGrid.innerHTML = `
-    <a href="review.html?slug=${main.slug}" class="hero-main">
+    <a href="/${main.slug}" class="hero-main">
       <div class="hero-main-img">
         ${mainImgHTML}
         <div class="hero-img-overlay"></div>
@@ -361,7 +361,7 @@ function contentCardHTML(item) {
 
   // [A11Y] role="listitem" sudah ada — dipertahankan agar sesuai dengan parent role="list"
   return `
-    <a href="review.html?slug=${item.slug}" class="content-card" role="listitem">
+    <a href="/${item.slug}" class="content-card" role="listitem">
       <div class="card-media">
         ${mediaHTML}
         <span class="card-ribbon ${ribbonCls}">${ribbonTxt}</span>
