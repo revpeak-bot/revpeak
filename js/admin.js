@@ -318,6 +318,207 @@ function confirmDelete(msg, onOk) {
 }
 
 /* ============================================================
+   AUTOSAVE DRAFT (localStorage)
+============================================================ */
+const DRAFT_KEY = 'rp-konten-draft';
+let _draftTimer    = null;
+let _draftDebounce = null;
+
+function _getDraftModalBody() {
+  return document.querySelector('#modal-konten .modal-body')
+      || document.querySelector('#modal-konten .modal-scroll')
+      || document.getElementById('f-title')?.closest('form')
+      || document.getElementById('modal-konten');
+}
+
+function collectDraftData() {
+  return {
+    savedAt:   new Date().toISOString(),
+    contentId: val('f-id') || null,
+    fields: {
+      'f-id':        val('f-id'),
+      'f-type':      val('f-type'),
+      'f-cat':       val('f-cat'),
+      'f-title':     val('f-title'),
+      'f-slug':      val('f-slug'),
+      'f-excerpt':   val('f-excerpt'),
+      'f-image':     val('f-image'),
+      'f-image-alt': val('f-image-alt'),
+      'f-emoji':     val('f-emoji'),
+      'f-rating':    val('f-rating'),
+      'f-affiliate': val('f-affiliate'),
+      'f-video-url': val('f-video-url'),
+      'f-duration':  val('f-duration'),
+      'f-author':    val('f-author'),
+      'f-content':   document.getElementById('f-content')?.value  || '',
+      'f-pros':      document.getElementById('f-pros')?.value     || '',
+      'f-cons':      document.getElementById('f-cons')?.value     || '',
+      'f-tags':      val('f-tags'),
+    },
+    checks: {
+      'f-published': isChecked('f-published'),
+      'f-featured':  isChecked('f-featured'),
+    },
+    products: collectProducts(),
+  };
+}
+
+function saveDraftLocal() {
+  const title   = document.getElementById('f-title')?.value   || '';
+  const content = document.getElementById('f-content')?.value || '';
+  if (!title && !content) return; // jangan simpan jika form kosong
+  try {
+    const draft = collectDraftData();
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    _updateDraftBadge(draft.savedAt);
+  } catch(e) { console.warn('Autosave draft gagal:', e); }
+}
+
+function _updateDraftBadge(savedAt) {
+  let badge = document.getElementById('draft-saved-badge');
+  if (!badge) {
+    // Cari area tombol simpan dan sisipkan badge di sampingnya
+    const btnSave = document.getElementById('btn-save-konten');
+    if (!btnSave) return;
+    badge = document.createElement('span');
+    badge.id = 'draft-saved-badge';
+    badge.style.cssText = 'font-size:11px;color:var(--text-muted,#888);margin-left:8px;white-space:nowrap;';
+    btnSave.insertAdjacentElement('afterend', badge);
+  }
+  const t = new Date(savedAt).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  badge.textContent = `💾 draft ${t}`;
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  document.getElementById('draft-saved-badge')?.remove();
+  document.getElementById('draft-restore-banner')?.remove();
+}
+
+function getDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function _draftInputListener() {
+  clearTimeout(_draftDebounce);
+  _draftDebounce = setTimeout(saveDraftLocal, 3000); // simpan 3 detik setelah berhenti mengetik
+}
+
+function startDraftAutosave() {
+  stopDraftAutosave();
+  _draftTimer = setInterval(saveDraftLocal, 30000); // simpan tiap 30 detik
+  const modal = document.getElementById('modal-konten');
+  if (modal) {
+    modal.addEventListener('input',  _draftInputListener);
+    modal.addEventListener('change', _draftInputListener);
+  }
+}
+
+function stopDraftAutosave() {
+  if (_draftTimer)    { clearInterval(_draftTimer);   _draftTimer    = null; }
+  if (_draftDebounce) { clearTimeout(_draftDebounce); _draftDebounce = null; }
+  const modal = document.getElementById('modal-konten');
+  if (modal) {
+    modal.removeEventListener('input',  _draftInputListener);
+    modal.removeEventListener('change', _draftInputListener);
+  }
+}
+
+function checkAndOfferDraftRestore(currentId) {
+  document.getElementById('draft-restore-banner')?.remove();
+
+  const draft = getDraft();
+  if (!draft) return;
+  if (draft.contentId !== (currentId || null)) return;
+  if (!draft.fields?.['f-title'] && !draft.fields?.['f-content']) return;
+
+  const savedAt = new Date(draft.savedAt);
+  const timeStr = savedAt.toLocaleString('id-ID', {
+    day:'2-digit', month:'short', year:'numeric',
+    hour:'2-digit', minute:'2-digit',
+  });
+
+  const banner = document.createElement('div');
+  banner.id = 'draft-restore-banner';
+  banner.style.cssText = [
+    'background:#fff8e1', 'border:1px solid #ffca28', 'border-radius:8px',
+    'padding:10px 14px', 'margin-bottom:12px',
+    'display:flex', 'align-items:center', 'gap:10px',
+    'font-size:13px', 'flex-wrap:wrap', 'line-height:1.4',
+  ].join(';');
+  banner.innerHTML = `
+    <span>📋 Ada draft tersimpan pada <b>${timeStr}</b>.</span>
+    <div style="display:flex;gap:8px;margin-left:auto">
+      <button type="button" id="btn-restore-draft"
+        style="background:#E03E0B;color:#fff;border:none;border-radius:5px;padding:5px 14px;cursor:pointer;font-size:12px;font-weight:600;">
+        Pulihkan
+      </button>
+      <button type="button" id="btn-discard-draft"
+        style="background:transparent;border:1px solid #bbb;border-radius:5px;padding:5px 12px;cursor:pointer;font-size:12px;">
+        Abaikan
+      </button>
+    </div>`;
+
+  const body = _getDraftModalBody();
+  if (body) body.insertBefore(banner, body.firstChild);
+
+  document.getElementById('btn-restore-draft').onclick = () => {
+    restoreDraftLocal(draft);
+    banner.remove();
+  };
+  document.getElementById('btn-discard-draft').onclick = () => {
+    clearDraft();
+    banner.remove();
+    toast('Draft dihapus', 'info');
+  };
+}
+
+function restoreDraftLocal(draft) {
+  if (!draft?.fields) return;
+
+  // Pulihkan semua field teks
+  Object.entries(draft.fields).forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = v ?? '';
+  });
+
+  // Pulihkan checkbox
+  Object.entries(draft.checks || {}).forEach(([id, v]) => setChecked(id, v));
+
+  // Pulihkan products
+  productCount = 0;
+  const pl = document.getElementById('products-list');
+  if (pl) pl.innerHTML = '';
+  if (Array.isArray(draft.products)) draft.products.forEach(p => addProduct(p));
+
+  // Isi ulang dropdown kategori
+  const sel = document.getElementById('f-cat');
+  if (sel) {
+    sel.innerHTML = '<option value="">Pilih kategori...</option>' +
+      allCategories.map(c => `<option value="${c.id}">${c.icon||'📌'} ${c.name}</option>`).join('');
+    sel.value = draft.fields['f-cat'] || '';
+  }
+
+  // Preview gambar
+  if (draft.fields['f-image']) previewImg(draft.fields['f-image']);
+
+  onTypeChange();
+  if (previewOn) updatePreview();
+  _updateDraftBadge(draft.savedAt);
+  toast('✏️ Draft berhasil dipulihkan!', 'info');
+}
+
+function onKontenModalOpened() {
+  const currentId = val('f-id') || null;
+  startDraftAutosave();
+  // Sedikit delay agar modal sudah tampil penuh sebelum banner dirender
+  setTimeout(() => checkAndOfferDraftRestore(currentId), 150);
+}
+
+/* ============================================================
    CATEGORIES (shared)
 ============================================================ */
 async function loadCategories() {
@@ -486,6 +687,7 @@ function openKontenForm(existing = null) {
   }
 
   openModal('modal-konten');
+  onKontenModalOpened();
 }
 
 async function loadKontenForEdit(id) {
@@ -551,6 +753,7 @@ function fillKontenForm(r) {
   }
 
   openModal('modal-konten');
+  onKontenModalOpened();
 }
 
 function resetKontenForm() {
@@ -646,6 +849,8 @@ async function saveKonten() {
 
   if (result.ok) {
     toast(id ? 'Konten berhasil diperbarui!' : 'Konten berhasil ditambahkan!');
+    clearDraft();
+    stopDraftAutosave();
     closeModal('modal-konten');
     loadKonten(kontenPage);
     loadDashboard();
@@ -1155,9 +1360,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Close modal on overlay click
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', e => {
-      if (e.target === overlay) overlay.classList.remove('open');
+      if (e.target === overlay) {
+        if (overlay.id === 'modal-konten') stopDraftAutosave();
+        overlay.classList.remove('open');
+      }
     });
   });
+
+  // Stop autosave jika tombol close/batal pada modal konten diklik
+  document.querySelector('#modal-konten .modal-close, #modal-konten [data-close]')
+    ?.addEventListener('click', stopDraftAutosave);
 
   // Check existing session
   const loggedIn = await checkSession();
