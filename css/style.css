@@ -13,8 +13,8 @@
   --surface2:     #EFECE6;
   --border:       #E2DED6;
   --text:         #1A1916;
-  --text-muted:   #78736A;
-  --text-light:   #B0AA9F;
+  --text-muted:   #6B6560;
+  --text-light:   #706B67;
   --accent:       #E03E0B;
   --accent-dark:  #BB320A;
   --accent-bg:    rgba(224,62,11,0.08);
@@ -36,8 +36,8 @@
   --surface2:     #232321;
   --border:       #2C2C2A;
   --text:         #F0EDE8;
-  --text-muted:   #87827A;
-  --text-light:   #504D4A;
+  --text-muted:   #938D86;
+  --text-light:   #979189;
   --accent:       #FF5722;
   --accent-dark:  #E04011;
   --accent-bg:    rgba(255,87,34,0.1);
@@ -1191,7 +1191,7 @@ input, textarea { font-family: inherit; }
 /* Affiliate note di footer */
 .footer-affiliate-note {
   font-size: 12px;
-  color: rgba(255,255,255,0.35);
+  color: #8C8880;
   line-height: 1.6;
   margin-bottom: 14px;
   padding: 10px 12px;
@@ -1238,7 +1238,7 @@ input, textarea { font-family: inherit; }
   align-items: center;
   justify-content: space-between;
   font-size: 13px;
-  color: rgba(255,255,255,0.35);
+  color: #8C8880;
 }
 
 .social-links { display: flex; gap: 10px; }
