@@ -99,14 +99,41 @@ async function initReviewPage() {
   if (ogImage)   ogImage.setAttribute('content', review.image_url || '');
   if (canonical) canonical.setAttribute('href', pageURL);
 
+  // Update og:type secara dinamis berdasarkan post_type
+  // CATATAN: pastikan review.html memiliki tag:
+  // <meta id="og-type" property="og:type" content="article">
+  const ogType = document.getElementById('og-type');
+  if (ogType) {
+    const type = review.post_type || 'review';
+    ogType.setAttribute('content', type === 'video' ? 'video.other' : 'article');
+  }
+
+  // Tambah article:section untuk berita/artikel (bantu Google News)
+  const existingSection = document.getElementById('og-article-section');
+  if (existingSection) existingSection.remove();
+  const type = review.post_type || 'review';
+  if (type === 'news' || type === 'article') {
+    const sectionMeta = document.createElement('meta');
+    sectionMeta.id = 'og-article-section';
+    sectionMeta.setAttribute('property', 'article:section');
+    sectionMeta.setAttribute('content', review.categories?.name || (type === 'news' ? 'Berita' : 'Artikel'));
+    document.head.appendChild(sectionMeta);
+
+    const publishedMeta = document.createElement('meta');
+    publishedMeta.setAttribute('property', 'article:published_time');
+    publishedMeta.setAttribute('content', review.created_at || '');
+    document.head.appendChild(publishedMeta);
+  }
+
   // Update JSON-LD schema
   updateArticleSchema(review, pageURL);
 
   // Render berdasarkan post_type
   const type = review.post_type || 'review';
-  if (type === 'list')       renderListArticle(container, review);
-  else if (type === 'video') renderVideoArticle(container, review);
-  else                       renderReviewArticle(container, review);
+  if (type === 'list')                       renderListArticle(container, review);
+  else if (type === 'video')                 renderVideoArticle(container, review);
+  else if (type === 'news' || type === 'article') renderArticleOrNews(container, review);
+  else                                       renderReviewArticle(container, review);
 
   // Load related
   if (review.category_id) loadRelated(review.category_id, review.slug);
@@ -178,6 +205,55 @@ function renderReviewArticle(container, r) {
         ${heroMedia}
         ${scoreBar}
         ${prosConsHTML}
+        <div class="review-content">${r.content || '<p>Konten sedang dipersiapkan...</p>'}</div>
+      </article>
+      <aside class="review-sidebar">
+        <div class="sidebar-sticky">${sidebar}</div>
+      </aside>
+    </div>`;
+}
+
+/* ===========================
+   ARTICLE / NEWS
+   Layout bersih tanpa rating, pros/cons, atau tombol beli.
+   Breadcrumb mengarah ke /berita bukan /kategori.
+=========================== */
+function renderArticleOrNews(container, r) {
+  const type      = r.post_type || 'article';
+  const isNews    = type === 'news';
+  const badgeLabel = isNews ? '📰 Berita' : '✍️ Artikel';
+  const badgeClass = isNews ? 'badge-news' : 'badge-article';
+
+  const heroMedia = r.image_url
+    ? `<img class="review-hero-img" src="${r.image_url}" alt="${r.image_alt || r.title}">`
+    : (r.emoji ? `<div class="review-hero-placeholder">${r.emoji}</div>` : '');
+
+  const sidebar = buildShareCard(r);
+
+  container.innerHTML = `
+    <nav class="review-breadcrumb">
+      <a href="/">Beranda</a>
+      <span>›</span>
+      <a href="/berita">Berita &amp; Artikel</a>
+      ${r.categories ? `<span>›</span><a href="/berita">${r.categories.icon || ''} ${r.categories.name}</a>` : ''}
+      <span>›</span>
+      <span>${r.title}</span>
+    </nav>
+    <div class="review-layout">
+      <article class="review-article">
+        <div class="review-header">
+          <div class="review-type-badges">
+            <span class="badge ${badgeClass}">${badgeLabel}</span>
+            ${r.categories ? `<span class="badge badge-cat">${r.categories.icon || ''} ${r.categories.name}</span>` : ''}
+          </div>
+          <h1 class="review-title">${r.title}</h1>
+          <div class="review-meta-row">
+            <span class="review-meta-item">✍️ ${r.author || 'Admin'}</span>
+            <span class="review-meta-item">📅 ${fmtDate(r.created_at)}</span>
+            ${r.views ? `<span class="review-meta-item">👁 ${fmtViews(r.views)} views</span>` : ''}
+          </div>
+        </div>
+        ${heroMedia}
         <div class="review-content">${r.content || '<p>Konten sedang dipersiapkan...</p>'}</div>
       </article>
       <aside class="review-sidebar">
@@ -531,7 +607,25 @@ function updateArticleSchema(r, pageURL) {
     if (image) schema['image'] = image;
   }
 
+  else if (type === 'article') {
+    schema = {
+      '@context':      'https://schema.org',
+      '@type':         'Article',
+      'headline':      r.title,
+      'description':   r.excerpt || '',
+      'url':           pageURL,
+      'inLanguage':    'id',
+      'datePublished': r.created_at || '',
+      'dateModified':  r.updated_at || r.created_at || '',
+      'author':        author,
+      'publisher':     publisher,
+      'articleSection': r.categories?.name || 'Artikel'
+    };
+    if (image) schema['image'] = image;
+  }
+
   else {
+    // Fallback untuk tipe yang tidak dikenali
     schema = {
       '@context':      'https://schema.org',
       '@type':         'Article',
