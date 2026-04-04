@@ -451,20 +451,26 @@ function updateArticleSchema(r, pageURL) {
         '@type':       'Product',
         'name':        r.title,
         'description': r.excerpt || '',
-        'aggregateRating': {
-          '@type':       'AggregateRating',
-          'ratingValue': r.rating ? parseFloat(r.rating) : 5,
-          'bestRating':  5,
-          'worstRating': 1,
-          'reviewCount': 1
-        }
+        // ── FIX: aggregateRating hanya ditambahkan jika r.rating ada ──
+        ...(r.rating ? {
+          'aggregateRating': {
+            '@type':       'AggregateRating',
+            'ratingValue': parseFloat(r.rating),
+            'bestRating':  5,
+            'worstRating': 1,
+            'reviewCount': 1
+          }
+        } : {})
       },
-      'reviewRating': {
-        '@type':       'Rating',
-        'ratingValue': r.rating ? parseFloat(r.rating) : 5,
-        'bestRating':  5,
-        'worstRating': 1
-      }
+      // ── FIX: reviewRating hanya ditambahkan jika r.rating ada ──
+      ...(r.rating ? {
+        'reviewRating': {
+          '@type':       'Rating',
+          'ratingValue': parseFloat(r.rating),
+          'bestRating':  5,
+          'worstRating': 1
+        }
+      } : {})
     };
     if (image) schema['image'] = image;
   }
