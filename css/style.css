@@ -938,10 +938,11 @@ input, textarea { font-family: inherit; }
   border-radius: 50px;
 }
 
-.ribbon-review { background: var(--accent); color: #fff; }
-.ribbon-list   { background: #7C3AED; color: #fff; }
-.ribbon-video  { background: #0369A1; color: #fff; }
-.ribbon-news   { background: #0D9348; color: #fff; }
+.ribbon-review  { background: var(--accent); color: #fff; }
+.ribbon-list    { background: #7C3AED; color: #fff; }
+.ribbon-video   { background: #0369A1; color: #fff; }
+.ribbon-news    { background: #0D9348; color: #fff; }
+.ribbon-article { background: #B45309; color: #fff; }
 
 .card-rating-pill {
   position: absolute;
@@ -1060,6 +1061,30 @@ input, textarea { font-family: inherit; }
 .sk-img { aspect-ratio: 16/10; width: 100%; border-radius: 0; }
 .sk-body { padding: 15px 16px 16px; }
 .sk-line { height: 12px; margin-bottom: 8px; }
+
+/* ===========================
+   REVIEW DETAIL BADGES
+   Dipakai di renderReviewArticle, renderArticleOrNews, dll.
+=========================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 12px;
+  border-radius: 50px;
+}
+
+.badge-review  { background: var(--accent);               color: #fff; }
+.badge-news    { background: #0D9348;                      color: #fff; }
+.badge-article { background: #B45309;                      color: #fff; }
+.badge-list    { background: #7C3AED;                      color: #fff; }
+.badge-video   { background: #0369A1;                      color: #fff; }
+.badge-cat     { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
 
 /* ===========================
    EMPTY STATE
