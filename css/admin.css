@@ -137,7 +137,6 @@ input,textarea,select{font-family:inherit;}
 .bt-list{background:rgba(124,58,237,0.1);color:#7C3AED;}
 .bt-video{background:rgba(3,105,161,0.1);color:#0369A1;}
 .bt-news{background:rgba(13,147,72,0.1);color:#0D9348;}
-.bt-article{background:rgba(180,83,9,0.1);color:#B45309;}
 .badge-status{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:50px;}
 .bs-pub{background:var(--success-bg);color:var(--success);}
 .bs-draft{background:var(--surface2);color:var(--text-muted);}
