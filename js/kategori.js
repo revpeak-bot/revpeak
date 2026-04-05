@@ -155,7 +155,7 @@ async function loadCatContent(reset = false) {
 
   const offset = katPage * KAT_SIZE;
   const sortParam = currentSort === 'popular' ? '&sort=trending' : '';
-  const data   = await fetchK(`/reviews?category=${activeCat}&type=review&limit=${KAT_SIZE + 1}&offset=${offset}${sortParam}`);
+  const data   = await fetchK(`/reviews?category=${activeCat}&limit=${KAT_SIZE + 1}&offset=${offset}${sortParam}`);
   const all    = data?.data || data || [];
   katHasMore   = all.length > KAT_SIZE;
   const items  = katHasMore ? all.slice(0, KAT_SIZE) : all;
@@ -238,7 +238,7 @@ if (searchInputK) {
           <div class="sk-body"><div class="skeleton sk-line sk-title"></div></div>
         </div>`).join('');
 
-      const data  = await fetchK(`/reviews?search=${encodeURIComponent(q)}&type=review`);
+      const data  = await fetchK(`/reviews?search=${encodeURIComponent(q)}`);
       const items = data?.data || data || [];
       document.getElementById('load-more-wrap').style.display = 'none';
 

@@ -1,7 +1,7 @@
 /* ===========================================
    REVPEAK v3 — app.js
-   Tab: Rekomendasi, Trending, Terbaru → Berita & Artikel
-   Seksi Produk: Review produk terpisah di bawah
+   Tab: Rekomendasi, Trending, Terbaru
+   Support: review, list, video, news
 =========================================== */
 
 /* ===== CONFIG ===== */
@@ -92,8 +92,10 @@ function initDrawer() {
     overlay?.classList.add('open');
     hamburger?.classList.add('open');
     hamburger?.setAttribute('aria-expanded', 'true');
+    // [A11Y] Drawer kini terlihat oleh screen reader
     drawer?.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    // [A11Y] Pindahkan fokus ke tombol tutup agar keyboard user bisa langsung menutup drawer
     setTimeout(() => close?.focus(), 50);
   }
 
@@ -102,8 +104,10 @@ function initDrawer() {
     overlay?.classList.remove('open');
     hamburger?.classList.remove('open');
     hamburger?.setAttribute('aria-expanded', 'false');
+    // [A11Y] Drawer disembunyikan kembali dari screen reader
     drawer?.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    // [A11Y] Kembalikan fokus ke tombol hamburger setelah drawer ditutup
     hamburger?.focus();
   }
 
@@ -115,6 +119,7 @@ function initDrawer() {
   overlay?.addEventListener('click', close_);
   toggle?.addEventListener('click', toggleTheme);
 
+  // Close on ESC
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close_(); });
 }
 
@@ -132,8 +137,7 @@ function initSearch() {
     timer = setTimeout(async () => {
       renderSkeletons(document.getElementById('content-grid'), 6);
       document.getElementById('load-more-wrap').style.display = 'none';
-      // Cari di semua tipe konten (berita, artikel, dll — bukan review produk)
-      const data  = await fetchAPI(`/reviews?search=${encodeURIComponent(q)}&exclude_type=review`);
+      const data  = await fetchAPI(`/reviews?search=${encodeURIComponent(q)}`);
       const items = data?.data || data || [];
       const grid  = document.getElementById('content-grid');
       if (!items.length) {
@@ -166,7 +170,7 @@ function initScrollTop() {
   btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 }
 
-/* ===== CATEGORIES (untuk filter berita/artikel) ===== */
+/* ===== CATEGORIES ===== */
 async function loadCategories() {
   const wrap = document.getElementById('cat-chips');
   if (!wrap) return;
@@ -174,12 +178,14 @@ async function loadCategories() {
   const cats = data?.data || data || [];
   if (!cats.length) return;
 
+  // [A11Y] type="button" ditambahkan pada semua tombol chip yang dibuat dinamis
   const all  = `<button type="button" class="cat-chip active" data-cat="all">🌟 Semua</button>`;
   const rest = cats.map(c =>
     `<button type="button" class="cat-chip" data-cat="${c.id}">${c.icon || '📌'} ${c.name}</button>`
   ).join('');
   wrap.innerHTML = all + rest;
 
+  // Delegated click
   wrap.addEventListener('click', e => {
     const chip = e.target.closest('.cat-chip');
     if (!chip) return;
@@ -207,6 +213,7 @@ function initTabs() {
 
       document.querySelectorAll('.tab-btn').forEach(b => {
         b.classList.remove('active');
+        // [A11Y] Perbarui aria-selected agar screen reader tahu tab mana yang aktif
         b.setAttribute('aria-selected', 'false');
       });
       btn.classList.add('active');
@@ -219,8 +226,10 @@ function initTabs() {
       const ttl = document.getElementById('section-title');
       if (ttl) ttl.textContent = tabLabels[currentTab] || currentTab;
 
+      // Scroll ke atas agar user langsung melihat hero yang berubah
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
+      // Reload hero dan content sesuai tab aktif
       loadHero(currentTab);
       loadContent(true);
     });
@@ -249,11 +258,11 @@ async function loadHero(tab = 'rekomendasi') {
       <div class="skeleton-card sk-side"><div class="skeleton sk-side-img"></div><div class="sk-side-body"><div class="skeleton sk-line" style="width:80%;height:13px;margin-bottom:6px"></div><div class="skeleton sk-line" style="width:55%"></div></div></div>
     </div>`;
 
-  // URL sesuai tab — exclude_type=review agar hero hanya tampilkan berita/artikel
+  // URL dan label badge sesuai tab
   const urlMap = {
-    rekomendasi: '/reviews?limit=4&featured=true&exclude_type=review',
-    trending:    '/reviews?limit=4&sort=trending&exclude_type=review',
-    terbaru:     '/reviews?limit=4&exclude_type=review',
+    rekomendasi: '/reviews?limit=4&featured=true',
+    trending:    '/reviews?limit=4&sort=trending',
+    terbaru:     '/reviews?limit=4',
   };
   const badgeMap = {
     rekomendasi: '⭐ Unggulan',
@@ -266,6 +275,7 @@ async function loadHero(tab = 'rekomendasi') {
     terbaru:     '🆕 Konten Terbaru',
   };
 
+  // Update label di atas hero grid
   const heroLabel = document.getElementById('hero-tab-label');
   if (heroLabel) heroLabel.textContent = labelMap[tab] || '';
 
@@ -277,19 +287,16 @@ async function loadHero(tab = 'rekomendasi') {
   const main = items[0];
   const side = items.slice(1, 4);
 
+  // Badge: list/video tetap pakai label tipe konten, selainnya pakai label tab
   const heroBadge = main.post_type === 'list'
     ? '📋 List'
     : main.post_type === 'video'
       ? '▶ Video'
-      : main.post_type === 'news'
-        ? '📰 Berita'
-        : main.post_type === 'article'
-          ? '📝 Artikel'
-          : badgeMap[tab] || '⭐ Unggulan';
+      : badgeMap[tab] || '⭐ Unggulan';
 
   const mainImgHTML = main.image_url
     ? `<img src="${main.image_url}" alt="${main.title}" loading="eager">`
-    : `<div style="font-size:80px;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2D2C29,#444)">${main.emoji || '📰'}</div>`;
+    : `<div style="font-size:80px;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2D2C29,#444)">${main.emoji || '📱'}</div>`;
 
   const sideHTML = side.map(s => `
     <a href="/${s.slug}" class="hero-side-card">
@@ -299,7 +306,7 @@ async function loadHero(tab = 'rekomendasi') {
           : `<span>${s.emoji || '📌'}</span>`}
       </div>
       <div class="side-body">
-        <div class="side-cat">${s.categories?.name || 'Berita'}</div>
+        <div class="side-cat">${s.categories?.name || 'Review'}</div>
         <div class="side-title">${s.title}</div>
         <div class="side-meta">
           ${s.rating ? `<span class="rating-star">★ ${s.rating}</span>` : ''}
@@ -317,7 +324,7 @@ async function loadHero(tab = 'rekomendasi') {
         ${main.views ? `<span class="hero-views-pill">👁 ${fmtViews(main.views)}</span>` : ''}
       </div>
       <div class="hero-main-body">
-        <div class="hero-cat">${main.categories?.name || 'Berita'}</div>
+        <div class="hero-cat">${main.categories?.name || 'Review'}</div>
         <h2 class="hero-title">${main.title}</h2>
         <p class="hero-excerpt">${main.excerpt || ''}</p>
         <div class="hero-footer">
@@ -336,13 +343,7 @@ async function loadHero(tab = 'rekomendasi') {
 function contentCardHTML(item) {
   const type = item.post_type || 'review';
 
-  const ribbonMap  = {
-    review:  ['ribbon-review',  '📝 Review'],
-    list:    ['ribbon-list',    '📋 List'],
-    video:   ['ribbon-video',   '▶ Video'],
-    news:    ['ribbon-news',    '📰 Berita'],
-    article: ['ribbon-article', '📝 Artikel'],
-  };
+  const ribbonMap  = { review: ['ribbon-review', '📝 Review'], list: ['ribbon-list', '📋 List'], video: ['ribbon-video', '▶ Video'], news: ['ribbon-news', '📰 News'] };
   const [ribbonCls, ribbonTxt] = ribbonMap[type] || ribbonMap.review;
 
   const mediaHTML = item.video_url && type === 'video'
@@ -354,21 +355,22 @@ function contentCardHTML(item) {
       </div>`
     : item.image_url
       ? `<img src="${item.image_url}" alt="${item.title}" loading="lazy">`
-      : `<div style="font-size:44px">${item.emoji || (type === 'list' ? '📋' : type === 'video' ? '▶️' : type === 'news' ? '📰' : '📝')}</div>`;
+      : `<div style="font-size:44px">${item.emoji || (type === 'list' ? '📋' : type === 'video' ? '▶️' : '📱')}</div>`;
 
   const showTrending = item.views > 100;
 
+  // [A11Y] role="listitem" sudah ada — dipertahankan agar sesuai dengan parent role="list"
   return `
     <a href="/${item.slug}" class="content-card" role="listitem">
       <div class="card-media">
         ${mediaHTML}
         <span class="card-ribbon ${ribbonCls}">${ribbonTxt}</span>
-        ${item.rating && type === 'review' ? `<span class="card-rating-pill">★ ${item.rating}</span>` : ''}
+        ${item.rating && type !== 'list' ? `<span class="card-rating-pill">★ ${item.rating}</span>` : ''}
         ${type === 'video' && item.duration ? `<span class="card-video-badge">${item.duration}</span>` : ''}
         ${showTrending ? `<span class="card-trending-pill">🔥 ${fmtViews(item.views)}</span>` : ''}
       </div>
       <div class="card-body">
-        <div class="card-cat">${item.categories?.name || (type === 'list' ? 'List Produk' : type === 'news' ? 'Berita' : 'Artikel')}</div>
+        <div class="card-cat">${item.categories?.name || (type === 'list' ? 'List Produk' : 'Review')}</div>
         <h3 class="card-title">${item.title}</h3>
         <p class="card-excerpt">${item.excerpt || ''}</p>
         <div class="card-footer">
@@ -382,6 +384,7 @@ function contentCardHTML(item) {
 /* ===== SKELETON ===== */
 function renderSkeletons(container, count) {
   if (!container) return;
+  // [A11Y] role="listitem" ditambahkan agar child cocok dengan parent role="list"
   container.innerHTML = Array(count).fill('').map(() => `
     <div class="skeleton-card" role="listitem">
       <div class="skeleton sk-img"></div>
@@ -403,7 +406,7 @@ function emptyStateHTML(icon, title, desc) {
   </div>`;
 }
 
-/* ===== LOAD CONTENT (Berita & Artikel) ===== */
+/* ===== LOAD CONTENT ===== */
 async function loadContent(reset = false) {
   if (isLoading) return;
   isLoading = true;
@@ -419,8 +422,8 @@ async function loadContent(reset = false) {
     if (lmWrap) lmWrap.style.display = 'none';
   }
 
-  // Bangun URL — exclude_type=review agar tab hanya tampilkan berita/artikel
-  let url = `/reviews?limit=${PAGE_SIZE + 1}&offset=${currentPage * PAGE_SIZE}&exclude_type=review`;
+  // Build URL
+  let url = `/reviews?limit=${PAGE_SIZE + 1}&offset=${currentPage * PAGE_SIZE}`;
   if (currentTab === 'rekomendasi') url += '&featured=true';
   if (currentTab === 'trending')    url += '&sort=trending';
   if (currentCat !== 'all')         url += `&category=${currentCat}`;
@@ -433,7 +436,7 @@ async function loadContent(reset = false) {
   if (reset) {
     if (!items.length) {
       const msgs = {
-        rekomendasi: ['⭐', 'Belum ada rekomendasi', 'Tandai konten berita/artikel sebagai featured di admin panel'],
+        rekomendasi: ['⭐', 'Belum ada rekomendasi', 'Tandai konten sebagai featured di admin panel'],
         trending:    ['🔥', 'Belum ada trending',    'Konten akan muncul seiring bertambahnya pembaca'],
         terbaru:     ['🆕', 'Belum ada konten',       'Upload konten pertama lewat admin panel'],
       };
@@ -463,25 +466,6 @@ function initLoadMore() {
   });
 }
 
-/* ===== SEKSI REVIEW PRODUK ===== */
-async function loadProductSection() {
-  const grid = document.getElementById('product-grid');
-  if (!grid) return;
-
-  // Tampilkan skeleton
-  renderSkeletons(grid, 6);
-
-  // Ambil review produk terpopuler (hanya post_type=review)
-  const data  = await fetchAPI('/reviews?type=review&limit=6&sort=trending');
-  const items = data?.data || [];
-
-  if (!items.length) {
-    grid.innerHTML = emptyStateHTML('📦', 'Belum ada review produk', 'Segera hadir di sini');
-    return;
-  }
-  grid.innerHTML = items.map(contentCardHTML).join('');
-}
-
 /* ===== STICKY HEADER SHADOW ===== */
 function initHeaderShadow() {
   const header = document.getElementById('header');
@@ -503,5 +487,4 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCategories();
   loadHero(currentTab);
   loadContent(true);
-  loadProductSection(); // ← Muat seksi review produk
 });
