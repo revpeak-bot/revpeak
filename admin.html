@@ -151,9 +151,10 @@
             <select id="konten-filter-type" class="toolbar-select">
               <option value="">Semua Tipe</option>
               <option value="review">Review</option>
+              <option value="news">Berita</option>
+              <option value="article">Artikel</option>
               <option value="list">List</option>
               <option value="video">Video</option>
-              <option value="news">News</option>
             </select>
           </div>
           <button class="btn-primary" onclick="openKontenForm()">＋ Tambah Konten</button>
@@ -220,10 +221,11 @@
           <div class="form-group">
             <label class="form-label">Tipe Konten <span class="req">*</span></label>
             <select id="f-type" class="form-input" onchange="onTypeChange()">
-              <option value="review">📝 Review</option>
+              <option value="review">📝 Review Produk</option>
+              <option value="news">📰 Berita</option>
+              <option value="article">✍️ Artikel</option>
               <option value="list">📋 List Produk</option>
               <option value="video">▶ Video</option>
-              <option value="news">📰 News</option>
             </select>
           </div>
           <div class="form-group">
@@ -242,7 +244,7 @@
         <div class="form-group">
           <label class="form-label">Slug (URL)</label>
           <div class="slug-wrap">
-            <span class="slug-prefix">…/review.html?slug=</span>
+            <span class="slug-prefix">revpeak.web.id/</span>
             <input type="text" id="f-slug" class="form-input" placeholder="judul-konten">
           </div>
         </div>

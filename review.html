@@ -7,7 +7,7 @@
   <meta property="og:title" id="og-title" content="Review – Revpeak">
   <meta property="og:description" id="og-desc" content="">
   <meta property="og:image" id="og-image" content="https://assets.revpeak.web.id/logo-revpeak.webp">
-  <meta property="og:type" content="article">
+  <meta property="og:type" id="og-type" content="article">
   <meta property="og:site_name" content="Revpeak">
   <meta name="robots" content="index, follow">
   <link rel="canonical" id="canonical-url" href="https://revpeak.web.id/review.html">
@@ -75,6 +75,8 @@
     </div>
     <nav class="drawer-nav">
       <a href="/" class="drawer-link"><span class="drawer-link-icon">🏠</span><span>Beranda</span></a>
+      <a href="/berita" class="drawer-link"><span class="drawer-link-icon">📰</span><span>Berita &amp; Artikel</span></a>
+      <a href="kategori.html" class="drawer-link"><span class="drawer-link-icon">📦</span><span>Review Produk</span></a>
       <a href="tokoh.html" class="drawer-link"><span class="drawer-link-icon">👤</span><span>Tokoh</span></a>
       <a href="tentang.html" class="drawer-link"><span class="drawer-link-icon">ℹ️</span><span>Tentang</span></a>
       <a href="kontak.html" class="drawer-link"><span class="drawer-link-icon">💬</span><span>Dukungan</span></a>
@@ -122,8 +124,8 @@
     </div>
   </header>
 
-  <!-- ===== AFFILIATE DISCLOSURE ===== -->
-  <div class="affiliate-disclosure" role="note" aria-label="Keterbukaan afiliasi">
+  <!-- ===== AFFILIATE DISCLOSURE (ditampilkan JS hanya untuk review & list) ===== -->
+  <div class="affiliate-disclosure" id="affiliate-disclosure" role="note" aria-label="Keterbukaan afiliasi" style="display:none">
     <div class="container">
       <p>
         <strong>Keterbukaan:</strong> Artikel ini mungkin mengandung tautan afiliasi. Jika Anda melakukan pembelian melalui tautan tersebut, kami mendapat komisi kecil <strong>tanpa biaya tambahan bagi Anda</strong>. Hal ini membantu kami terus menulis review secara independen. Penilaian kami tidak dipengaruhi oleh afiliasi apa pun.
@@ -159,7 +161,7 @@
     <div class="container">
       <div class="section-header">
         <h2 class="section-title">Konten Terkait</h2>
-        <a href="kategori.html" class="section-more">Lihat semua →</a>
+        <a href="kategori.html" id="related-see-all" class="section-more">Lihat semua →</a>
       </div>
       <div class="content-grid" id="related-grid" role="list" aria-label="Review terkait"></div>
     </div>
@@ -180,6 +182,8 @@
         <div class="footer-col">
           <h3>Navigasi</h3>
           <a href="/">Beranda</a>
+          <a href="/berita">Berita &amp; Artikel</a>
+          <a href="kategori.html">Review Produk</a>
           <a href="tokoh.html">Tokoh</a>
           <a href="tentang.html">Tentang Kami</a>
           <a href="kontak.html">Dukungan</a>
@@ -192,7 +196,7 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <p>© 2025 Revpeak. Semua hak dilindungi.</p>
+        <p>© 2026 Revpeak. Semua hak dilindungi.</p>
         <div class="social-links">
           <a href="#" aria-label="Instagram Revpeak">📸</a>
           <a href="#" aria-label="YouTube Revpeak">▶️</a>

@@ -246,6 +246,19 @@
       background: #f0f0f0;
       color: #111;
     }
+
+    /* ===== SEKSI REVIEW PRODUK ===== */
+    .product-section {
+      padding: 0 0 40px;
+    }
+    .product-section-divider {
+      height: 1px;
+      background: var(--border, #ebebeb);
+      margin: 40px 0 32px;
+    }
+    [data-theme="dark"] .product-section-divider {
+      background: #2a2a2a;
+    }
   </style>
 </head>
 <body>
@@ -296,6 +309,15 @@
         <span class="drawer-link-icon">🏠</span>
         <span>Beranda</span>
       </a>
+      <!-- BARU: Link halaman Berita -->
+      <a href="berita.html" class="drawer-link">
+        <span class="drawer-link-icon">📰</span>
+        <span>Berita &amp; Artikel</span>
+      </a>
+      <a href="kategori.html" class="drawer-link">
+        <span class="drawer-link-icon">📦</span>
+        <span>Review Produk</span>
+      </a>
       <a href="tokoh.html" class="drawer-link">
         <span class="drawer-link-icon">👤</span>
         <span>Tokoh</span>
@@ -335,7 +357,7 @@
           </div>
           <div class="header-logo-text">
             <span class="logo-text">Rev<span>peak</span></span>
-            <span class="logo-tagline">Review Jujur & Terpercaya</span>
+            <span class="logo-tagline">Review Jujur &amp; Terpercaya</span>
           </div>
         </a>
       </div>
@@ -348,7 +370,7 @@
           <svg class="search-icon-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input type="search" id="search-input" class="search-input" placeholder="Cari review, produk, topik..." autocomplete="off" aria-label="Cari konten">
+          <input type="search" id="search-input" class="search-input" placeholder="Cari berita, artikel, topik..." autocomplete="off" aria-label="Cari konten">
           <button class="search-clear" id="search-clear" aria-label="Hapus pencarian">✕</button>
         </div>
       </div>
@@ -376,7 +398,7 @@
   </div>
 
   <!-- ===== HERO ===== -->
-  <section class="hero-section" id="hero-section" aria-label="Review pilihan">
+  <section class="hero-section" id="hero-section" aria-label="Konten pilihan">
     <div class="container">
       <p id="hero-tab-label" style="font-size:0.72rem;font-weight:700;color:#888;letter-spacing:0.07em;text-transform:uppercase;margin:0 0 10px;line-height:1.4;">⭐ Pilihan Rekomendasi</p>
       <div class="hero-grid" id="hero-grid">
@@ -399,34 +421,51 @@
     </div>
   </section>
 
-  <!-- ===== MAIN CONTENT ===== -->
+  <!-- ===== MAIN CONTENT (Berita & Artikel) ===== -->
   <main class="main-section" id="main-content">
     <div class="container">
 
-      <!-- SEO H1 - visible untuk Google, subtle secara visual -->
-      <h1 style="font-size:0.8rem;font-weight:600;color:#999;letter-spacing:0.04em;text-transform:uppercase;margin:0 0 12px;line-height:1.4;">Review Produk Jujur &amp; Terpercaya — Revpeak</h1>
+      <!-- SEO H1 -->
+      <h1 style="font-size:0.8rem;font-weight:600;color:#999;letter-spacing:0.04em;text-transform:uppercase;margin:0 0 12px;line-height:1.4;">Berita, Artikel &amp; Informasi Terkini — Revpeak</h1>
 
-      <!-- Category chips -->
-      <nav class="cat-chips-scroll" id="cat-chips" aria-label="Filter kategori">
+      <!-- Category chips (filter berita/artikel berdasarkan topik) -->
+      <nav class="cat-chips-scroll" id="cat-chips" aria-label="Filter topik berita">
         <button class="cat-chip active" data-cat="all">🌟 Semua</button>
       </nav>
 
       <!-- Section header -->
       <div class="section-header">
         <h2 class="section-title" id="section-title">⭐ Rekomendasi</h2>
-        <a href="kategori.html" class="section-more" aria-label="Lihat semua review">Lihat semua →</a>
+        <!-- Link ke halaman berita lengkap -->
+        <a href="berita.html" class="section-more" aria-label="Lihat semua berita dan artikel">Lihat semua →</a>
       </div>
 
-      <!-- Content grid -->
-      <div class="content-grid" id="content-grid" role="list" aria-label="Daftar review">
+      <!-- Content grid (berita & artikel) -->
+      <div class="content-grid" id="content-grid" role="list" aria-label="Daftar berita dan artikel">
         <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
         <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
         <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
       </div>
 
-      <!-- Load more -->
+      <!-- Load more (berita) -->
       <div class="load-more-wrap" id="load-more-wrap" style="display:none">
         <button class="btn-load-more" id="btn-load-more">Muat Lebih Banyak</button>
+      </div>
+
+      <!-- ===== SEKSI REVIEW PRODUK ===== -->
+      <!-- Divider pemisah antara berita dan review produk -->
+      <div class="product-section-divider"></div>
+
+      <div class="section-header">
+        <h2 class="section-title">📦 Review Produk</h2>
+        <a href="kategori.html" class="section-more" aria-label="Lihat semua review produk">Lihat semua →</a>
+      </div>
+
+      <!-- Content grid (review produk) -->
+      <div class="content-grid" id="product-grid" role="list" aria-label="Daftar review produk">
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
       </div>
 
     </div>
@@ -448,6 +487,8 @@
         <div class="footer-col">
           <h3>Navigasi</h3>
           <a href="/">Beranda</a>
+          <a href="berita.html">Berita &amp; Artikel</a>
+          <a href="kategori.html">Review Produk</a>
           <a href="tokoh.html">Tokoh</a>
           <a href="tentang.html">Tentang Kami</a>
           <a href="kontak.html">Dukungan</a>
