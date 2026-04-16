@@ -422,7 +422,7 @@ async function loadKonten(page = 0) {
     return;
   }
 
-  const typeLabel = { review:'bt-review', list:'bt-list', video:'bt-video', news:'bt-news' };
+  const typeLabel = { review:'bt-review', list:'bt-list', video:'bt-video', news:'bt-news', article:'bt-article' };
 
   tbody.innerHTML = items.map(r => `
     <tr>
@@ -573,13 +573,14 @@ function resetKontenForm() {
 
 function onTypeChange() {
   const type = val('f-type');
-  const isVideo  = type === 'video';
-  const isList   = type === 'list';
-  const isReview = type === 'review';
+  const isVideo   = type === 'video';
+  const isList    = type === 'list';
+  const isReview  = type === 'review';
+  // news & article: tidak perlu field khusus (sama seperti review tapi tanpa rating/pros/cons/affiliate)
 
-  document.getElementById('video-fields').style.display  = isVideo ? 'block' : 'none';
-  document.getElementById('list-fields').style.display   = isList  ? 'block' : 'none';
-  document.getElementById('review-fields').style.display = isReview ? 'block' : 'none';
+  document.getElementById('video-fields').style.display   = isVideo  ? 'block' : 'none';
+  document.getElementById('list-fields').style.display    = isList   ? 'block' : 'none';
+  document.getElementById('review-fields').style.display  = isReview ? 'block' : 'none';
 }
 
 function toISO8601Duration(input) {
