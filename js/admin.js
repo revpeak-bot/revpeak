@@ -473,12 +473,13 @@ function openKontenForm(existing = null) {
 
   if (existing && typeof existing === 'object') {
     fillKontenForm(existing);
+    return; // ← penting: cegah kode di bawah dieksekusi ulang
   } else if (typeof existing === 'number') {
     loadKontenForEdit(existing);
     return;
   }
 
-  // Populate category select
+  // Populate category select (hanya untuk konten BARU)
   const sel = document.getElementById('f-cat');
   if (sel) {
     sel.innerHTML = '<option value="">Pilih kategori...</option>' +
@@ -497,8 +498,6 @@ async function loadKontenForEdit(id) {
 
 function fillKontenForm(r) {
   setVal('f-id',       r.id);
-  setVal('f-type',     r.post_type || 'review');
-  setVal('f-cat',      r.category_id);
   setVal('f-title',    r.title);
   setVal('f-slug',     r.slug);
   setVal('f-excerpt',  r.excerpt);
@@ -539,16 +538,19 @@ function fillKontenForm(r) {
   // Image preview
   if (r.image_url) previewImg(r.image_url);
 
-  // Trigger type change to show/hide fields
-  onTypeChange();
-
-  // Populate category select
+  // 1. Rebuild category select DULU, lalu restore nilai
   const sel = document.getElementById('f-cat');
   if (sel) {
     sel.innerHTML = '<option value="">Pilih kategori...</option>' +
       allCategories.map(c => `<option value="${c.id}">${c.icon||'📌'} ${c.name}</option>`).join('');
     setVal('f-cat', r.category_id);
   }
+
+  // 2. Set post_type SETELAH category, agar nilai tidak tertimpa
+  setVal('f-type', r.post_type || 'review');
+
+  // 3. Trigger onTypeChange TERAKHIR agar UI field menyesuaikan tipe yang benar
+  onTypeChange();
 
   openModal('modal-konten');
 }
@@ -603,6 +605,14 @@ async function saveKonten() {
 
   const type = val('f-type');
   const id   = val('f-id');
+
+  // Validasi post_type wajib ada
+  if (!type) {
+    toast('Tipe konten wajib dipilih!', 'error');
+    btn.textContent = '💾 Simpan Konten';
+    btn.disabled    = false;
+    return;
+  }
 
   // Pros & cons
   const prosArr  = val('f-pros').split('\n').map(s=>s.trim()).filter(Boolean);
