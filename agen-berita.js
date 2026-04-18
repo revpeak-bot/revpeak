@@ -10,23 +10,28 @@ async function dapatkanTrenTerbaru() {
         const feed = await parser.parseURL('https://news.google.com/rss?hl=id&gl=ID&ceid=ID:id');
         return feed.items.slice(0, 5).map(item => item.title).join(" | ");
     } catch (e) {
-        return "Berita Teknologi Populer";
+        return "Teknologi dan Politik Indonesia";
     }
 }
 
 async function generateBerita() {
     const tren = await dapatkanTrenTerbaru();
-    // Menggunakan Gemini 2.0 Flash - Model standar paling stabil di 2026
-    const MODEL = "gemini-1.5-flash"; 
+    
+    // MENGGUNAKAN MODEL PRO (Versi 1.5 Pro paling stabil untuk automasi)
+    const MODEL = "gemini-1.5-pro"; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
-    const promptText = `Tren: ${tren}. Buat 1 berita viral untuk Revpeak. Output HARUS JSON murni:
-    {
-      "title": "Judul Berita",
-      "slug": "url-slug",
-      "excerpt": "Ringkasan",
-      "content": "Isi berita HTML"
-    }`;
+    const promptText = `
+        Konteks Tren: ${tren}. 
+        Tugas: Sebagai editor senior Revpeak, tuliskan 1 berita trending yang mendalam, akurat, dan netral.
+        Hasilkan output HANYA dalam JSON murni:
+        {
+          "title": "Judul Berita Profesional",
+          "slug": "url-slug-seo",
+          "excerpt": "Ringkasan berita yang menarik (maks 150 karakter)",
+          "content": "Isi berita mendalam (min 5 paragraf) dengan tag HTML <h2>, <p>, <ul>"
+        }
+    `;
 
     const response = await fetch(url, {
         method: 'POST',
@@ -34,7 +39,7 @@ async function generateBerita() {
         body: JSON.stringify({
             contents: [{ parts: [{ text: promptText }] }],
             generationConfig: { 
-                temperature: 0.7,
+                temperature: 0.8, // Sedikit lebih kreatif untuk model Pro
                 response_mime_type: "application/json" 
             }
         })
@@ -42,10 +47,12 @@ async function generateBerita() {
 
     const result = await response.json();
 
-    // Pengecekan Error dari Google
-    if (result.error) throw new Error("Google AI Error: " + result.error.message);
+    if (result.error) {
+        throw new Error(`Google Pro Error (${result.error.code}): ${result.error.message}`);
+    }
+
     if (!result.candidates?.[0]?.content?.parts?.[0]?.text) {
-        throw new Error("Format respons AI tidak dikenali. Cek kuota API Anda.");
+        throw new Error("Model Pro tidak memberikan respons. Kemungkinan limit kuota tercapai.");
     }
 
     return JSON.parse(result.candidates[0].content.parts[0].text);
@@ -53,10 +60,10 @@ async function generateBerita() {
 
 async function main() {
     try {
-        console.log("Menghubungi Agen AI...");
+        console.log("Menghubungi Agen AI Pro...");
         const dataAI = await generateBerita();
         
-        console.log("Mengirim ke Supabase (Tabel: reviews)...");
+        console.log("Mengirim artikel berkualitas ke Supabase...");
         const { error } = await supabase
             .from('reviews') 
             .insert([{ 
@@ -64,12 +71,12 @@ async function main() {
                 slug: dataAI.slug,
                 excerpt: dataAI.excerpt,
                 content: dataAI.content,
-                is_published: false, // Status Draft
+                is_published: false, // Draft
                 created_at: new Date()
             }]);
 
         if (error) throw new Error("Supabase Error: " + error.message);
-        console.log("✅ BERHASIL! Draf berita '" + dataAI.title + "' sudah masuk.");
+        console.log("✅ BERHASIL! Artikel Pro '" + dataAI.title + "' telah masuk.");
     } catch (err) {
         console.error("❌ Kegagalan:", err.message);
         process.exit(1);
