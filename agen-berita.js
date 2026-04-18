@@ -16,16 +16,16 @@ async function dapatkanTrenTerbaru() {
 
 async function generateBerita() {
     const tren = await dapatkanTrenTerbaru();
-    // Menggunakan Gemini 2.5 Flash yang tadi sudah terbukti konek ke AI
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    // Menggunakan Gemini 2.0 Flash - Model standar paling stabil di 2026
+    const MODEL = "gemini-2.0-flash"; 
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
-    const promptText = `Tren: ${tren}. Buat 1 berita trending akurat untuk Revpeak. 
-    Output JSON murni:
+    const promptText = `Tren: ${tren}. Buat 1 berita viral untuk Revpeak. Output HARUS JSON murni:
     {
-      "title": "...",
-      "slug": "...",
-      "excerpt": "...",
-      "content": "..."
+      "title": "Judul Berita",
+      "slug": "url-slug",
+      "excerpt": "Ringkasan",
+      "content": "Isi berita HTML"
     }`;
 
     const response = await fetch(url, {
@@ -33,11 +33,21 @@ async function generateBerita() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             contents: [{ parts: [{ text: promptText }] }],
-            generationConfig: { response_mime_type: "application/json" }
+            generationConfig: { 
+                temperature: 0.7,
+                response_mime_type: "application/json" 
+            }
         })
     });
 
     const result = await response.json();
+
+    // Pengecekan Error dari Google
+    if (result.error) throw new Error("Google AI Error: " + result.error.message);
+    if (!result.candidates?.[0]?.content?.parts?.[0]?.text) {
+        throw new Error("Format respons AI tidak dikenali. Cek kuota API Anda.");
+    }
+
     return JSON.parse(result.candidates[0].content.parts[0].text);
 }
 
@@ -46,7 +56,7 @@ async function main() {
         console.log("Menghubungi Agen AI...");
         const dataAI = await generateBerita();
         
-        console.log("Mengirim ke Supabase (Hanya kolom wajib)...");
+        console.log("Mengirim ke Supabase (Tabel: reviews)...");
         const { error } = await supabase
             .from('reviews') 
             .insert([{ 
@@ -54,12 +64,12 @@ async function main() {
                 slug: dataAI.slug,
                 excerpt: dataAI.excerpt,
                 content: dataAI.content,
-                is_published: false,
+                is_published: false, // Status Draft
                 created_at: new Date()
             }]);
 
         if (error) throw new Error("Supabase Error: " + error.message);
-        console.log("✅ BERHASIL! Silakan cek dashboard Revpeak Anda.");
+        console.log("✅ BERHASIL! Draf berita '" + dataAI.title + "' sudah masuk.");
     } catch (err) {
         console.error("❌ Kegagalan:", err.message);
         process.exit(1);
