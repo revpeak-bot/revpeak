@@ -141,11 +141,11 @@ async function initReviewPage() {
   }
 
   // Render berdasarkan post_type
-  const type = review.post_type || 'review';
-  if (type === 'list')                       renderListArticle(container, review);
-  else if (type === 'video')                 renderVideoArticle(container, review);
+  // ── FIX: hapus duplikasi "const type" yang sebelumnya ada di sini ──
+  if (type === 'list')                            renderListArticle(container, review);
+  else if (type === 'video')                      renderVideoArticle(container, review);
   else if (type === 'news' || type === 'article') renderArticleOrNews(container, review);
-  else                                       renderReviewArticle(container, review);
+  else                                            renderReviewArticle(container, review);
 
   // Load related
   if (review.category_id) loadRelated(review.category_id, review.slug);
@@ -231,8 +231,8 @@ function renderReviewArticle(container, r) {
    Breadcrumb mengarah ke /berita bukan /kategori.
 =========================== */
 function renderArticleOrNews(container, r) {
-  const type      = r.post_type || 'article';
-  const isNews    = type === 'news';
+  const type       = r.post_type || 'article';
+  const isNews     = type === 'news';
   const badgeLabel = isNews ? '📰 Berita' : '✍️ Artikel';
   const badgeClass = isNews ? 'badge-news' : 'badge-article';
 
