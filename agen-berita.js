@@ -17,7 +17,7 @@ async function dapatkanTrenTerbaru() {
 async function generateBerita() {
     const tren = await dapatkanTrenTerbaru();
     // Menggunakan Gemini 2.0 Flash - Model standar paling stabil di 2026
-    const MODEL = "gemini-2.0-flash"; 
+    const MODEL = "gemini-1.5-pro"; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
     const promptText = `Tren: ${tren}. Buat 1 berita viral untuk Revpeak. Output HARUS JSON murni:
