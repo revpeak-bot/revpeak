@@ -2,7 +2,7 @@ const { createClient } = require('@supabase/supabase-js');
 const Parser = require('rss-parser');
 const parser = new Parser();
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const CF_AI_TOKEN = process.env.CF_AI_TOKEN;
 
