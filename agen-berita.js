@@ -7,16 +7,44 @@ const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const CF_AI_TOKEN = process.env.CF_AI_TOKEN;
 const CF_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+// Mode bergantian otomatis berdasarkan jam (genap=berita, ganjil=artikel)
+// Bisa di-override via env variable MODE=berita atau MODE=artikel
+const jamSekarang = new Date().getUTCHours();
+const MODE = process.env.MODE || (jamSekarang % 2 === 0 ? 'berita' : 'artikel');
 
-async function dapatkanTrenTerbaru() {
-    try {
-        const feed = await parser.parseURL('https://news.google.com/rss?hl=id&gl=ID&ceid=ID:id');
-        return feed.items[0].title;
-    } catch (e) {
-        return 'Politik dan Ekonomi Indonesia terkini';
-    }
-}
+// Daftar topik artikel evergreen — tambah sesuai kebutuhan
+const TOPIK_ARTIKEL = [
+    'Tips Memilih Laptop untuk Pelajar dengan Budget Terbatas',
+    'Cara Mengatur Keuangan Pribadi untuk Pemula Indonesia',
+    'Panduan Memilih Smartphone Android Terbaik 2025',
+    'Tips Meningkatkan Produktivitas Kerja dari Rumah',
+    'Cara Memilih Investasi yang Aman untuk Pemula',
+    'Panduan Lengkap Belanja Online Aman di Indonesia',
+    'Tips Memilih Kamera untuk Konten Kreator Pemula',
+    'Cara Menghemat Kuota Internet di Smartphone',
+    'Panduan Memilih Router WiFi untuk Rumah',
+    'Tips Merawat Baterai Smartphone agar Tahan Lama',
+    'Cara Memilih Earphone dan Headphone yang Tepat',
+    'Panduan Memilih Televisi untuk Ruang Keluarga',
+    'Tips Belanja Elektronik Bekas yang Aman',
+    'Cara Memilih Power Bank Berkualitas',
+    'Panduan Memilih Aplikasi Keuangan Terbaik di Indonesia',
+    'Tips Menjaga Keamanan Akun Media Sosial',
+    'Cara Memilih Hosting Website untuk Pemula',
+    'Panduan Memulai Bisnis Online di Indonesia',
+    'Tips Memilih Printer untuk Kebutuhan Rumah dan Kantor',
+    'Cara Memilih Aplikasi Edit Foto Terbaik di Android',
+];
+
+// Sumber RSS berita terpercaya Indonesia
+const SUMBER_RSS = [
+    { url: 'https://rss.kompas.com/mon/breakingnews', nama: 'Kompas' },
+    { url: 'https://www.cnbcindonesia.com/rss',       nama: 'CNBC Indonesia' },
+    { url: 'https://news.detik.com/rss',              nama: 'Detik News' },
+    { url: 'https://www.antaranews.com/rss/terkini.rss', nama: 'Antara News' },
+];
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
 
 function bersihkan(teks) {
     return teks.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#+\s*/, '').trim();
@@ -32,9 +60,19 @@ function buatSlug(judul) {
         .replace(/-$/, '');
 }
 
-// Panggil Cloudflare AI dengan satu prompt
+function jeda(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function topikAcak() {
+    // Pilih topik berdasarkan menit sekarang agar tidak mengulang topik yang sama
+    const menit = new Date().getUTCMinutes() + new Date().getUTCHours() * 60;
+    return TOPIK_ARTIKEL[menit % TOPIK_ARTIKEL.length];
+}
+
 async function panggilAI(systemMsg, userMsg, maxTokens = 700) {
-    const url = 'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT_ID + '/ai/run/' + CF_MODEL;
+    const url = 'https://api.cloudflare.com/client/v4/accounts/'
+        + CF_ACCOUNT_ID + '/ai/run/' + CF_MODEL;
 
     const response = await fetch(url, {
         method: 'POST',
@@ -45,10 +83,10 @@ async function panggilAI(systemMsg, userMsg, maxTokens = 700) {
         body: JSON.stringify({
             messages: [
                 { role: 'system', content: systemMsg },
-                { role: 'user', content: userMsg }
+                { role: 'user',   content: userMsg }
             ],
-            max_tokens: maxTokens,
-            temperature: 0.6
+            max_tokens:  maxTokens,
+            temperature: 0.5
         })
     });
 
@@ -59,136 +97,187 @@ async function panggilAI(systemMsg, userMsg, maxTokens = 700) {
 
     const result = await response.json();
     if (!result.success) throw new Error('CF gagal: ' + JSON.stringify(result.errors));
-
     return result.result.response.trim();
 }
 
-// Jeda antar request agar tidak kena rate limit
-function jeda(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+function ambilLabel(raw, label) {
+    const match = raw.match(new RegExp(label + ':\\s*(.+)', 'i'));
+    return match ? bersihkan(match[1]) : '';
 }
 
-// ─── Step 1: Buat outline artikel ─────────────────────────────────────────────
+// ─── Rakit HTML ───────────────────────────────────────────────────────────────
 
-async function buatOutline(topik) {
-    console.log('Step 1: Membuat outline...');
-
-    const raw = await panggilAI(
-        'Anda adalah editor berita senior Indonesia. Jawab singkat dan tepat.',
-        'Topik berita: ' + topik + '\n\n'
-        + 'Buat outline artikel dalam format berikut (tanpa teks lain):\n'
-        + 'JUDUL: [judul artikel menarik]\n'
-        + 'EXCERPT: [ringkasan 1 kalimat]\n'
-        + 'SEKSI1: [judul seksi pertama]\n'
-        + 'SEKSI2: [judul seksi kedua]\n'
-        + 'SEKSI3: [judul seksi ketiga]\n'
-        + 'SEKSI4: [judul seksi keempat]\n'
-        + 'SEKSI5: [judul seksi kelima]\n'
-        + 'SEKSI6: [judul seksi keenam]',
-        400
-    );
-
-    console.log('Outline raw:\n' + raw.substring(0, 300));
-
-    const ambil = (label) => {
-        const match = raw.match(new RegExp(label + ':\\s*(.+)', 'i'));
-        return match ? bersihkan(match[1]) : '';
-    };
-
-    const judul   = ambil('JUDUL') || bersihkan(raw.split('\n')[0]);
-    const excerpt = ambil('EXCERPT') || '';
-    const seksi   = [1,2,3,4,5,6].map(n => ambil('SEKSI' + n)).filter(s => s.length > 0);
-
-    if (!judul) throw new Error('Gagal mendapat judul dari outline.');
-    if (seksi.length < 4) throw new Error('Outline tidak lengkap, hanya ' + seksi.length + ' seksi.');
-
-    return { judul, excerpt, seksi };
-}
-
-// ─── Step 2: Tulis konten tiap seksi ─────────────────────────────────────────
-
-async function tulisSeksi(topik, judulArtikel, judulSeksi, nomorSeksi) {
-    console.log('Step 2.' + nomorSeksi + ': Menulis seksi "' + judulSeksi + '"...');
-
-    const raw = await panggilAI(
-        'Anda adalah jurnalis Indonesia profesional. Tulis dengan bahasa formal dan informatif.',
-        'Artikel berjudul: ' + judulArtikel + '\n'
-        + 'Topik utama: ' + topik + '\n\n'
-        + 'Tulis isi seksi berjudul "' + judulSeksi + '".\n'
-        + 'Ketentuan:\n'
-        + '- Minimal 4 paragraf\n'
-        + '- Setiap paragraf minimal 4 kalimat\n'
-        + '- Bahasa Indonesia formal\n'
-        + '- Langsung tulis isinya tanpa mengulang judul seksi\n'
-        + '- Jangan gunakan markdown (tanpa **, tanpa #)',
-        700
-    );
-
-    return raw;
-}
-
-// ─── Step 3: Rakit HTML lengkap ───────────────────────────────────────────────
-
-function rakitHTML(judulArtikel, excerpt, seksi, isiSeksi) {
+function rakitHTML(excerpt, seksi, isiSeksi) {
     let html = '';
+    if (excerpt) html += '<p><strong>' + bersihkan(excerpt) + '</strong></p>\n\n';
 
-    // Intro paragraf dari excerpt
-    html += '<p>' + excerpt + '</p>\n\n';
-
-    // Gabungkan tiap seksi
     seksi.forEach((judulSeksi, i) => {
-        html += '<h2>' + judulSeksi + '</h2>\n';
-
-        const isi = isiSeksi[i] || '';
-        const baris = isi.split('\n').filter(b => b.trim().length > 20);
-
+        html += '<h2>' + bersihkan(judulSeksi) + '</h2>\n';
+        const baris = (isiSeksi[i] || '').split('\n').filter(b => b.trim().length > 20);
         if (baris.length > 0) {
             baris.forEach(b => {
                 const bersih = bersihkan(b);
-                if (bersih.length > 20) {
-                    html += '<p>' + bersih + '</p>\n';
-                }
+                if (bersih.length > 20) html += '<p>' + bersih + '</p>\n';
             });
         } else {
-            // Fallback jika isi kosong
-            html += '<p>' + bersihkan(isi || judulSeksi) + '</p>\n';
+            html += '<p>' + bersihkan(isiSeksi[i] || judulSeksi) + '</p>\n';
         }
-
         html += '\n';
     });
 
     return html.trim();
 }
 
-// ─── Main generator ───────────────────────────────────────────────────────────
+// ─── MODE BERITA ──────────────────────────────────────────────────────────────
 
-async function generateArtikel(topik) {
+async function ambilBeritaNyata() {
+    for (const sumber of SUMBER_RSS) {
+        try {
+            const feed  = await parser.parseURL(sumber.url);
+            const items = feed.items.filter(item =>
+                item.title && (item.contentSnippet || item.content || item.summary)
+            );
+            if (items.length === 0) continue;
+
+            // Pilih berita berdasarkan menit agar variatif setiap run
+            const idx  = new Date().getUTCMinutes() % items.length;
+            const item = items[idx];
+
+            console.log('Sumber: ' + sumber.nama);
+            console.log('Judul asli: ' + item.title);
+
+            return {
+                judulAsli:  item.title || '',
+                kontenAsli: item.contentSnippet || item.content || item.summary || '',
+                urlAsli:    item.link || '',
+                sumber:     sumber.nama
+            };
+        } catch (e) {
+            console.log('RSS gagal (' + sumber.nama + '): ' + e.message);
+        }
+    }
+    throw new Error('Semua sumber RSS tidak dapat diakses.');
+}
+
+async function prosesBerita(berita) {
     // Step 1: Outline
-    const { judul, excerpt, seksi } = await buatOutline(topik);
-    console.log('Judul: ' + judul);
-    console.log('Seksi: ' + seksi.join(' | '));
+    console.log('Membuat outline berita...');
+    const outlineRaw = await panggilAI(
+        'Anda adalah editor berita senior. Tulis dalam Bahasa Indonesia formal.',
+        'Berita asli dari ' + berita.sumber + ':\n'
+        + 'Judul: ' + berita.judulAsli + '\n'
+        + 'Isi: ' + berita.kontenAsli.substring(0, 800) + '\n\n'
+        + 'Buat outline berdasarkan berita di atas:\n'
+        + 'JUDUL: [judul menarik Bahasa Indonesia]\n'
+        + 'EXCERPT: [ringkasan 1 kalimat]\n'
+        + 'SEKSI1: [aspek utama berita]\n'
+        + 'SEKSI2: [kronologi atau detail]\n'
+        + 'SEKSI3: [konteks dan latar belakang]\n'
+        + 'SEKSI4: [dampak dan kesimpulan]',
+        350
+    );
 
-    await jeda(1000);
+    const judul   = ambilLabel(outlineRaw, 'JUDUL') || bersihkan(berita.judulAsli);
+    const excerpt = ambilLabel(outlineRaw, 'EXCERPT');
+    const seksi   = [1,2,3,4]
+        .map(n => ambilLabel(outlineRaw, 'SEKSI' + n))
+        .filter(s => s.length > 0);
 
-    // Step 2: Tulis setiap seksi (6 seksi × ~400 kata = ~2400 kata)
-    const isiSeksi = [];
-    for (let i = 0; i < seksi.length; i++) {
-        const isi = await tulisSeksi(topik, judul, seksi[i], i + 1);
-        isiSeksi.push(isi);
-        await jeda(1500); // jeda 1.5 detik antar request
+    if (seksi.length < 2) {
+        seksi.push(...['Kronologi Kejadian','Konteks Peristiwa','Dampak dan Analisis','Kesimpulan']
+            .slice(0, 4 - seksi.length));
     }
 
-    // Step 3: Rakit HTML
-    const html = rakitHTML(judul, excerpt, seksi, isiSeksi);
-    const slug  = buatSlug(judul);
+    await jeda(1500);
 
-    // Hitung estimasi kata
+    // Step 2: Tulis tiap seksi
+    const isiSeksi = [];
+    for (let i = 0; i < seksi.length; i++) {
+        console.log('Seksi ' + (i+1) + '/' + seksi.length + ': ' + seksi[i]);
+        const isi = await panggilAI(
+            'Anda adalah jurnalis Indonesia. Hanya tulis berdasarkan fakta dari berita yang diberikan.',
+            'Berita asli:\nJudul: ' + berita.judulAsli + '\n'
+            + 'Isi: ' + berita.kontenAsli.substring(0, 600) + '\n\n'
+            + 'Tulis seksi "' + seksi[i] + '" untuk artikel "' + judul + '".\n'
+            + 'Minimal 4 paragraf (3-4 kalimat per paragraf).\n'
+            + 'HANYA berdasarkan fakta berita di atas. Jangan mengarang.',
+            700
+        );
+        isiSeksi.push(isi);
+        await jeda(1500);
+    }
+
+    const html = rakitHTML(excerpt, seksi, isiSeksi)
+        + '\n\n<p><em>Sumber: <a href="' + berita.urlAsli + '" target="_blank">'
+        + berita.sumber + '</a></em></p>';
+
     const jumlahKata = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
-    console.log('Estimasi kata: ' + jumlahKata);
+    console.log('Jumlah kata berita: ~' + jumlahKata);
 
     return {
         title:   judul.substring(0, 200),
-        slug:    slug,
+        slug:    buatSlug(judul),
+        excerpt: (excerpt || judul).substring(0, 160),
+        content: html
+    };
+}
+
+// ─── MODE ARTIKEL ─────────────────────────────────────────────────────────────
+
+async function prosesArtikel() {
+    const topik = topikAcak();
+    console.log('Topik artikel: ' + topik);
+
+    // Step 1: Outline
+    console.log('Membuat outline artikel...');
+    const outlineRaw = await panggilAI(
+        'Anda adalah penulis konten Indonesia profesional.',
+        'Buat outline artikel informatif tentang: ' + topik + '\n\n'
+        + 'JUDUL: [judul menarik dan SEO-friendly]\n'
+        + 'EXCERPT: [manfaat membaca artikel ini]\n'
+        + 'SEKSI1: [pengenalan topik]\n'
+        + 'SEKSI2: [poin penting pertama]\n'
+        + 'SEKSI3: [poin penting kedua]\n'
+        + 'SEKSI4: [poin penting ketiga]\n'
+        + 'SEKSI5: [tips praktis]\n'
+        + 'SEKSI6: [kesimpulan dan rekomendasi]',
+        400
+    );
+
+    const judul   = ambilLabel(outlineRaw, 'JUDUL') || topik;
+    const excerpt = ambilLabel(outlineRaw, 'EXCERPT');
+    const seksi   = [1,2,3,4,5,6]
+        .map(n => ambilLabel(outlineRaw, 'SEKSI' + n))
+        .filter(s => s.length > 0);
+
+    if (seksi.length < 4) throw new Error('Outline artikel tidak lengkap: ' + seksi.length + ' seksi.');
+
+    await jeda(1500);
+
+    // Step 2: Tulis tiap seksi
+    const isiSeksi = [];
+    for (let i = 0; i < seksi.length; i++) {
+        console.log('Seksi ' + (i+1) + '/' + seksi.length + ': ' + seksi[i]);
+        const isi = await panggilAI(
+            'Anda adalah penulis konten Indonesia yang informatif dan terpercaya.',
+            'Artikel: ' + judul + '\n\n'
+            + 'Tulis seksi "' + seksi[i] + '".\n'
+            + 'Minimal 4 paragraf (3-4 kalimat per paragraf).\n'
+            + 'Bahasa Indonesia formal, informatif, berikan contoh konkret.\n'
+            + 'Jangan gunakan markdown atau tanda bintang.',
+            700
+        );
+        isiSeksi.push(isi);
+        await jeda(1500);
+    }
+
+    const html = rakitHTML(excerpt, seksi, isiSeksi);
+    const jumlahKata = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
+    console.log('Jumlah kata artikel: ~' + jumlahKata);
+
+    return {
+        title:   judul.substring(0, 200),
+        slug:    buatSlug(judul),
         excerpt: (excerpt || judul).substring(0, 160),
         content: html
     };
@@ -222,12 +311,20 @@ async function simpanKeSupabase(dataAI) {
 
 async function main() {
     try {
-        console.log('Mengambil tren dari Google News...');
-        const topik = await dapatkanTrenTerbaru();
-        console.log('Topik: ' + topik);
+        console.log('=== Revpeak AI Agent ===');
+        console.log('Mode: ' + MODE + ' | Jam UTC: ' + jamSekarang);
 
-        const dataAI = await generateArtikel(topik);
-        console.log('Artikel selesai: ' + dataAI.title);
+        let dataAI;
+        if (MODE === 'artikel') {
+            dataAI = await prosesArtikel();
+        } else {
+            console.log('Mengambil berita dari RSS...');
+            const berita = await ambilBeritaNyata();
+            dataAI = await prosesBerita(berita);
+        }
+
+        console.log('Judul: ' + dataAI.title);
+        console.log('Slug: '  + dataAI.slug);
 
         console.log('Menyimpan ke Supabase...');
         await simpanKeSupabase(dataAI);
