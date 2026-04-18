@@ -1,0 +1,29 @@
+name: Run Agen AI Admin
+
+on:
+  schedule:
+    # Berjalan setiap 6 jam (4 kali sehari)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Tombol manual di GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Agen
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node agen-berita.js
