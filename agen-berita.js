@@ -58,7 +58,7 @@ async function main() {
     try {
         const berita = await generateBerita();
         const { data, error } = await supabase
-            .from('konten') // Ganti dengan nama tabel database Anda
+            .from('reviews') // Ganti dengan nama tabel database Anda
             .insert([{ 
                 ...berita, 
                 tipe: 'Berita', 
