@@ -8,28 +8,28 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 async function dapatkanTrenTerbaru() {
     try {
         const feed = await parser.parseURL('https://news.google.com/rss?hl=id&gl=ID&ceid=ID:id');
-        return feed.items.slice(0, 8).map(item => item.title).join(" | ");
+        return feed.items.slice(0, 5).map(item => item.title).join(" | ");
     } catch (e) {
-        return "Berita Teknologi dan Viral Terkini";
+        return "Berita Teknologi Viral";
     }
 }
 
 async function generateBerita() {
     const tren = await dapatkanTrenTerbaru();
-    // Menggunakan nama model 'gemini-pro' (paling stabil)
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+    // Menggunakan model 1.5-pro-latest yang paling didukung saat ini
+    const MODEL = "gemini-1.5-pro-latest"; 
+    const url = `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
     const promptText = `
-        Tren: ${tren}. 
-        Buatlah 1 artikel berita trending yang akurat untuk Revpeak.
-        Hasilkan output HANYA dalam format JSON murni:
+        Hari ini trennya: ${tren}. Buat 1 berita trending akurat untuk Revpeak. 
+        Hasilkan output HANYA JSON murni:
         {
-          "title": "Judul Berita",
-          "slug": "url-slug-berita",
-          "excerpt": "Ringkasan maksimal 150 karakter",
-          "content": "Isi berita lengkap dengan tag HTML <h2>, <p>, <ul>",
-          "tags": "tag1, tag2",
-          "alt_text": "Deskripsi gambar"
+          "title": "...",
+          "slug": "...",
+          "excerpt": "...",
+          "content": "...",
+          "tags": "...",
+          "alt_text": "..."
         }
     `;
 
@@ -47,8 +47,8 @@ async function generateBerita() {
         throw new Error("Google AI Error: " + result.error.message);
     }
 
-    // Membersihkan respons dari kemungkinan teks tambahan AI
     let rawText = result.candidates[0].content.parts[0].text;
+    // Bersihkan karakter markdown jika ada
     rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
     
     return JSON.parse(rawText);
@@ -56,9 +56,10 @@ async function generateBerita() {
 
 async function main() {
     try {
-        console.log("Agen AI mulai bekerja...");
+        console.log("Menghubungi Google AI...");
         const dataAI = await generateBerita();
         
+        console.log("Mengirim ke Supabase...");
         const { error } = await supabase
             .from('reviews') 
             .insert([{ 
@@ -68,15 +69,14 @@ async function main() {
                 content: dataAI.content,
                 tags: dataAI.tags,
                 alt_text: dataAI.alt_text,
-                type: 'Berita', // Mengatur Tipe Konten
-                category: 'Berita', // Mengatur Kategori agar tidak kosong
+                type: 'Berita',
                 author: 'Admin',
                 is_published: false,
                 created_at: new Date()
             }]);
 
         if (error) throw new Error("Supabase Error: " + error.message);
-        console.log("✅ Berhasil! Draf '" + dataAI.title + "' sudah masuk.");
+        console.log("✅ Berhasil! Cek dashboard Anda sekarang.");
     } catch (err) {
         console.error("❌ Terjadi Kesalahan:", err.message);
         process.exit(1);
