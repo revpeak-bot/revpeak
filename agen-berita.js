@@ -5,52 +5,64 @@ const parser = new Parser();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const CF_AI_TOKEN = process.env.CF_AI_TOKEN;
-
-// Model Cloudflare AI (gratis, tanpa batasan region)
 const CF_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 
+// Ambil tren terkini dari Google News RSS
 async function dapatkanTrenTerbaru() {
     try {
         const feed = await parser.parseURL('https://news.google.com/rss?hl=id&gl=ID&ceid=ID:id');
-        return feed.items.slice(0, 5).map(item => item.title).join(" | ");
+        return feed.items.slice(0, 5).map(item => item.title).join(' | ');
     } catch (e) {
-        console.log("RSS gagal, menggunakan topik default.");
-        return "Teknologi, Politik, dan Ekonomi Indonesia";
+        console.log('RSS gagal, menggunakan topik default.');
+        return 'Teknologi, Politik, dan Ekonomi Indonesia';
     }
 }
 
+// Konversi array paragraf menjadi HTML
+function paragraphsToHtml(paragraphs) {
+    return paragraphs.map(p => {
+        if (p.startsWith('## ')) {
+            return '<h2>' + p.replace('## ', '') + '</h2>';
+        }
+        return '<p>' + p + '</p>';
+    }).join('\n');
+}
+
+// Ekstrak JSON dari teks respons AI secara aman
+function extractJson(text) {
+    let clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    const start = clean.indexOf('{');
+    const end = clean.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('Tidak ditemukan blok JSON dalam respons.');
+    clean = clean.substring(start, end + 1);
+
+    // Hapus semua karakter kontrol — aman karena konten tidak lagi mengandung HTML
+    clean = clean.replace(/[\x00-\x1F\x7F]/g, ' ');
+
+    return JSON.parse(clean);
+}
+
 async function generateBerita(tren) {
-    const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/${CF_MODEL}`;
+    const url = 'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT_ID + '/ai/run/' + CF_MODEL;
 
-    const promptText = `Konteks Tren Terkini: ${tren}
-
-Tugas: Sebagai editor senior Revpeak, tuliskan 1 artikel berita trending yang mendalam, akurat, dan netral dalam Bahasa Indonesia.
-
-PENTING: Balas HANYA dengan JSON murni, tanpa teks lain, tanpa markdown, tanpa backtick.
-Format JSON:
-{
-  "title": "Judul berita yang menarik dan SEO-friendly",
-  "slug": "url-slug-seo-friendly",
-  "excerpt": "Ringkasan singkat berita maksimal 150 karakter",
-  "content": "Isi berita lengkap minimal 5 paragraf dengan tag HTML <h2> dan <p>"
-}`;
+    const systemMsg = 'Anda adalah editor senior Revpeak. Balas HANYA dengan JSON valid tanpa teks lain.';
+    const userMsg = 'Tren: ' + tren + '. Tulis 1 artikel berita dalam Bahasa Indonesia. '
+        + 'Gunakan format JSON ini persis (tanpa newline di dalam nilai string): '
+        + '{"title":"judul","slug":"slug-url","excerpt":"ringkasan maks 150 karakter",'
+        + '"paragraphs":["## Subjudul Satu","Isi paragraf satu.","## Subjudul Dua","Isi paragraf dua.","Isi paragraf tiga."]}. '
+        + 'Tulis minimal 5 elemen di paragraphs. Jangan gunakan tanda kutip ganda di dalam nilai teks.';
 
     const response = await fetch(url, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${CF_AI_TOKEN}`,
+            'Authorization': 'Bearer ' + CF_AI_TOKEN,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             messages: [
-                {
-                    role: "system",
-                    content: "Anda adalah editor senior Revpeak, platform berita dan ulasan produk Indonesia. Anda selalu membalas HANYA dengan JSON murni yang valid, tanpa teks tambahan, tanpa markdown, tanpa backtick."
-                },
-                {
-                    role: "user",
-                    content: promptText
-                }
+                { role: 'system', content: systemMsg },
+                { role: 'user', content: userMsg }
             ],
             max_tokens: 2048,
             temperature: 0.7
@@ -59,62 +71,33 @@ Format JSON:
 
     if (!response.ok) {
         const errText = await response.text();
-        throw new Error(`Cloudflare AI Error (${response.status}): ${errText}`);
+        throw new Error('Cloudflare AI Error (' + response.status + '): ' + errText);
     }
 
     const result = await response.json();
-
     if (!result.success) {
-        throw new Error(`Cloudflare AI gagal: ${JSON.stringify(result.errors)}`);
+        throw new Error('Cloudflare AI gagal: ' + JSON.stringify(result.errors));
     }
 
     const rawText = result.result.response.trim();
-
-    // Bersihkan backtick dan karakter kontrol yang menyebabkan JSON.parse gagal
-    const cleanText = rawText
-        .replace(/```json/gi, '')
-        .replace(/```/g, '')
-        .trim();
-
-    // Ekstrak blok JSON terlebih dahulu, lalu sanitasi karakter kontrol di dalamnya
-    function sanitizeAndParse(text) {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        const jsonStr = jsonMatch ? jsonMatch[0] : text;
-
-        // Ganti karakter kontrol yang tidak di-escape (newline, tab, dll)
-        // hanya di dalam nilai string JSON (di antara tanda kutip)
-        const sanitized = jsonStr.replace(
-            /"((?:[^"\\]|\\.)*)"/g,
-            (match, inner) => {
-                return '"' + inner
-                    .replace(/\n/g, '\\n')
-                    .replace(/\r/g, '\\r')
-                    .replace(/\t/g, '\\t')
-                    .replace(/[\x00-\x1F\x7F]/g, '') // hapus control chars lain
-                    + '"';
-            }
-        );
-
-        return JSON.parse(sanitized);
-    }
-
     let data;
     try {
-        data = sanitizeAndParse(cleanText);
+        data = extractJson(rawText);
     } catch (e) {
-        throw new Error("Gagal parse JSON dari respons AI: " + e.message + " | Raw: " + cleanText.substring(0, 300));
+        throw new Error('Gagal parse JSON: ' + e.message + ' | Raw: ' + rawText.substring(0, 400));
     }
 
-    // Validasi field wajib
-    if (!data.title || !data.slug || !data.excerpt || !data.content) {
-        throw new Error("JSON tidak lengkap, field wajib tidak ada: " + JSON.stringify(data));
+    if (!data.title || !data.slug || !data.excerpt || !Array.isArray(data.paragraphs)) {
+        throw new Error('JSON tidak lengkap: ' + JSON.stringify(data).substring(0, 200));
     }
 
+    // Konversi array paragraf ke HTML
+    data.content = paragraphsToHtml(data.paragraphs);
     return data;
 }
 
 async function simpanKeSupabase(dataAI) {
-    // Cek apakah slug sudah ada untuk mencegah duplikat
+    // Cek duplikat slug
     const { data: existing } = await supabase
         .from('reviews')
         .select('id')
@@ -122,9 +105,8 @@ async function simpanKeSupabase(dataAI) {
         .single();
 
     if (existing) {
-        // Tambahkan timestamp ke slug agar unik
-        dataAI.slug = `${dataAI.slug}-${Date.now()}`;
-        console.log(`Slug duplikat, diubah menjadi: ${dataAI.slug}`);
+        dataAI.slug = dataAI.slug + '-' + Date.now();
+        console.log('Slug duplikat, diubah menjadi: ' + dataAI.slug);
     }
 
     const { error } = await supabase
@@ -135,31 +117,29 @@ async function simpanKeSupabase(dataAI) {
             excerpt: dataAI.excerpt,
             content: dataAI.content,
             post_type: 'article',
-            is_published: false, // Draft, perlu review manual sebelum publish
+            is_published: false,
             created_at: new Date().toISOString()
         }]);
 
-    if (error) {
-        throw new Error("Supabase Error: " + error.message);
-    }
+    if (error) throw new Error('Supabase Error: ' + error.message);
 }
 
 async function main() {
     try {
-        console.log("Mengambil tren terkini dari Google News...");
+        console.log('Mengambil tren terkini dari Google News...');
         const tren = await dapatkanTrenTerbaru();
-        console.log("Tren ditemukan:", tren.substring(0, 80) + "...");
+        console.log('Tren: ' + tren.substring(0, 80) + '...');
 
-        console.log("Menghubungi Cloudflare AI...");
+        console.log('Menghubungi Cloudflare AI...');
         const dataAI = await generateBerita(tren);
-        console.log("Artikel dibuat:", dataAI.title);
+        console.log('Artikel dibuat: ' + dataAI.title);
 
-        console.log("Menyimpan ke Supabase...");
+        console.log('Menyimpan ke Supabase...');
         await simpanKeSupabase(dataAI);
 
-        console.log(`✅ BERHASIL! Artikel '${dataAI.title}' tersimpan sebagai draft.`);
+        console.log('BERHASIL! Artikel tersimpan sebagai draft: ' + dataAI.title);
     } catch (err) {
-        console.error("❌ Kegagalan:", err.message);
+        console.error('Kegagalan: ' + err.message);
         process.exit(1);
     }
 }
