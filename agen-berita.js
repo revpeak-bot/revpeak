@@ -70,23 +70,39 @@ Format JSON:
 
     const rawText = result.result.response.trim();
 
-    // Bersihkan jika ada backtick yang tidak sengaja muncul
+    // Bersihkan backtick dan karakter kontrol yang menyebabkan JSON.parse gagal
     const cleanText = rawText
         .replace(/```json/gi, '')
         .replace(/```/g, '')
         .trim();
 
+    // Ekstrak blok JSON terlebih dahulu, lalu sanitasi karakter kontrol di dalamnya
+    function sanitizeAndParse(text) {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : text;
+
+        // Ganti karakter kontrol yang tidak di-escape (newline, tab, dll)
+        // hanya di dalam nilai string JSON (di antara tanda kutip)
+        const sanitized = jsonStr.replace(
+            /"((?:[^"\\]|\\.)*)"/g,
+            (match, inner) => {
+                return '"' + inner
+                    .replace(/\n/g, '\\n')
+                    .replace(/\r/g, '\\r')
+                    .replace(/\t/g, '\\t')
+                    .replace(/[\x00-\x1F\x7F]/g, '') // hapus control chars lain
+                    + '"';
+            }
+        );
+
+        return JSON.parse(sanitized);
+    }
+
     let data;
     try {
-        data = JSON.parse(cleanText);
+        data = sanitizeAndParse(cleanText);
     } catch (e) {
-        // Coba ekstrak JSON dari dalam teks jika parsing langsung gagal
-        const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            data = JSON.parse(jsonMatch[0]);
-        } else {
-            throw new Error("Gagal parse JSON dari respons AI: " + cleanText.substring(0, 200));
-        }
+        throw new Error("Gagal parse JSON dari respons AI: " + e.message + " | Raw: " + cleanText.substring(0, 300));
     }
 
     // Validasi field wajib
