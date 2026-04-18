@@ -10,62 +10,43 @@ async function dapatkanTrenTerbaru() {
         const feed = await parser.parseURL('https://news.google.com/rss?hl=id&gl=ID&ceid=ID:id');
         return feed.items.slice(0, 5).map(item => item.title).join(" | ");
     } catch (e) {
-        return "Berita Teknologi Populer 2026";
+        return "Berita Teknologi Populer";
     }
 }
 
 async function generateBerita() {
     const tren = await dapatkanTrenTerbaru();
-    // Update 2026: Menggunakan Gemini 2.5 Flash (Model paling stabil untuk Free Tier)
-    const MODEL = "gemini-2.5-flash"; 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    // Menggunakan Gemini 2.5 Flash yang tadi sudah terbukti konek ke AI
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
-    const promptText = `
-        Konteks Hari Ini: ${tren}. 
-        Tugas: Buat 1 artikel berita trending yang akurat untuk Revpeak. 
-        PENTING: Berikan hasil HANYA dalam format JSON murni tanpa teks pembuka/penutup.
-        Format JSON:
-        {
-          "title": "Judul Berita",
-          "slug": "url-slug-seo",
-          "excerpt": "Ringkasan maksimal 150 karakter",
-          "content": "Isi berita lengkap (minimal 4 paragraf) dengan tag HTML <h2>, <p>, <ul>",
-          "tags": "tag1, tag2",
-          "alt_text": "Deskripsi gambar SEO"
-        }
-    `;
+    const promptText = `Tren: ${tren}. Buat 1 berita trending akurat untuk Revpeak. 
+    Output JSON murni:
+    {
+      "title": "...",
+      "slug": "...",
+      "excerpt": "...",
+      "content": "..."
+    }`;
 
     const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             contents: [{ parts: [{ text: promptText }] }],
-            generationConfig: {
-                response_mime_type: "application/json" // Memaksa output JSON
-            }
+            generationConfig: { response_mime_type: "application/json" }
         })
     });
 
     const result = await response.json();
-    
-    if (result.error) {
-        throw new Error(`Google API Error (${result.error.code}): ${result.error.message}`);
-    }
-
-    if (!result.candidates || !result.candidates[0]) {
-        throw new Error("AI tidak memberikan jawaban. Periksa kuota API Free Tier Anda.");
-    }
-
-    const rawText = result.candidates[0].content.parts[0].text;
-    return JSON.parse(rawText);
+    return JSON.parse(result.candidates[0].content.parts[0].text);
 }
 
 async function main() {
     try {
-        console.log("Menghubungi Agen AI (Gemini 2.5 Flash)...");
+        console.log("Menghubungi Agen AI...");
         const dataAI = await generateBerita();
         
-        console.log("Mengirim data ke tabel 'reviews'...");
+        console.log("Mengirim ke Supabase (Hanya kolom wajib)...");
         const { error } = await supabase
             .from('reviews') 
             .insert([{ 
@@ -73,16 +54,12 @@ async function main() {
                 slug: dataAI.slug,
                 excerpt: dataAI.excerpt,
                 content: dataAI.content,
-                tags: dataAI.tags,
-                alt_text: dataAI.alt_text,
-                type: 'Berita',
-                author: 'Admin AI',
-                is_published: false, // Simpan sebagai draf
+                is_published: false,
                 created_at: new Date()
             }]);
 
         if (error) throw new Error("Supabase Error: " + error.message);
-        console.log("✅ Berhasil! Artikel '" + dataAI.title + "' telah masuk ke dashboard.");
+        console.log("✅ BERHASIL! Silakan cek dashboard Revpeak Anda.");
     } catch (err) {
         console.error("❌ Kegagalan:", err.message);
         process.exit(1);
