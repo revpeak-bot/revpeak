@@ -3,80 +3,145 @@ const Parser = require('rss-parser');
 const parser = new Parser();
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
+const CF_AI_TOKEN = process.env.CF_AI_TOKEN;
+
+// Model Cloudflare AI (gratis, tanpa batasan region)
+const CF_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 
 async function dapatkanTrenTerbaru() {
     try {
         const feed = await parser.parseURL('https://news.google.com/rss?hl=id&gl=ID&ceid=ID:id');
         return feed.items.slice(0, 5).map(item => item.title).join(" | ");
     } catch (e) {
-        return "Teknologi dan Politik Indonesia";
+        console.log("RSS gagal, menggunakan topik default.");
+        return "Teknologi, Politik, dan Ekonomi Indonesia";
     }
 }
 
-async function generateBerita() {
-    const tren = await dapatkanTrenTerbaru();
-    
-    // MENGGUNAKAN MODEL PRO (Versi 1.5 Pro paling stabil untuk automasi)
-    const MODEL = "gemini-2.0-flash"; 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+async function generateBerita(tren) {
+    const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/${CF_MODEL}`;
 
-    const promptText = `
-        Konteks Tren: ${tren}. 
-        Tugas: Sebagai editor senior Revpeak, tuliskan 1 berita trending yang mendalam, akurat, dan netral.
-        Hasilkan output HANYA dalam JSON murni:
-        {
-          "title": "Judul Berita Profesional",
-          "slug": "url-slug-seo",
-          "excerpt": "Ringkasan berita yang menarik (maks 150 karakter)",
-          "content": "Isi berita mendalam (min 5 paragraf) dengan tag HTML <h2>, <p>, <ul>"
-        }
-    `;
+    const promptText = `Konteks Tren Terkini: ${tren}
+
+Tugas: Sebagai editor senior Revpeak, tuliskan 1 artikel berita trending yang mendalam, akurat, dan netral dalam Bahasa Indonesia.
+
+PENTING: Balas HANYA dengan JSON murni, tanpa teks lain, tanpa markdown, tanpa backtick.
+Format JSON:
+{
+  "title": "Judul berita yang menarik dan SEO-friendly",
+  "slug": "url-slug-seo-friendly",
+  "excerpt": "Ringkasan singkat berita maksimal 150 karakter",
+  "content": "Isi berita lengkap minimal 5 paragraf dengan tag HTML <h2> dan <p>"
+}`;
 
     const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Authorization': `Bearer ${CF_AI_TOKEN}`,
+            'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }] }],
-            generationConfig: { 
-                temperature: 0.8, // Sedikit lebih kreatif untuk model Pro
-                response_mime_type: "application/json" 
-            }
+            messages: [
+                {
+                    role: "system",
+                    content: "Anda adalah editor senior Revpeak, platform berita dan ulasan produk Indonesia. Anda selalu membalas HANYA dengan JSON murni yang valid, tanpa teks tambahan, tanpa markdown, tanpa backtick."
+                },
+                {
+                    role: "user",
+                    content: promptText
+                }
+            ],
+            max_tokens: 2048,
+            temperature: 0.7
         })
     });
 
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Cloudflare AI Error (${response.status}): ${errText}`);
+    }
+
     const result = await response.json();
 
-    if (result.error) {
-        throw new Error(`Google Pro Error (${result.error.code}): ${result.error.message}`);
+    if (!result.success) {
+        throw new Error(`Cloudflare AI gagal: ${JSON.stringify(result.errors)}`);
     }
 
-    if (!result.candidates?.[0]?.content?.parts?.[0]?.text) {
-        throw new Error("Model Pro tidak memberikan respons. Kemungkinan limit kuota tercapai.");
+    const rawText = result.result.response.trim();
+
+    // Bersihkan jika ada backtick yang tidak sengaja muncul
+    const cleanText = rawText
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
+
+    let data;
+    try {
+        data = JSON.parse(cleanText);
+    } catch (e) {
+        // Coba ekstrak JSON dari dalam teks jika parsing langsung gagal
+        const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            data = JSON.parse(jsonMatch[0]);
+        } else {
+            throw new Error("Gagal parse JSON dari respons AI: " + cleanText.substring(0, 200));
+        }
     }
 
-    return JSON.parse(result.candidates[0].content.parts[0].text);
+    // Validasi field wajib
+    if (!data.title || !data.slug || !data.excerpt || !data.content) {
+        throw new Error("JSON tidak lengkap, field wajib tidak ada: " + JSON.stringify(data));
+    }
+
+    return data;
+}
+
+async function simpanKeSupabase(dataAI) {
+    // Cek apakah slug sudah ada untuk mencegah duplikat
+    const { data: existing } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('slug', dataAI.slug)
+        .single();
+
+    if (existing) {
+        // Tambahkan timestamp ke slug agar unik
+        dataAI.slug = `${dataAI.slug}-${Date.now()}`;
+        console.log(`Slug duplikat, diubah menjadi: ${dataAI.slug}`);
+    }
+
+    const { error } = await supabase
+        .from('reviews')
+        .insert([{
+            title: dataAI.title,
+            slug: dataAI.slug,
+            excerpt: dataAI.excerpt,
+            content: dataAI.content,
+            post_type: 'article',
+            is_published: false, // Draft, perlu review manual sebelum publish
+            created_at: new Date().toISOString()
+        }]);
+
+    if (error) {
+        throw new Error("Supabase Error: " + error.message);
+    }
 }
 
 async function main() {
     try {
-        console.log("Menghubungi Agen AI Pro...");
-        const dataAI = await generateBerita();
-        
-        console.log("Mengirim artikel berkualitas ke Supabase...");
-        const { error } = await supabase
-            .from('reviews') 
-            .insert([{ 
-                title: dataAI.title,
-                slug: dataAI.slug,
-                excerpt: dataAI.excerpt,
-                content: dataAI.content,
-                is_published: false, // Draft
-                created_at: new Date()
-            }]);
+        console.log("Mengambil tren terkini dari Google News...");
+        const tren = await dapatkanTrenTerbaru();
+        console.log("Tren ditemukan:", tren.substring(0, 80) + "...");
 
-        if (error) throw new Error("Supabase Error: " + error.message);
-        console.log("✅ BERHASIL! Artikel Pro '" + dataAI.title + "' telah masuk.");
+        console.log("Menghubungi Cloudflare AI...");
+        const dataAI = await generateBerita(tren);
+        console.log("Artikel dibuat:", dataAI.title);
+
+        console.log("Menyimpan ke Supabase...");
+        await simpanKeSupabase(dataAI);
+
+        console.log(`✅ BERHASIL! Artikel '${dataAI.title}' tersimpan sebagai draft.`);
     } catch (err) {
         console.error("❌ Kegagalan:", err.message);
         process.exit(1);
