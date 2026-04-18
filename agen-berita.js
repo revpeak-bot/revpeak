@@ -59,7 +59,7 @@ async function main() {
     try {
         const berita = await generateBerita();
         const { error } = await supabase
-            .from('konten')
+            .from('reviews')
             .insert([{ 
                 ...berita, 
                 tipe: 'Berita', 
