@@ -7,38 +7,61 @@ const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const CF_AI_TOKEN = process.env.CF_AI_TOKEN;
 const CF_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 
-// Ambil tren terkini dari Google News RSS
 async function dapatkanTrenTerbaru() {
     try {
         const feed = await parser.parseURL('https://news.google.com/rss?hl=id&gl=ID&ceid=ID:id');
-        return feed.items.slice(0, 5).map(item => item.title).join(' | ');
+        return feed.items.slice(0, 3).map(item => item.title).join(' | ');
     } catch (e) {
         console.log('RSS gagal, menggunakan topik default.');
-        return 'Teknologi, Politik, dan Ekonomi Indonesia';
+        return 'Teknologi dan Politik Indonesia';
     }
 }
 
-// Konversi array paragraf menjadi HTML
 function paragraphsToHtml(paragraphs) {
     return paragraphs.map(p => {
-        if (p.startsWith('## ')) {
-            return '<h2>' + p.replace('## ', '') + '</h2>';
-        }
+        if (p.startsWith('## ')) return '<h2>' + p.slice(3) + '</h2>';
         return '<p>' + p + '</p>';
     }).join('\n');
 }
 
-// Ekstrak JSON dari teks respons AI secara aman
-function extractJson(text) {
+// Perbaiki JSON yang terpotong sebelum parsing
+function repairAndParse(text) {
+    // Bersihkan backtick
     let clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
 
+    // Ambil dari { pertama
     const start = clean.indexOf('{');
-    const end = clean.lastIndexOf('}');
-    if (start === -1 || end === -1) throw new Error('Tidak ditemukan blok JSON dalam respons.');
-    clean = clean.substring(start, end + 1);
+    if (start === -1) throw new Error('Tidak ada blok JSON.');
+    clean = clean.substring(start);
 
-    // Hapus semua karakter kontrol — aman karena konten tidak lagi mengandung HTML
+    // Hapus karakter kontrol
     clean = clean.replace(/[\x00-\x1F\x7F]/g, ' ');
+
+    // Jika JSON lengkap, langsung parse
+    if (clean.lastIndexOf('}') !== -1) {
+        const end = clean.lastIndexOf('}');
+        try {
+            return JSON.parse(clean.substring(0, end + 1));
+        } catch (e) {
+            // lanjut ke repair
+        }
+    }
+
+    // JSON terpotong — potong di elemen array terakhir yang lengkap
+    // Cari koma+kutip terakhir yang menandai akhir elemen valid
+    const lastComplete = clean.lastIndexOf('",');
+    if (lastComplete !== -1) {
+        // Potong di sana, tutup array dan objek
+        clean = clean.substring(0, lastComplete + 1) + '"]}';
+    } else {
+        // Fallback: cari kutip penutup terakhir
+        const lastQuote = clean.lastIndexOf('"');
+        if (lastQuote !== -1) {
+            clean = clean.substring(0, lastQuote + 1) + ']}';
+        } else {
+            throw new Error('JSON tidak dapat diperbaiki.');
+        }
+    }
 
     return JSON.parse(clean);
 }
@@ -46,12 +69,11 @@ function extractJson(text) {
 async function generateBerita(tren) {
     const url = 'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT_ID + '/ai/run/' + CF_MODEL;
 
-    const systemMsg = 'Anda adalah editor senior Revpeak. Balas HANYA dengan JSON valid tanpa teks lain.';
-    const userMsg = 'Tren: ' + tren + '. Tulis 1 artikel berita dalam Bahasa Indonesia. '
-        + 'Gunakan format JSON ini persis (tanpa newline di dalam nilai string): '
-        + '{"title":"judul","slug":"slug-url","excerpt":"ringkasan maks 150 karakter",'
-        + '"paragraphs":["## Subjudul Satu","Isi paragraf satu.","## Subjudul Dua","Isi paragraf dua.","Isi paragraf tiga."]}. '
-        + 'Tulis minimal 5 elemen di paragraphs. Jangan gunakan tanda kutip ganda di dalam nilai teks.';
+    // Prompt sangat ringkas agar respons tidak melebihi token limit
+    const systemMsg = 'Balas HANYA dengan JSON valid. Tanpa teks lain.';
+    const userMsg = 'Buat 1 artikel berita Bahasa Indonesia tentang: ' + tren
+        + '. Format: {"title":"...","slug":"...","excerpt":"maks 100 karakter","paragraphs":["## Judul Bagian","Paragraf isi.","Paragraf isi dua.","## Bagian Dua","Paragraf isi tiga."]}.'
+        + ' Maksimal 3 paragraf isi saja. Jangan ada tanda kutip di dalam teks.';
 
     const response = await fetch(url, {
         method: 'POST',
@@ -64,8 +86,8 @@ async function generateBerita(tren) {
                 { role: 'system', content: systemMsg },
                 { role: 'user', content: userMsg }
             ],
-            max_tokens: 2048,
-            temperature: 0.7
+            max_tokens: 800,
+            temperature: 0.5
         })
     });
 
@@ -80,24 +102,30 @@ async function generateBerita(tren) {
     }
 
     const rawText = result.result.response.trim();
+    console.log('Raw AI (200 char): ' + rawText.substring(0, 200));
+
     let data;
     try {
-        data = extractJson(rawText);
+        data = repairAndParse(rawText);
     } catch (e) {
-        throw new Error('Gagal parse JSON: ' + e.message + ' | Raw: ' + rawText.substring(0, 400));
+        throw new Error('Gagal parse JSON: ' + e.message);
     }
 
-    if (!data.title || !data.slug || !data.excerpt || !Array.isArray(data.paragraphs)) {
-        throw new Error('JSON tidak lengkap: ' + JSON.stringify(data).substring(0, 200));
+    if (!data.title || !data.slug || !data.excerpt) {
+        throw new Error('Field wajib tidak ada: ' + JSON.stringify(data).substring(0, 200));
     }
 
-    // Konversi array paragraf ke HTML
-    data.content = paragraphsToHtml(data.paragraphs);
+    // Jika paragraphs ada, konversi ke HTML. Jika tidak, buat konten minimal.
+    if (Array.isArray(data.paragraphs) && data.paragraphs.length > 0) {
+        data.content = paragraphsToHtml(data.paragraphs);
+    } else {
+        data.content = '<p>' + data.excerpt + '</p>';
+    }
+
     return data;
 }
 
 async function simpanKeSupabase(dataAI) {
-    // Cek duplikat slug
     const { data: existing } = await supabase
         .from('reviews')
         .select('id')
@@ -106,7 +134,7 @@ async function simpanKeSupabase(dataAI) {
 
     if (existing) {
         dataAI.slug = dataAI.slug + '-' + Date.now();
-        console.log('Slug duplikat, diubah menjadi: ' + dataAI.slug);
+        console.log('Slug duplikat, diubah: ' + dataAI.slug);
     }
 
     const { error } = await supabase
@@ -126,18 +154,18 @@ async function simpanKeSupabase(dataAI) {
 
 async function main() {
     try {
-        console.log('Mengambil tren terkini dari Google News...');
+        console.log('Mengambil tren dari Google News...');
         const tren = await dapatkanTrenTerbaru();
         console.log('Tren: ' + tren.substring(0, 80) + '...');
 
         console.log('Menghubungi Cloudflare AI...');
         const dataAI = await generateBerita(tren);
-        console.log('Artikel dibuat: ' + dataAI.title);
+        console.log('Artikel: ' + dataAI.title);
 
         console.log('Menyimpan ke Supabase...');
         await simpanKeSupabase(dataAI);
 
-        console.log('BERHASIL! Artikel tersimpan sebagai draft: ' + dataAI.title);
+        console.log('BERHASIL! Draft tersimpan: ' + dataAI.title);
     } catch (err) {
         console.error('Kegagalan: ' + err.message);
         process.exit(1);
