@@ -18,7 +18,7 @@ async function generateBerita() {
     const tren = await dapatkanTrenTerbaru();
     
     // MENGGUNAKAN MODEL PRO (Versi 1.5 Pro paling stabil untuk automasi)
-    const MODEL = "gemini-1.5-pro"; 
+    const MODEL = "gemini-2.0-flash"; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
     const promptText = `
