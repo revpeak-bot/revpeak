@@ -396,11 +396,22 @@ async function prosesArtikel() {
 
     const judul   = ambilLabel(outlineRaw, 'JUDUL') || topik;
     const excerpt = ambilLabel(outlineRaw, 'EXCERPT');
-    const seksi   = [1,2,3,4,5,6]
+    let seksi     = [1,2,3,4,5,6]
         .map(n => ambilLabel(outlineRaw, 'SEKSI' + n))
         .filter(s => s.length > 0);
 
-    if (seksi.length < 4) throw new Error('Outline artikel tidak lengkap: ' + seksi.length + ' seksi.');
+    // Fallback jika AI tidak mengikuti format label — gunakan seksi default berdasarkan topik
+    if (seksi.length < 4) {
+        console.warn('Outline tidak lengkap (' + seksi.length + ' seksi), menggunakan seksi default.');
+        seksi = [
+            'Pengenalan: ' + topik,
+            'Hal-hal Penting yang Perlu Diketahui',
+            'Tips dan Panduan Praktis',
+            'Faktor yang Perlu Dipertimbangkan',
+            'Rekomendasi untuk Pemula',
+            'Kesimpulan dan Saran'
+        ];
+    }
 
     await jeda(1500);
 
