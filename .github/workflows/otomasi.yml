@@ -1,4 +1,4 @@
-name: Run Agen AI Admin
+name: Run Agen Sains AI
 
 on:
   schedule:
@@ -16,12 +16,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install Dependencies
         run: npm install
 
-      - name: Run Agen (Mode Otomatis)
+      - name: Run Agen Sains
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
@@ -30,4 +30,4 @@ jobs:
           CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
           CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
           CF_R2_PUBLIC_URL: ${{ secrets.CF_R2_PUBLIC_URL }}
-        run: node agen-berita.js
+        run: node agen-sains.js
