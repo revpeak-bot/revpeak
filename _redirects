@@ -1,0 +1,13 @@
+# Cloudflare Pages - Clean URL Routing
+
+# Beranda → index.html (prioritas tertinggi, harus di atas)
+/               /index.html     200
+
+# File statis → langsung dilayani (jangan diubah)
+/style.css      /style.css      200
+/script.js      /script.js      200
+/article.html   /article.html   200
+
+# Semua URL artikel → article.html (slug dibaca JS dari URL)
+# Contoh: /cara-membuat-kopi → article.html
+/:slug          /article.html   200
