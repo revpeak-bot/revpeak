@@ -1,507 +1,608 @@
-/* ===========================================
-   REVPEAK v3 — app.js
-   Tab: Rekomendasi, Trending, Terbaru → Berita & Artikel
-   Seksi Produk: Review produk terpisah di bawah
-=========================================== */
+// ============================================================
+// REVPEAK — app.js
+// Menangani: index.html, berita.html, artikel.html,
+//            kategori.html, kategori-detail.html,
+//            penulis.html, penulis-detail.html, search.html
+// ============================================================
 
-/* ===== CONFIG ===== */
-const API_BASE  = '/api';
-const PAGE_SIZE = 9;
+const API_BASE = "https://revpeak-api.revpeak2.workers.dev"; // ganti dengan URL Worker Anda
 
-/* ===== STATE ===== */
-let currentTab  = 'rekomendasi';
-let currentCat  = 'all';
-let currentPage = 0;
-let isLoading   = false;
-let hasMore     = false;
+// ============================================================
+// UTILS
+// ============================================================
 
-/* ===== UTILS ===== */
-function timeAgo(dateStr) {
-  const s = (Date.now() - new Date(dateStr)) / 1000;
-  if (s < 60)      return 'baru saja';
-  if (s < 3600)    return Math.floor(s / 60) + ' mnt lalu';
-  if (s < 86400)   return Math.floor(s / 3600) + ' jam lalu';
-  if (s < 2592000) return Math.floor(s / 86400) + ' hari lalu';
-  return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+function $(sel, ctx = document) { return ctx.querySelector(sel); }
+function $$(sel, ctx = document) { return [...ctx.querySelectorAll(sel)]; }
+
+function getParam(key) {
+  return new URLSearchParams(window.location.search).get(key) || "";
 }
 
-function fmtViews(v) {
-  if (!v) return '';
-  if (v >= 1000000) return (v / 1000000).toFixed(1) + 'jt';
-  if (v >= 1000)    return (v / 1000).toFixed(1) + 'rb';
-  return String(v);
-}
-
-function showToast(msg) {
-  let wrap = document.getElementById('toast-wrap');
-  if (!wrap) {
-    wrap = document.createElement('div');
-    wrap.id = 'toast-wrap';
-    wrap.className = 'toast-wrap';
-    document.body.appendChild(wrap);
-  }
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.textContent = msg;
-  wrap.appendChild(t);
-  setTimeout(() => t.remove(), 3200);
-}
-
-/* ===== API ===== */
-async function fetchAPI(endpoint) {
-  try {
-    const res = await fetch(API_BASE + endpoint);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.json();
-  } catch (err) {
-    console.error('[Revpeak API]', err.message);
-    return null;
-  }
-}
-
-/* ===== THEME ===== */
-function initTheme() {
-  const saved = localStorage.getItem('rp-theme') || 'light';
-  applyTheme(saved, false);
-}
-
-function applyTheme(theme, animate = true) {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('rp-theme', theme);
-  const toggle = document.getElementById('theme-toggle');
-  if (toggle) {
-    toggle.setAttribute('aria-checked', theme === 'dark' ? 'true' : 'false');
-  }
-}
-
-function toggleTheme() {
-  const cur = document.documentElement.getAttribute('data-theme');
-  applyTheme(cur === 'dark' ? 'light' : 'dark');
-}
-
-/* ===== DRAWER ===== */
-function initDrawer() {
-  const overlay   = document.getElementById('drawer-overlay');
-  const drawer    = document.getElementById('drawer');
-  const hamburger = document.getElementById('hamburger');
-  const close     = document.getElementById('drawer-close');
-  const toggle    = document.getElementById('theme-toggle');
-
-  function open() {
-    drawer?.classList.add('open');
-    overlay?.classList.add('open');
-    hamburger?.classList.add('open');
-    hamburger?.setAttribute('aria-expanded', 'true');
-    drawer?.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    setTimeout(() => close?.focus(), 50);
-  }
-
-  function close_() {
-    drawer?.classList.remove('open');
-    overlay?.classList.remove('open');
-    hamburger?.classList.remove('open');
-    hamburger?.setAttribute('aria-expanded', 'false');
-    drawer?.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-    hamburger?.focus();
-  }
-
-  hamburger?.addEventListener('click', () => {
-    drawer?.classList.contains('open') ? close_() : open();
-  });
-
-  close?.addEventListener('click', close_);
-  overlay?.addEventListener('click', close_);
-  toggle?.addEventListener('click', toggleTheme);
-
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') close_(); });
-}
-
-/* ===== SEARCH ===== */
-function initSearch() {
-  const input     = document.getElementById('search-input');
-  const clearBtn  = document.getElementById('search-clear');
-  if (!input) return;
-
-  let timer;
-
-  function handleSearch(q) {
-    clearTimeout(timer);
-    if (!q) { loadContent(true); return; }
-    timer = setTimeout(async () => {
-      renderSkeletons(document.getElementById('content-grid'), 6);
-      document.getElementById('load-more-wrap').style.display = 'none';
-      // Cari di semua tipe konten (berita, artikel, dll — bukan review produk)
-      const data  = await fetchAPI(`/reviews?search=${encodeURIComponent(q)}&exclude_type=review`);
-      const items = data?.data || data || [];
-      const grid  = document.getElementById('content-grid');
-      if (!items.length) {
-        grid.innerHTML = emptyStateHTML('🔍', 'Tidak ditemukan', 'Coba kata kunci lain');
-      } else {
-        grid.innerHTML = items.map(contentCardHTML).join('');
-      }
-    }, 380);
-  }
-
-  input.addEventListener('input', e => {
-    const q = e.target.value.trim();
-    clearBtn?.classList.toggle('visible', q.length > 0);
-    handleSearch(q);
-  });
-
-  clearBtn?.addEventListener('click', () => {
-    input.value = '';
-    clearBtn.classList.remove('visible');
-    loadContent(true);
-    input.focus();
+function formatDate(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("id-ID", {
+    day: "numeric", month: "long", year: "numeric"
   });
 }
 
-/* ===== SCROLL TOP ===== */
-function initScrollTop() {
-  const btn = document.getElementById('scroll-top');
-  if (!btn) return;
-  window.addEventListener('scroll', () => btn.classList.toggle('show', window.scrollY > 380), { passive: true });
-  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+function slugify(text) {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-/* ===== CATEGORIES (untuk filter berita/artikel) ===== */
-async function loadCategories() {
-  const wrap = document.getElementById('cat-chips');
-  if (!wrap) return;
-  const data = await fetchAPI('/categories');
-  const cats = data?.data || data || [];
-  if (!cats.length) return;
-
-  const all  = `<button type="button" class="cat-chip active" data-cat="all">🌟 Semua</button>`;
-  const rest = cats.map(c =>
-    `<button type="button" class="cat-chip" data-cat="${c.id}">${c.icon || '📌'} ${c.name}</button>`
-  ).join('');
-  wrap.innerHTML = all + rest;
-
-  wrap.addEventListener('click', e => {
-    const chip = e.target.closest('.cat-chip');
-    if (!chip) return;
-    wrap.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    currentCat  = chip.dataset.cat;
-    currentPage = 0;
-    loadContent(true);
-  });
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-/* ===== TABS ===== */
-function initTabs() {
-  const tabLabels = {
-    rekomendasi: '⭐ Rekomendasi',
-    trending:    '🔥 Trending',
-    terbaru:     '🆕 Terbaru',
-  };
+async function apiFetch(path) {
+  const res = await fetch(`${API_BASE}${path}`);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
 
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentTab  = btn.dataset.tab;
-      currentPage = 0;
-      currentCat  = 'all';
+// ============================================================
+// CARD RENDERER
+// ============================================================
 
-      document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('active');
-        b.setAttribute('aria-selected', 'false');
-      });
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
+function renderCard(article) {
+  const cat = article.categories || {};
+  const author = article.authors || {};
+  const badge = article.post_type === "news" ? "Berita" : "Artikel";
+  const badgeClass = article.post_type === "news" ? "badge-news" : "badge-article";
 
-      // Reset cat chips
-      document.querySelectorAll('.cat-chip').forEach(c => c.classList.toggle('active', c.dataset.cat === 'all'));
+  return `
+    <article class="card" role="article">
+      <a href="/${escapeHtml(article.slug)}" class="card-thumbnail-link" aria-label="${escapeHtml(article.title)}">
+        <div class="card-thumbnail">
+          ${article.thumbnail_url
+            ? `<img src="${escapeHtml(article.thumbnail_url)}" alt="${escapeHtml(article.title)}" loading="lazy">`
+            : `<div class="card-thumbnail-placeholder" aria-hidden="true"></div>`}
+          <span class="card-badge ${badgeClass}">${badge}</span>
+        </div>
+      </a>
+      <div class="card-body">
+        ${cat.slug ? `<a href="/kategori-detail.html?slug=${escapeHtml(cat.slug)}" class="card-category">${escapeHtml(cat.name)}</a>` : ""}
+        <h2 class="card-title">
+          <a href="/${escapeHtml(article.slug)}">${escapeHtml(article.title)}</a>
+        </h2>
+        ${article.excerpt ? `<p class="card-excerpt">${escapeHtml(article.excerpt)}</p>` : ""}
+        <div class="card-meta">
+          ${author.name ? `<span class="card-author">${escapeHtml(author.name)}</span>` : ""}
+          <span class="card-date">${formatDate(article.published_at)}</span>
+          <span class="card-views" aria-label="${article.view_count || 0} kali dibaca">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            ${article.view_count || 0}
+          </span>
+        </div>
+      </div>
+    </article>`;
+}
 
-      // Update section title
-      const ttl = document.getElementById('section-title');
-      if (ttl) ttl.textContent = tabLabels[currentTab] || currentTab;
+function renderCardSkeleton(count = 6) {
+  return Array(count).fill(0).map(() => `
+    <div class="card card-skeleton" aria-hidden="true">
+      <div class="card-thumbnail skeleton-box"></div>
+      <div class="card-body">
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+    </div>`).join("");
+}
 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+function renderEmpty(msg = "Tidak ada konten ditemukan.") {
+  return `<div class="empty-state" role="status"><p>${escapeHtml(msg)}</p></div>`;
+}
 
-      loadHero(currentTab);
-      loadContent(true);
+function renderError(msg = "Gagal memuat data. Silakan coba lagi.") {
+  return `<div class="error-state" role="alert"><p>${escapeHtml(msg)}</p></div>`;
+}
+
+// ============================================================
+// PAGINATION
+// ============================================================
+
+function renderPagination(container, { page, limit, total, onPageChange }) {
+  if (!container) return;
+  const totalPages = Math.ceil(total / limit);
+  if (totalPages <= 1) { container.innerHTML = ""; return; }
+
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (
+      i === 1 || i === totalPages ||
+      (i >= page - 1 && i <= page + 1)
+    ) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== "...") {
+      pages.push("...");
+    }
+  }
+
+  container.innerHTML = `
+    <nav class="pagination" aria-label="Navigasi halaman">
+      <button class="pagination-btn" data-page="${page - 1}" ${page <= 1 ? "disabled" : ""} aria-label="Halaman sebelumnya">
+        &laquo;
+      </button>
+      ${pages.map(p => p === "..."
+        ? `<span class="pagination-ellipsis">…</span>`
+        : `<button class="pagination-btn ${p === page ? "active" : ""}" data-page="${p}" aria-label="Halaman ${p}" aria-current="${p === page ? "page" : "false"}">${p}</button>`
+      ).join("")}
+      <button class="pagination-btn" data-page="${page + 1}" ${page >= totalPages ? "disabled" : ""} aria-label="Halaman berikutnya">
+        &raquo;
+      </button>
+    </nav>`;
+
+  container.querySelectorAll(".pagination-btn:not([disabled])").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const p = parseInt(btn.dataset.page);
+      if (p >= 1 && p <= totalPages) onPageChange(p);
     });
   });
 }
 
-/* ===== HERO ===== */
-async function loadHero(tab = 'rekomendasi') {
-  const heroGrid = document.getElementById('hero-grid');
-  if (!heroGrid) return;
+// ============================================================
+// PAGE: INDEX (Homepage)
+// ============================================================
 
-  // Tampilkan skeleton hero saat loading ulang
-  heroGrid.innerHTML = `
-    <div class="hero-main-skeleton skeleton-card">
-      <div class="skeleton sk-hero-img"></div>
-      <div class="sk-body">
-        <div class="skeleton sk-line" style="width:30%;height:11px;margin-bottom:10px"></div>
-        <div class="skeleton sk-line" style="width:90%;height:20px;margin-bottom:8px"></div>
-        <div class="skeleton sk-line" style="width:100%;margin-bottom:6px"></div>
-        <div class="skeleton sk-line" style="width:70%"></div>
-      </div>
-    </div>
-    <div class="hero-side-skeleton">
-      <div class="skeleton-card sk-side"><div class="skeleton sk-side-img"></div><div class="sk-side-body"><div class="skeleton sk-line" style="width:80%;height:13px;margin-bottom:6px"></div><div class="skeleton sk-line" style="width:55%"></div></div></div>
-      <div class="skeleton-card sk-side"><div class="skeleton sk-side-img"></div><div class="sk-side-body"><div class="skeleton sk-line" style="width:80%;height:13px;margin-bottom:6px"></div><div class="skeleton sk-line" style="width:55%"></div></div></div>
-      <div class="skeleton-card sk-side"><div class="skeleton sk-side-img"></div><div class="sk-side-body"><div class="skeleton sk-line" style="width:80%;height:13px;margin-bottom:6px"></div><div class="skeleton sk-line" style="width:55%"></div></div></div>
-    </div>`;
-
-  // URL sesuai tab — exclude_type=review agar hero hanya tampilkan berita/artikel
-  const urlMap = {
-    rekomendasi: '/reviews?limit=4&featured=true&exclude_type=review',
-    trending:    '/reviews?limit=4&sort=trending&exclude_type=review',
-    terbaru:     '/reviews?limit=4&exclude_type=review',
-  };
-  const badgeMap = {
-    rekomendasi: '⭐ Unggulan',
-    trending:    '🔥 Trending',
-    terbaru:     '🆕 Terbaru',
-  };
-  const labelMap = {
-    rekomendasi: '⭐ Pilihan Rekomendasi',
-    trending:    '🔥 Sedang Trending',
-    terbaru:     '🆕 Konten Terbaru',
-  };
-
-  const heroLabel = document.getElementById('hero-tab-label');
-  if (heroLabel) heroLabel.textContent = labelMap[tab] || '';
-
-  const data  = await fetchAPI(urlMap[tab] || urlMap.rekomendasi);
-  const items = data?.data || data || [];
-  if (!items.length) { heroGrid.style.display = 'none'; return; }
-  heroGrid.style.display = '';
-
-  const main = items[0];
-  const side = items.slice(1, 4);
-
-  const heroBadge = main.post_type === 'list'
-    ? '📋 List'
-    : main.post_type === 'video'
-      ? '▶ Video'
-      : main.post_type === 'news'
-        ? '📰 Berita'
-        : main.post_type === 'article'
-          ? '📝 Artikel'
-          : badgeMap[tab] || '⭐ Unggulan';
-
-  const mainImgHTML = main.image_url
-    ? `<img src="${main.image_url}" alt="${main.title}" loading="eager">`
-    : `<div style="font-size:80px;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2D2C29,#444)">${main.emoji || '📰'}</div>`;
-
-  const sideHTML = side.map(s => `
-    <a href="/${s.slug}" class="hero-side-card">
-      <div class="side-thumb">
-        ${s.image_url
-          ? `<img src="${s.image_url}" alt="${s.title}" loading="lazy">`
-          : `<span>${s.emoji || '📌'}</span>`}
-      </div>
-      <div class="side-body">
-        <div class="side-cat">${s.categories?.name || 'Berita'}</div>
-        <div class="side-title">${s.title}</div>
-        <div class="side-meta">
-          ${s.rating ? `<span class="rating-star">★ ${s.rating}</span>` : ''}
-          <span>${timeAgo(s.created_at)}</span>
-        </div>
-      </div>
-    </a>`).join('');
-
-  heroGrid.innerHTML = `
-    <a href="/${main.slug}" class="hero-main">
-      <div class="hero-main-img">
-        ${mainImgHTML}
-        <div class="hero-img-overlay"></div>
-        <span class="hero-badge">${heroBadge}</span>
-        ${main.views ? `<span class="hero-views-pill">👁 ${fmtViews(main.views)}</span>` : ''}
-      </div>
-      <div class="hero-main-body">
-        <div class="hero-cat">${main.categories?.name || 'Berita'}</div>
-        <h2 class="hero-title">${main.title}</h2>
-        <p class="hero-excerpt">${main.excerpt || ''}</p>
-        <div class="hero-footer">
-          <div class="hero-meta">
-            ${main.rating ? `<span class="rating-star">★ ${main.rating}</span>` : ''}
-            <span>${timeAgo(main.created_at)}</span>
-          </div>
-          <span class="btn-baca">Baca →</span>
-        </div>
-      </div>
-    </a>
-    <div class="hero-sidebar">${sideHTML}</div>`;
-}
-
-/* ===== CONTENT CARD ===== */
-function contentCardHTML(item) {
-  const type = item.post_type || 'review';
-
-  const ribbonMap  = {
-    review:  ['ribbon-review',  '📝 Review'],
-    list:    ['ribbon-list',    '📋 List'],
-    video:   ['ribbon-video',   '▶ Video'],
-    news:    ['ribbon-news',    '📰 Berita'],
-    article: ['ribbon-article', '📝 Artikel'],
-  };
-  const [ribbonCls, ribbonTxt] = ribbonMap[type] || ribbonMap.review;
-
-  const mediaHTML = item.video_url && type === 'video'
-    ? `<div class="card-video-wrap" style="width:100%;height:100%;position:relative">
-        <img src="${item.image_url || ''}" alt="${item.title}" loading="lazy" style="width:100%;height:100%;object-fit:cover">
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
-          <div style="width:48px;height:48px;background:rgba(0,0,0,0.65);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff">▶</div>
-        </div>
-      </div>`
-    : item.image_url
-      ? `<img src="${item.image_url}" alt="${item.title}" loading="lazy">`
-      : `<div style="font-size:44px">${item.emoji || (type === 'list' ? '📋' : type === 'video' ? '▶️' : type === 'news' ? '📰' : '📝')}</div>`;
-
-  const showTrending = item.views > 100;
-
-  return `
-    <a href="/${item.slug}" class="content-card" role="listitem">
-      <div class="card-media">
-        ${mediaHTML}
-        <span class="card-ribbon ${ribbonCls}">${ribbonTxt}</span>
-        ${item.rating && type === 'review' ? `<span class="card-rating-pill">★ ${item.rating}</span>` : ''}
-        ${type === 'video' && item.duration ? `<span class="card-video-badge">${item.duration}</span>` : ''}
-        ${showTrending ? `<span class="card-trending-pill">🔥 ${fmtViews(item.views)}</span>` : ''}
-      </div>
-      <div class="card-body">
-        <div class="card-cat">${item.categories?.name || (type === 'list' ? 'List Produk' : type === 'news' ? 'Berita' : 'Artikel')}</div>
-        <h3 class="card-title">${item.title}</h3>
-        <p class="card-excerpt">${item.excerpt || ''}</p>
-        <div class="card-footer">
-          <span class="card-time">${timeAgo(item.created_at)}</span>
-          ${item.views ? `<span class="card-views">👁 ${fmtViews(item.views)}</span>` : ''}
-        </div>
-      </div>
-    </a>`;
-}
-
-/* ===== SKELETON ===== */
-function renderSkeletons(container, count) {
-  if (!container) return;
-  container.innerHTML = Array(count).fill('').map(() => `
-    <div class="skeleton-card" role="listitem">
-      <div class="skeleton sk-img"></div>
-      <div class="sk-body">
-        <div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div>
-        <div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div>
-        <div class="skeleton sk-line" style="width:100%;margin-bottom:6px"></div>
-        <div class="skeleton sk-line" style="width:55%"></div>
-      </div>
-    </div>`).join('');
-}
-
-/* ===== EMPTY STATE ===== */
-function emptyStateHTML(icon, title, desc) {
-  return `<div class="empty-state">
-    <div class="empty-icon">${icon}</div>
-    <div class="empty-title">${title}</div>
-    <div class="empty-desc">${desc}</div>
-  </div>`;
-}
-
-/* ===== LOAD CONTENT (Berita & Artikel) ===== */
-async function loadContent(reset = false) {
-  if (isLoading) return;
-  isLoading = true;
-
-  const grid    = document.getElementById('content-grid');
-  const lmWrap  = document.getElementById('load-more-wrap');
-  const lmBtn   = document.getElementById('btn-load-more');
+async function initHomepage() {
+  const grid        = $("#articles-grid");
+  const heroTitle   = $(".hero-title");
+  const heroBadge   = $(".hero-badge");
+  const tabs        = $$("[data-tab]");
+  const paginationEl = $("#pagination");
   if (!grid) return;
 
-  if (reset) {
-    currentPage = 0;
-    renderSkeletons(grid, 6);
-    if (lmWrap) lmWrap.style.display = 'none';
-  }
+  let currentTab  = "terbaru";
+  let currentPage = 1;
+  const limit     = 9;
 
-  // Bangun URL — exclude_type=review agar tab hanya tampilkan berita/artikel
-  let url = `/reviews?limit=${PAGE_SIZE + 1}&offset=${currentPage * PAGE_SIZE}&exclude_type=review`;
-  if (currentTab === 'rekomendasi') url += '&featured=true';
-  if (currentTab === 'trending')    url += '&sort=trending';
-  if (currentCat !== 'all')         url += `&category=${currentCat}`;
+  const tabConfig = {
+    rekomendasi: { sort: "popular",  type: null,    label: "Rekomendasi",  badge: "Pilihan Editor" },
+    trending:    { sort: "popular",  type: null,    label: "Trending",     badge: "Sedang Viral" },
+    terbaru:     { sort: "latest",   type: null,    label: "Terbaru",      badge: "Baru Diterbitkan" },
+  };
 
-  const data  = await fetchAPI(url);
-  const all   = data?.data || data || [];
-  hasMore     = all.length > PAGE_SIZE;
-  const items = hasMore ? all.slice(0, PAGE_SIZE) : all;
+  async function loadTab(tab, page = 1) {
+    currentTab  = tab;
+    currentPage = page;
+    const cfg   = tabConfig[tab];
 
-  if (reset) {
-    if (!items.length) {
-      const msgs = {
-        rekomendasi: ['⭐', 'Belum ada rekomendasi', 'Tandai konten berita/artikel sebagai featured di admin panel'],
-        trending:    ['🔥', 'Belum ada trending',    'Konten akan muncul seiring bertambahnya pembaca'],
-        terbaru:     ['🆕', 'Belum ada konten',       'Upload konten pertama lewat admin panel'],
-      };
-      const [icon, title, desc] = msgs[currentTab] || ['📭', 'Belum ada', 'Segera hadir'];
-      grid.innerHTML = emptyStateHTML(icon, title, desc);
-    } else {
-      grid.innerHTML = items.map(contentCardHTML).join('');
+    grid.innerHTML = renderCardSkeleton(limit);
+    if (paginationEl) paginationEl.innerHTML = "";
+
+    // Update hero
+    if (heroTitle) heroTitle.textContent = cfg.label;
+    if (heroBadge) heroBadge.textContent = cfg.badge;
+
+    // Update active tab
+    tabs.forEach(t => {
+      t.classList.toggle("active", t.dataset.tab === tab);
+      t.setAttribute("aria-selected", t.dataset.tab === tab);
+    });
+
+    try {
+      let url = `/api/articles?sort=${cfg.sort}&page=${page}&limit=${limit}`;
+      if (cfg.type) url += `&type=${cfg.type}`;
+      const res = await apiFetch(url);
+      const articles = res.data || [];
+
+      if (!articles.length) {
+        grid.innerHTML = renderEmpty("Belum ada konten.");
+        return;
+      }
+
+      grid.innerHTML = articles.map(renderCard).join("");
+
+      renderPagination(paginationEl, {
+        page, limit, total: res.total,
+        onPageChange: (p) => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          loadTab(currentTab, p);
+        }
+      });
+    } catch (e) {
+      grid.innerHTML = renderError();
     }
-  } else {
-    grid.insertAdjacentHTML('beforeend', items.map(contentCardHTML).join(''));
   }
 
-  if (lmWrap) lmWrap.style.display = hasMore ? 'flex' : 'none';
-  if (lmBtn)  { lmBtn.textContent = 'Muat Lebih Banyak'; lmBtn.disabled = false; }
+  // Tab click
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      loadTab(tab.dataset.tab, 1);
+    });
+  });
 
-  isLoading = false;
+  // Sidebar trending
+  await loadSidebarTrending();
+
+  // Initial load
+  loadTab(currentTab, 1);
 }
 
-/* ===== LOAD MORE ===== */
-function initLoadMore() {
-  const btn = document.getElementById('btn-load-more');
-  btn?.addEventListener('click', async () => {
-    btn.textContent = '⏳ Memuat...';
-    btn.disabled    = true;
-    currentPage++;
-    await loadContent(false);
+// ============================================================
+// PAGE: BERITA
+// ============================================================
+
+async function initBeritaPage() {
+  const grid        = $("#articles-grid");
+  const paginationEl = $("#pagination");
+  const pageTitle   = $(".page-title");
+  if (!grid) return;
+
+  if (pageTitle) pageTitle.textContent = "Berita Terkini";
+
+  let currentPage = parseInt(getParam("page")) || 1;
+  const limit = 12;
+
+  async function loadBerita(page = 1) {
+    currentPage = page;
+    grid.innerHTML = renderCardSkeleton(limit);
+    if (paginationEl) paginationEl.innerHTML = "";
+
+    try {
+      const res = await apiFetch(`/api/articles?type=news&sort=latest&page=${page}&limit=${limit}`);
+      const articles = res.data || [];
+
+      grid.innerHTML = articles.length
+        ? articles.map(renderCard).join("")
+        : renderEmpty("Belum ada berita.");
+
+      renderPagination(paginationEl, {
+        page, limit, total: res.total,
+        onPageChange: (p) => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          loadBerita(p);
+        }
+      });
+    } catch {
+      grid.innerHTML = renderError();
+    }
+  }
+
+  await loadSidebarTrending("news");
+  loadBerita(currentPage);
+}
+
+// ============================================================
+// PAGE: ARTIKEL
+// ============================================================
+
+async function initArtikelPage() {
+  const grid        = $("#articles-grid");
+  const paginationEl = $("#pagination");
+  const pageTitle   = $(".page-title");
+  if (!grid) return;
+
+  if (pageTitle) pageTitle.textContent = "Semua Artikel";
+
+  let currentPage = parseInt(getParam("page")) || 1;
+  const limit = 12;
+
+  async function loadArtikel(page = 1) {
+    currentPage = page;
+    grid.innerHTML = renderCardSkeleton(limit);
+    if (paginationEl) paginationEl.innerHTML = "";
+
+    try {
+      const res = await apiFetch(`/api/articles?type=article&sort=latest&page=${page}&limit=${limit}`);
+      const articles = res.data || [];
+
+      grid.innerHTML = articles.length
+        ? articles.map(renderCard).join("")
+        : renderEmpty("Belum ada artikel.");
+
+      renderPagination(paginationEl, {
+        page, limit, total: res.total,
+        onPageChange: (p) => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          loadArtikel(p);
+        }
+      });
+    } catch {
+      grid.innerHTML = renderError();
+    }
+  }
+
+  await loadSidebarTrending("article");
+  loadArtikel(currentPage);
+}
+
+// ============================================================
+// PAGE: KATEGORI (list semua kategori)
+// ============================================================
+
+async function initKategoriPage() {
+  const grid = $("#categories-grid");
+  if (!grid) return;
+
+  grid.innerHTML = `<div class="skeleton-line" aria-hidden="true"></div>`;
+
+  try {
+    const categories = await apiFetch("/api/categories");
+
+    if (!categories.length) {
+      grid.innerHTML = renderEmpty("Belum ada kategori.");
+      return;
+    }
+
+    grid.innerHTML = categories.map(cat => `
+      <a href="/kategori-detail.html?slug=${escapeHtml(cat.slug)}" class="category-card">
+        <h2 class="category-card-name">${escapeHtml(cat.name)}</h2>
+        ${cat.description ? `<p class="category-card-desc">${escapeHtml(cat.description)}</p>` : ""}
+      </a>`).join("");
+  } catch {
+    grid.innerHTML = renderError();
+  }
+}
+
+// ============================================================
+// PAGE: KATEGORI DETAIL
+// ============================================================
+
+async function initKategoriDetailPage() {
+  const slug        = getParam("slug");
+  const grid        = $("#articles-grid");
+  const paginationEl = $("#pagination");
+  const titleEl     = $(".page-title");
+  const descEl      = $(".page-description");
+  if (!grid || !slug) return;
+
+  let currentPage = parseInt(getParam("page")) || 1;
+  const limit = 12;
+
+  async function loadKategori(page = 1) {
+    currentPage = page;
+    grid.innerHTML = renderCardSkeleton(limit);
+    if (paginationEl) paginationEl.innerHTML = "";
+
+    try {
+      const res = await apiFetch(`/api/categories/${encodeURIComponent(slug)}?page=${page}&limit=${limit}`);
+
+      if (titleEl) titleEl.textContent = res.category?.name || slug;
+      if (descEl && res.category?.description) descEl.textContent = res.category.description;
+
+      // Update page title & meta
+      document.title = `${res.category?.name || slug} — Revpeak`;
+
+      const articles = res.data || [];
+      grid.innerHTML = articles.length
+        ? articles.map(renderCard).join("")
+        : renderEmpty("Belum ada konten dalam kategori ini.");
+
+      renderPagination(paginationEl, {
+        page, limit, total: res.total,
+        onPageChange: (p) => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          loadKategori(p);
+        }
+      });
+    } catch {
+      grid.innerHTML = renderError();
+    }
+  }
+
+  loadKategori(currentPage);
+}
+
+// ============================================================
+// PAGE: PENULIS (list semua penulis)
+// ============================================================
+
+async function initPenulisPage() {
+  const grid = $("#authors-grid");
+  if (!grid) return;
+
+  grid.innerHTML = `<div class="skeleton-line" aria-hidden="true"></div>`;
+
+  try {
+    const authors = await apiFetch("/api/authors");
+
+    if (!authors.length) {
+      grid.innerHTML = renderEmpty("Belum ada penulis.");
+      return;
+    }
+
+    grid.innerHTML = authors.map(author => `
+      <a href="/penulis-detail.html?slug=${escapeHtml(author.slug)}" class="author-card">
+        <div class="author-card-avatar">
+          ${author.avatar_url
+            ? `<img src="${escapeHtml(author.avatar_url)}" alt="${escapeHtml(author.name)}" loading="lazy">`
+            : `<div class="author-avatar-placeholder" aria-hidden="true">${escapeHtml(author.name.charAt(0).toUpperCase())}</div>`}
+        </div>
+        <div class="author-card-info">
+          <h2 class="author-card-name">${escapeHtml(author.name)}</h2>
+          ${author.bio ? `<p class="author-card-bio">${escapeHtml(author.bio)}</p>` : ""}
+        </div>
+      </a>`).join("");
+  } catch {
+    grid.innerHTML = renderError();
+  }
+}
+
+// ============================================================
+// PAGE: PENULIS DETAIL
+// ============================================================
+
+async function initPenulisDetailPage() {
+  const slug        = getParam("slug");
+  const grid        = $("#articles-grid");
+  const paginationEl = $("#pagination");
+  const nameEl      = $(".author-name");
+  const bioEl       = $(".author-bio");
+  const avatarEl    = $(".author-avatar");
+  if (!grid || !slug) return;
+
+  let currentPage = 1;
+  const limit = 12;
+
+  async function loadPenulis(page = 1) {
+    currentPage = page;
+    grid.innerHTML = renderCardSkeleton(limit);
+    if (paginationEl) paginationEl.innerHTML = "";
+
+    try {
+      const res = await apiFetch(`/api/authors/${encodeURIComponent(slug)}?page=${page}&limit=${limit}`);
+
+      if (nameEl) nameEl.textContent = res.author?.name || slug;
+      if (bioEl && res.author?.bio) bioEl.textContent = res.author.bio;
+      if (avatarEl && res.author?.avatar_url) {
+        avatarEl.src = res.author.avatar_url;
+        avatarEl.alt = res.author.name;
+      }
+
+      document.title = `${res.author?.name || slug} — Revpeak`;
+
+      const articles = res.data || [];
+      grid.innerHTML = articles.length
+        ? articles.map(renderCard).join("")
+        : renderEmpty("Penulis ini belum memiliki artikel.");
+
+      renderPagination(paginationEl, {
+        page, limit, total: res.total,
+        onPageChange: (p) => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          loadPenulis(p);
+        }
+      });
+    } catch {
+      grid.innerHTML = renderError();
+    }
+  }
+
+  loadPenulis(currentPage);
+}
+
+// ============================================================
+// PAGE: SEARCH
+// ============================================================
+
+async function initSearchPage() {
+  const grid     = $("#articles-grid");
+  const input    = $("#search-input");
+  const form     = $("#search-form");
+  const queryEl  = $(".search-query-label");
+  if (!grid) return;
+
+  const q = getParam("q");
+
+  if (input) input.value = q;
+  if (queryEl && q) queryEl.textContent = `Hasil pencarian: "${q}"`;
+
+  if (!q.trim()) {
+    grid.innerHTML = renderEmpty("Masukkan kata kunci untuk mencari.");
+    return;
+  }
+
+  grid.innerHTML = renderCardSkeleton(6);
+
+  try {
+    const res = await apiFetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const articles = res.data || [];
+
+    if (queryEl) queryEl.textContent = `Ditemukan ${articles.length} hasil untuk "${q}"`;
+
+    grid.innerHTML = articles.length
+      ? articles.map(renderCard).join("")
+      : renderEmpty(`Tidak ada hasil untuk "${q}".`);
+  } catch {
+    grid.innerHTML = renderError();
+  }
+
+  // Search form submit
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const val = (input?.value || "").trim();
+      if (val) window.location.href = `/search.html?q=${encodeURIComponent(val)}`;
+    });
+  }
+}
+
+// ============================================================
+// SIDEBAR: TRENDING
+// ============================================================
+
+async function loadSidebarTrending(type = null) {
+  const sidebar = $("#sidebar-trending");
+  if (!sidebar) return;
+
+  try {
+    let url = "/api/trending?limit=5";
+    if (type) url += `&type=${type}`;
+    const articles = await apiFetch(url);
+
+    if (!articles.length) { sidebar.innerHTML = ""; return; }
+
+    sidebar.innerHTML = `
+      <h3 class="sidebar-title">Trending</h3>
+      <ol class="trending-list">
+        ${articles.map((a, i) => `
+          <li class="trending-item">
+            <span class="trending-number" aria-hidden="true">${i + 1}</span>
+            <a href="/${escapeHtml(a.slug)}" class="trending-title">${escapeHtml(a.title)}</a>
+          </li>`).join("")}
+      </ol>`;
+  } catch {
+    sidebar.innerHTML = "";
+  }
+}
+
+// ============================================================
+// GLOBAL: SEARCH BAR (header)
+// ============================================================
+
+function initHeaderSearch() {
+  const form  = $("#header-search-form");
+  const input = $("#header-search-input");
+  if (!form || !input) return;
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const val = input.value.trim();
+    if (val) window.location.href = `/search.html?q=${encodeURIComponent(val)}`;
   });
 }
 
-/* ===== SEKSI REVIEW PRODUK ===== */
-async function loadProductSection() {
-  const grid = document.getElementById('product-grid');
-  if (!grid) return;
+// ============================================================
+// GLOBAL: NAVIGATION ACTIVE STATE
+// ============================================================
 
-  // Tampilkan skeleton
-  renderSkeletons(grid, 6);
-
-  // Ambil review produk terpopuler (hanya post_type=review)
-  const data  = await fetchAPI('/reviews?type=review&limit=6&sort=trending');
-  const items = data?.data || [];
-
-  if (!items.length) {
-    grid.innerHTML = emptyStateHTML('📦', 'Belum ada review produk', 'Segera hadir di sini');
-    return;
-  }
-  grid.innerHTML = items.map(contentCardHTML).join('');
+function initNavActiveState() {
+  const path = window.location.pathname;
+  $$("nav a[href]").forEach(link => {
+    try {
+      const linkPath = new URL(link.href, window.location.origin).pathname;
+      link.classList.toggle("active", linkPath === path);
+      link.setAttribute("aria-current", linkPath === path ? "page" : "false");
+    } catch {}
+  });
 }
 
-/* ===== STICKY HEADER SHADOW ===== */
-function initHeaderShadow() {
-  const header = document.getElementById('header');
-  if (!header) return;
-  window.addEventListener('scroll', () => {
-    header.style.boxShadow = window.scrollY > 10 ? 'var(--shadow-md)' : '';
-  }, { passive: true });
-}
+// ============================================================
+// ROUTER — deteksi halaman dan jalankan init yang sesuai
+// ============================================================
 
-/* ===== INIT ===== */
-document.addEventListener('DOMContentLoaded', () => {
-  initTheme();
-  initDrawer();
-  initSearch();
-  initScrollTop();
-  initTabs();
-  initLoadMore();
-  initHeaderShadow();
-  loadCategories();
-  loadHero(currentTab);
-  loadContent(true);
-  loadProductSection(); // ← Muat seksi review produk
+document.addEventListener("DOMContentLoaded", () => {
+  initHeaderSearch();
+  initNavActiveState();
+
+  const path = window.location.pathname;
+  const page = path.split("/").pop() || "index.html";
+
+  if (page === "" || page === "index.html")              initHomepage();
+  else if (page === "berita.html")                       initBeritaPage();
+  else if (page === "artikel.html")                      initArtikelPage();
+  else if (page === "kategori.html")                     initKategoriPage();
+  else if (page === "kategori-detail.html")              initKategoriDetailPage();
+  else if (page === "penulis.html")                      initPenulisPage();
+  else if (page === "penulis-detail.html")               initPenulisDetailPage();
+  else if (page === "search.html")                       initSearchPage();
 });
