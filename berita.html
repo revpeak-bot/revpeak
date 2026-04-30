@@ -3,188 +3,81 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Berita dan artikel terbaru dari Revpeak — tips, panduan, informasi teknologi, dan lebih banyak lagi.">
-  <meta property="og:title" content="Berita &amp; Artikel — Revpeak">
-  <meta property="og:description" content="Baca berita terkini, artikel informatif, dan konten terpilih dari Revpeak.">
+  <meta name="description" content="Berita terkini dari Revpeak — informasi teknologi, bisnis, gaya hidup, dan lebih banyak lagi.">
+  <meta property="og:title" content="Berita Terkini — Revpeak">
+  <meta property="og:description" content="Baca berita terkini dan informasi terpilih dari Revpeak.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://revpeak.web.id/berita">
+  <meta property="og:url" content="https://revpeak.web.id/berita.html">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://revpeak.web.id/berita">
+  <link rel="canonical" href="https://revpeak.web.id/berita.html">
   <link rel="icon" type="image/webp" href="logo-revpeak.webp">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
-  <title>Berita &amp; Artikel — Revpeak</title>
+  <title>Berita Terkini — Revpeak</title>
   <style>
-    /* ===== PAGE HEADER ===== */
     .page-header {
       background: var(--bg-card, #fff);
       border-bottom: 1px solid var(--border, #ebebeb);
       padding: 28px 0 20px;
     }
-    [data-theme="dark"] .page-header {
-      background: #111;
-      border-color: #222;
-    }
-    .page-header-inner {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
+    [data-theme="dark"] .page-header { background: #111; border-color: #222; }
+    .page-header-inner { display: flex; flex-direction: column; gap: 6px; }
     .page-header-eyebrow {
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-muted, #999);
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-muted, #999);
     }
     .page-header-title {
-      font-family: 'Syne', sans-serif;
-      font-size: 1.6rem;
-      font-weight: 800;
-      color: var(--text-primary, #111);
-      letter-spacing: -0.5px;
-      line-height: 1.2;
-      margin: 0;
+      font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800;
+      color: var(--text-primary, #111); letter-spacing: -0.5px; line-height: 1.2; margin: 0;
     }
     [data-theme="dark"] .page-header-title { color: #f0f0f0; }
-    .page-header-desc {
-      font-size: 0.85rem;
-      color: var(--text-muted, #888);
-      margin: 0;
-      line-height: 1.5;
-    }
+    .page-header-desc { font-size: 0.85rem; color: var(--text-muted, #888); margin: 0; line-height: 1.5; }
 
-    /* ===== TYPE CHIPS ===== */
     .type-chips-wrap {
-      background: var(--bg-card, #fff);
-      border-bottom: 1px solid var(--border, #ebebeb);
-      padding: 12px 0;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      background: var(--bg-card, #fff); border-bottom: 1px solid var(--border, #ebebeb);
+      padding: 12px 0; position: sticky; top: 0; z-index: 100;
     }
-    [data-theme="dark"] .type-chips-wrap {
-      background: #111;
-      border-color: #222;
-    }
+    [data-theme="dark"] .type-chips-wrap { background: #111; border-color: #222; }
     .type-chips-scroll {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      padding: 0 4px;
-      -webkit-overflow-scrolling: touch;
+      display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+      padding: 0 4px; -webkit-overflow-scrolling: touch;
     }
     .type-chips-scroll::-webkit-scrollbar { display: none; }
     .type-chip {
-      flex-shrink: 0;
-      padding: 7px 14px;
-      border-radius: 20px;
-      border: 1.5px solid var(--border, #e5e5e5);
-      background: transparent;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-secondary, #666);
-      cursor: pointer;
-      white-space: nowrap;
+      flex-shrink: 0; padding: 7px 14px; border-radius: 20px;
+      border: 1.5px solid var(--border, #e5e5e5); background: transparent;
+      font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600;
+      color: var(--text-secondary, #666); cursor: pointer; white-space: nowrap;
       transition: all 0.18s ease;
     }
-    .type-chip:hover {
-      border-color: #bbb;
-      color: var(--text-primary, #111);
-    }
-    .type-chip.active {
-      background: var(--text-primary, #111);
-      border-color: var(--text-primary, #111);
-      color: #fff;
-    }
-    [data-theme="dark"] .type-chip {
-      border-color: #333;
-      color: #aaa;
-    }
-    [data-theme="dark"] .type-chip.active {
-      background: #f0f0f0;
-      border-color: #f0f0f0;
-      color: #111;
-    }
+    .type-chip:hover { border-color: #bbb; color: var(--text-primary, #111); }
+    .type-chip.active { background: var(--text-primary, #111); border-color: var(--text-primary, #111); color: #fff; }
+    [data-theme="dark"] .type-chip { border-color: #333; color: #aaa; }
+    [data-theme="dark"] .type-chip.active { background: #f0f0f0; border-color: #f0f0f0; color: #111; }
 
-    /* ===== TOOLBAR ===== */
     .berita-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
     }
     .berita-toolbar h2 {
-      font-family: 'Syne', sans-serif;
-      font-size: 1.05rem;
-      font-weight: 800;
-      color: var(--text-primary, #111);
-      letter-spacing: -0.3px;
-      margin: 0;
+      font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 800;
+      color: var(--text-primary, #111); letter-spacing: -0.3px; margin: 0;
     }
     [data-theme="dark"] .berita-toolbar h2 { color: #f0f0f0; }
     .berita-sort {
-      padding: 7px 12px;
-      border-radius: 8px;
-      border: 1.5px solid var(--border, #e5e5e5);
-      background: transparent;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-secondary, #666);
-      cursor: pointer;
+      padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border, #e5e5e5);
+      background: transparent; font-family: 'DM Sans', sans-serif; font-size: 0.8rem;
+      font-weight: 600; color: var(--text-secondary, #666); cursor: pointer;
     }
-    [data-theme="dark"] .berita-sort {
-      border-color: #333;
-      color: #aaa;
-      background: #1a1a1a;
-    }
-
-    /* ===== LOAD MORE ===== */
-    .load-more-wrap {
-      display: none;
-      justify-content: center;
-      margin-top: 32px;
-    }
-    .btn-load-more {
-      padding: 12px 32px;
-      border-radius: 12px;
-      border: 2px solid var(--border, #e5e5e5);
-      background: transparent;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: var(--text-primary, #111);
-      cursor: pointer;
-      transition: all 0.18s ease;
-    }
-    .btn-load-more:hover {
-      background: var(--text-primary, #111);
-      color: #fff;
-      border-color: var(--text-primary, #111);
-    }
-    [data-theme="dark"] .btn-load-more {
-      border-color: #333;
-      color: #f0f0f0;
-    }
-    [data-theme="dark"] .btn-load-more:hover {
-      background: #f0f0f0;
-      color: #111;
-    }
+    [data-theme="dark"] .berita-sort { border-color: #333; color: #aaa; background: #1a1a1a; }
   </style>
 </head>
 <body>
 
-  <!-- ===== DRAWER OVERLAY ===== -->
   <div class="drawer-overlay" id="drawer-overlay"></div>
 
-  <!-- ===== DRAWER MENU ===== -->
   <aside class="drawer" id="drawer" aria-label="Menu navigasi" aria-hidden="true">
     <div class="drawer-header">
       <div class="drawer-logo">
@@ -196,30 +89,14 @@
       </button>
     </div>
     <nav class="drawer-nav">
-      <a href="/" class="drawer-link">
-        <span class="drawer-link-icon">🏠</span>
-        <span>Beranda</span>
-      </a>
-      <a href="berita.html" class="drawer-link active">
-        <span class="drawer-link-icon">📰</span>
-        <span>Berita &amp; Artikel</span>
-      </a>
-      <a href="kategori.html" class="drawer-link">
-        <span class="drawer-link-icon">📦</span>
-        <span>Review Produk</span>
-      </a>
-      <a href="tokoh.html" class="drawer-link">
-        <span class="drawer-link-icon">👤</span>
-        <span>Tokoh</span>
-      </a>
-      <a href="tentang.html" class="drawer-link">
-        <span class="drawer-link-icon">ℹ️</span>
-        <span>Tentang</span>
-      </a>
-      <a href="kontak.html" class="drawer-link">
-        <span class="drawer-link-icon">💬</span>
-        <span>Dukungan</span>
-      </a>
+      <a href="/" class="drawer-link"><span class="drawer-link-icon">🏠</span><span>Beranda</span></a>
+      <a href="berita.html" class="drawer-link active"><span class="drawer-link-icon">📰</span><span>Berita</span></a>
+      <a href="artikel.html" class="drawer-link"><span class="drawer-link-icon">📝</span><span>Artikel</span></a>
+      <a href="kategori.html" class="drawer-link"><span class="drawer-link-icon">🗂️</span><span>Kategori</span></a>
+      <a href="penulis.html" class="drawer-link"><span class="drawer-link-icon">👤</span><span>Penulis</span></a>
+      <a href="search.html" class="drawer-link"><span class="drawer-link-icon">🔍</span><span>Cari</span></a>
+      <a href="tentang.html" class="drawer-link"><span class="drawer-link-icon">ℹ️</span><span>Tentang</span></a>
+      <a href="kontak.html" class="drawer-link"><span class="drawer-link-icon">💬</span><span>Kontak</span></a>
     </nav>
     <div class="drawer-footer">
       <div class="drawer-theme-row">
@@ -228,11 +105,10 @@
           <span class="theme-toggle-thumb"></span>
         </button>
       </div>
-      <p class="drawer-version">Revpeak v2.0</p>
+      <p class="drawer-version">Revpeak v3.0</p>
     </div>
   </aside>
 
-  <!-- ===== HEADER ===== -->
   <header class="header" id="header">
     <div class="header-top">
       <div class="header-top-inner container">
@@ -246,65 +122,56 @@
           </div>
           <div class="header-logo-text">
             <span class="logo-text">Rev<span>peak</span></span>
-            <span class="logo-tagline">Berita &amp; Artikel</span>
+            <span class="logo-tagline">Berita &amp; Artikel Terpercaya</span>
           </div>
         </a>
       </div>
     </div>
-    <!-- Search bar -->
     <div class="header-search-wrap">
       <div class="container">
-        <div class="header-search-inner">
-          <svg class="search-icon-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <form id="header-search-form" class="header-search-inner" role="search" aria-label="Cari artikel">
+          <svg class="search-icon-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input type="search" id="search-input" class="search-input" placeholder="Cari berita, artikel, topik..." autocomplete="off" aria-label="Cari konten">
-          <button class="search-clear" id="search-clear" aria-label="Hapus pencarian">✕</button>
-        </div>
+          <input type="search" id="header-search-input" class="search-input" placeholder="Cari berita, artikel, topik..." autocomplete="off" aria-label="Cari konten">
+          <button type="button" class="search-clear" id="search-clear" aria-label="Hapus pencarian">✕</button>
+        </form>
       </div>
     </div>
   </header>
 
-  <!-- ===== PAGE HEADER ===== -->
   <div class="page-header">
     <div class="container">
       <div class="page-header-inner">
-        <p class="page-header-eyebrow">📰 Konten Terkini</p>
-        <h1 class="page-header-title">Berita &amp; Artikel</h1>
-        <p class="page-header-desc">Informasi terbaru, tips, panduan, dan konten pilihan dari Revpeak.</p>
+        <p class="page-header-eyebrow">📰 Berita</p>
+        <h1 class="page-header-title page-title">Berita Terkini</h1>
+        <p class="page-header-desc">Informasi terbaru seputar teknologi, bisnis, dan gaya hidup dari tim Revpeak.</p>
       </div>
     </div>
   </div>
 
-  <!-- ===== TYPE FILTER CHIPS ===== -->
-  <div class="type-chips-wrap" id="type-chips-wrap">
+  <div class="type-chips-wrap">
     <div class="container">
-      <div class="type-chips-scroll" id="type-chips" role="group" aria-label="Filter tipe konten">
+      <div class="type-chips-scroll" role="group" aria-label="Filter tipe konten">
         <button class="type-chip active" data-type="all">🌟 Semua</button>
         <button class="type-chip" data-type="news">📰 Berita</button>
         <button class="type-chip" data-type="article">📝 Artikel</button>
-        <button class="type-chip" data-type="list">📋 Daftar</button>
-        <button class="type-chip" data-type="video">▶ Video</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== MAIN CONTENT ===== -->
-  <main class="main-section" style="padding-top: 24px;">
+  <main class="main-section" style="padding-top:24px" id="main-content">
     <div class="container">
 
-      <!-- Toolbar: judul + sort -->
       <div class="berita-toolbar">
         <h2 id="berita-section-title">Semua Konten</h2>
-        <select class="berita-sort" id="berita-sort" onchange="onBeritaSortChange()" aria-label="Urutkan konten">
-          <option value="newest">🕐 Terbaru</option>
+        <select class="berita-sort" id="sort-select" aria-label="Urutkan konten">
+          <option value="latest">🕐 Terbaru</option>
           <option value="popular">🔥 Terpopuler</option>
         </select>
       </div>
 
-      <!-- Content grid -->
-      <div class="content-grid" id="berita-grid" role="list" aria-label="Daftar berita dan artikel">
-        <!-- Skeleton awal -->
+      <div id="articles-grid" class="content-grid" role="list" aria-label="Daftar berita dan artikel" aria-live="polite">
         <div class="skeleton-card" role="listitem"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
         <div class="skeleton-card" role="listitem"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
         <div class="skeleton-card" role="listitem"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
@@ -313,15 +180,11 @@
         <div class="skeleton-card" role="listitem"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
       </div>
 
-      <!-- Load more -->
-      <div class="load-more-wrap" id="load-more-wrap">
-        <button class="btn-load-more" id="btn-load-more">Muat Lebih Banyak</button>
-      </div>
+      <div id="pagination" class="pagination-wrap" aria-label="Navigasi halaman"></div>
 
     </div>
   </main>
 
-  <!-- ===== FOOTER ===== -->
   <footer class="footer">
     <div class="container">
       <div class="footer-grid">
@@ -330,25 +193,23 @@
             <div class="logo-icon"><img src="logo-revpeak.webp" alt="Revpeak logo" style="width:100%;height:100%;object-fit:contain;"></div>
             <span class="logo-text">Rev<span>peak</span></span>
           </div>
-          <p class="footer-desc">Review jujur dan mendalam untuk membantu Anda membuat keputusan belanja yang lebih cerdas.</p>
-          <p class="footer-affiliate-note">⚠️ Beberapa tautan di situs ini adalah tautan afiliasi. Hal ini tidak memengaruhi penilaian kami.</p>
+          <p class="footer-desc">Kami menyajikan berita terkini dan artikel mendalam yang bermanfaat untuk Anda setiap hari.</p>
         </div>
         <div class="footer-col">
           <h3>Navigasi</h3>
           <a href="/">Beranda</a>
-          <a href="berita.html">Berita &amp; Artikel</a>
-          <a href="kategori.html">Review Produk</a>
-          <a href="tokoh.html">Tokoh</a>
+          <a href="berita.html">Berita</a>
+          <a href="artikel.html">Artikel</a>
+          <a href="kategori.html">Kategori</a>
+          <a href="penulis.html">Penulis</a>
           <a href="tentang.html">Tentang Kami</a>
-          <a href="kontak.html">Dukungan</a>
+          <a href="kontak.html">Kontak</a>
         </div>
         <div class="footer-col">
-          <h3>Kategori</h3>
-          <a href="kategori.html">Semua Kategori</a>
-          <a href="kategori.html?cat=fashion">👗 Fashion</a>
-          <a href="kategori.html?cat=elektronik">📱 Elektronik</a>
-          <a href="kategori.html?cat=makanan">🍜 Makanan</a>
-          <a href="kategori.html?cat=kecantikan">💄 Kecantikan</a>
+          <h3>Jelajahi</h3>
+          <a href="search.html">Cari Artikel</a>
+          <a href="berita.html">Berita Terkini</a>
+          <a href="artikel.html">Artikel Pilihan</a>
         </div>
         <div class="footer-col">
           <h3>Legal</h3>
@@ -358,7 +219,7 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <p>© 2026 Revpeak. Semua hak dilindungi.</p>
+        <p>© <span id="footer-year"></span> Revpeak. Semua hak dilindungi.</p>
         <div class="social-links">
           <a href="#" aria-label="Instagram Revpeak">📸</a>
           <a href="#" aria-label="YouTube Revpeak">▶️</a>
@@ -368,10 +229,21 @@
     </div>
   </footer>
 
-  <!-- Scroll to top -->
   <button class="scroll-top" id="scroll-top" aria-label="Kembali ke atas">↑</button>
 
-  <script src="js/app.js"></script>
-  <script src="js/berita.js"></script>
+  <script>
+    document.getElementById("footer-year").textContent = new Date().getFullYear();
+
+    // Search clear
+    const si = document.getElementById("header-search-input");
+    const sc = document.getElementById("search-clear");
+    if (si && sc) {
+      sc.style.display = "none";
+      si.addEventListener("input", () => sc.style.display = si.value ? "" : "none");
+      sc.addEventListener("click", () => { si.value = ""; sc.style.display = "none"; si.focus(); });
+    }
+  </script>
+  <script src="js/seo.js" defer></script>
+  <script src="js/app.js" defer></script>
 </body>
 </html>
