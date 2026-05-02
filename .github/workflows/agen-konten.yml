@@ -1,1 +1,60 @@
+# ============================================================
+# REVPEAK — Agen Konten AI
+# Berjalan otomatis 6x sehari (setiap 4 jam)
+# ============================================================
 
+name: Agen Konten AI
+
+on:
+  # Jadwal: jam 0, 4, 8, 12, 16, 20 UTC
+  # (UTC+7 = jam 7, 11, 15, 19, 23, 03 WIB)
+  schedule:
+    - cron: "0 0,4,8,12,16,20 * * *"
+
+  # Bisa juga dijalankan manual dari tab Actions
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (generate tapi tidak simpan ke database)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  generate-konten:
+    name: Generate & Publish Konten
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # 1. Checkout repo
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # 3. Jalankan agen
+      - name: Jalankan Agen Konten
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
+          UNSPLASH_ACCESS_KEY:  ${{ secrets.UNSPLASH_ACCESS_KEY }}
+          DRY_RUN:              ${{ github.event.inputs.dry_run || 'false' }}
+        run: node agen-konten.js
+
+      # 4. Tampilkan status
+      - name: Selesai
+        if: success()
+        run: echo "✅ Agen konten berhasil berjalan."
+
+      - name: Gagal
+        if: failure()
+        run: echo "❌ Agen konten gagal. Periksa log di atas."
