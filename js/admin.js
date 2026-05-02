@@ -359,33 +359,50 @@ function renderListPagination(count) {
 // ============================================================
 
 function showView(viewId) {
-  // Sembunyikan semua view
-  $$(".apage").forEach(v => v.style.display = "none");
+  // Sembunyikan semua view — hapus juga atribut hidden agar tidak konflik
+  $$(".apage").forEach(v => {
+    v.style.display = "none";
+    v.removeAttribute("hidden");
+  });
   // Tampilkan view yang diminta
   const target = document.getElementById(`view-${viewId}`);
-  if (target) target.style.display = "block";
+  if (target) {
+    target.removeAttribute("hidden");
+    target.style.display = "block";
+  }
 }
 
 async function openNewForm() {
-  await loadDropdownData();
-  resetForm();
+  try {
+    showToast("Memuat form...", "info");
+    await loadDropdownData();
+    resetForm();
 
-  const draft = loadDraft();
-  if (draft && !draft.editingId) {
-    const useDraft = confirm(`Ada draft tersimpan pada ${formatDate(draft.savedAt)}.\nMau dilanjutkan?`);
-    if (useDraft) fillFormFromDraft(draft);
+    const draft = loadDraft();
+    if (draft && !draft.editingId) {
+      const useDraft = confirm(`Ada draft tersimpan pada ${formatDate(draft.savedAt)}.\nMau dilanjutkan?`);
+      if (useDraft) fillFormFromDraft(draft);
+    }
+
+    startAutosave();
+    showView("form");
+
+    const titleEl = document.getElementById("topbar-title");
+    if (titleEl) titleEl.textContent = "Tambah Artikel";
+
+    $("#f-title")?.focus();
+  } catch (e) {
+    showToast("Gagal membuka form: " + e.message, "error");
+    console.error("[openNewForm]", e);
   }
-
-  startAutosave();
-  showView("form");
-  $("#f-title")?.focus();
 }
 
 async function openEditForm(id) {
-  await loadDropdownData();
-  resetForm();
-
   try {
+    showToast("Memuat artikel...", "info");
+    await loadDropdownData();
+    resetForm();
+
     const articles = await dbFetch(`/articles?id=eq.${id}&select=*&limit=1`);
     if (!articles || !articles.length) { showToast("Artikel tidak ditemukan.", "error"); return; }
 
@@ -398,9 +415,14 @@ async function openEditForm(id) {
 
     showView("form");
     startAutosave();
+
+    const titleEl = document.getElementById("topbar-title");
+    if (titleEl) titleEl.textContent = "Edit Artikel";
+
     $("#f-title")?.focus();
   } catch (e) {
     showToast("Gagal memuat artikel: " + e.message, "error");
+    console.error("[openEditForm]", e);
   }
 }
 
@@ -915,8 +937,11 @@ function initFormBindings() {
 // ============================================================
 
 function initApp() {
-  // Sembunyikan semua view, tampilkan view-list
-  $$(".apage").forEach(v => v.style.display = "none");
+  // Sembunyikan semua view, hapus atribut hidden, tampilkan view-list
+  $$(".apage").forEach(v => {
+    v.style.display = "none";
+    v.removeAttribute("hidden");
+  });
   const listView = document.getElementById("view-list");
   if (listView) listView.style.display = "block";
 
