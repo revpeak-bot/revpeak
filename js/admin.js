@@ -5,7 +5,7 @@
 
 const API_BASE     = "https://revpeak-api.revpeak2.workers.dev";
 const SUPABASE_URL = "https://xfzqfowijriurfnheakg.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmenFmb3dpanJpdXJmbmhlYWtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3OTIzMzMsImV4cCI6MjA5MDM2ODMzM30.W5r5w3duNpVMo6NgPfHLhrb7jl32ksMGTQDBfT1MbVY"; // anon key (untuk admin login)
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmenFmb3dpanJpdXJmbmhlYWtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3OTIzMzMsImV4cCI6MjA5MDM2ODMzM30.W5r5w3duNpVMo6NgPfHLhrb7jl32ksMGTQDBfT1MbVY";
 
 // ============================================================
 // UTILS
@@ -60,6 +60,21 @@ function confirmDialog(msg) {
 }
 
 // ============================================================
+// TAMPILKAN / SEMBUNYIKAN SECTION
+// FIX: gunakan style.display agar konsisten dengan admin.html
+// ============================================================
+
+function showSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = "";
+}
+
+function hideSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = "none";
+}
+
+// ============================================================
 // SUPABASE AUTH
 // ============================================================
 
@@ -87,26 +102,26 @@ async function refreshSession() {
   const session = getSession();
   if (!session?.refresh_token) return null;
 
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-    method: "POST",
-    headers: {
-      "apikey": SUPABASE_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ refresh_token: session.refresh_token }),
-  });
-
-  if (!res.ok) { clearSession(); return null; }
-  const data = await res.json();
-  saveSession(data);
-  return data;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: "POST",
+      headers: { "apikey": SUPABASE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: session.refresh_token }),
+    });
+    if (!res.ok) { clearSession(); return null; }
+    const data = await res.json();
+    saveSession(data);
+    return data;
+  } catch {
+    clearSession();
+    return null;
+  }
 }
 
 async function getValidToken() {
   let session = getSession();
   if (!session) return null;
 
-  // Cek apakah token sudah expired (buffer 60 detik)
   const now = Math.floor(Date.now() / 1000);
   if (session.expires_at && now >= session.expires_at - 60) {
     session = await refreshSession();
@@ -118,27 +133,23 @@ async function getValidToken() {
 async function supabaseAuth(email, password) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: "POST",
-    headers: {
-      "apikey": SUPABASE_KEY,
-      "Content-Type": "application/json",
-    },
+    headers: { "apikey": SUPABASE_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.error_description || "Login gagal");
+    throw new Error(err.error_description || err.message || "Login gagal. Periksa email dan password.");
   }
   return res.json();
 }
 
 async function supabaseLogout(token) {
-  await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-    method: "POST",
-    headers: {
-      "apikey": SUPABASE_KEY,
-      "Authorization": `Bearer ${token}`,
-    },
-  });
+  try {
+    await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+      method: "POST",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` },
+    });
+  } catch { /* abaikan error logout */ }
 }
 
 // ============================================================
@@ -156,10 +167,7 @@ async function dbFetch(path, options = {}) {
     "Prefer": options.prefer || "return=representation",
   };
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
-    ...options,
-    headers,
-  });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, { ...options, headers });
 
   if (res.status === 204) return null;
   const data = await res.json();
@@ -180,19 +188,19 @@ function saveDraft() {
   if (!form) return;
 
   const draft = {
-    title:       $("#f-title")?.value || "",
-    slug:        $("#f-slug")?.value  || "",
-    excerpt:     $("#f-excerpt")?.value || "",
-    content:     $("#f-content")?.value || "",
-    post_type:   $("#f-type")?.value  || "article",
-    category_id: $("#f-category")?.value || "",
-    author_id:   $("#f-author")?.value   || "",
-    tags:        $("#f-tags")?.value     || "",
-    status:      $("#f-status")?.value   || "draft",
+    title:         $("#f-title")?.value || "",
+    slug:          $("#f-slug")?.value  || "",
+    excerpt:       $("#f-excerpt")?.value || "",
+    content:       $("#f-content")?.value || "",
+    post_type:     $("#f-type")?.value  || "article",
+    category_id:   $("#f-category")?.value || "",
+    author_id:     $("#f-author")?.value   || "",
+    tags:          $("#f-tags")?.value     || "",
+    status:        $("#f-status")?.value   || "draft",
     thumbnail_url: $("#f-thumbnail")?.value || "",
     thumbnail_alt: $("#f-thumbnail-alt")?.value || "",
-    savedAt:     new Date().toISOString(),
-    editingId:   form.dataset.editingId || "",
+    savedAt:       new Date().toISOString(),
+    editingId:     form.dataset.editingId || "",
   };
 
   localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -204,9 +212,8 @@ function saveDraft() {
 }
 
 function loadDraft() {
-  try {
-    return JSON.parse(localStorage.getItem(DRAFT_KEY));
-  } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(DRAFT_KEY)); }
+  catch { return null; }
 }
 
 function clearDraft() {
@@ -217,12 +224,12 @@ function clearDraft() {
 
 function startAutosave() {
   if (autosaveTimer) clearInterval(autosaveTimer);
-  autosaveTimer = setInterval(saveDraft, 30000); // setiap 30 detik
+  autosaveTimer = setInterval(saveDraft, 30000);
 }
 
 function debounceSave() {
   clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(saveDraft, 3000); // 3 detik setelah berhenti mengetik
+  debounceTimer = setTimeout(saveDraft, 3000);
 }
 
 // ============================================================
@@ -275,7 +282,7 @@ async function loadArticleList(page = 1) {
   const tbody = $("#article-table-body");
   if (!tbody) return;
 
-  tbody.innerHTML = `<tr><td colspan="6" class="table-loading" aria-live="polite">Memuat data...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="6" class="tbl-loading" aria-live="polite">Memuat data...</td></tr>`;
 
   try {
     let path = `/articles?select=id,title,slug,post_type,status,published_at,view_count,categories(name)&order=created_at.desc&limit=${listLimit}&offset=${(page - 1) * listLimit}`;
@@ -286,8 +293,8 @@ async function loadArticleList(page = 1) {
 
     const articles = await dbFetch(path);
 
-    if (!articles.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="table-empty">Tidak ada data.</td></tr>`;
+    if (!articles || !articles.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="tbl-empty">Tidak ada data.</td></tr>`;
       return;
     }
 
@@ -299,28 +306,23 @@ async function loadArticleList(page = 1) {
           </a>
         </td>
         <td>
-          <span class="badge ${a.post_type === "news" ? "badge-news" : "badge-article"}">
+          <span class="badge ${a.post_type === "news" ? "bt-news" : "bt-article"}">
             ${a.post_type === "news" ? "Berita" : "Artikel"}
           </span>
         </td>
         <td>${escapeHtml(a.categories?.name || "-")}</td>
         <td>
           <span class="status-badge status-${a.status}">
-            ${a.status === "published" ? "Terbit" : "Draft"}
+            ${a.status === "published" ? "✅ Terbit" : "📋 Draft"}
           </span>
         </td>
         <td class="td-date">${formatDate(a.published_at)}</td>
         <td class="td-actions">
-          <button class="btn-icon btn-edit" data-id="${a.id}" aria-label="Edit ${escapeHtml(a.title)}">
-            ✏️
-          </button>
-          <button class="btn-icon btn-delete" data-id="${a.id}" data-title="${escapeHtml(a.title)}" aria-label="Hapus ${escapeHtml(a.title)}">
-            🗑️
-          </button>
+          <button class="btn-icon btn-edit" data-id="${a.id}" aria-label="Edit ${escapeHtml(a.title)}">✏️</button>
+          <button class="btn-icon btn-delete" data-id="${a.id}" data-title="${escapeHtml(a.title)}" aria-label="Hapus ${escapeHtml(a.title)}">🗑️</button>
         </td>
       </tr>`).join("");
 
-    // Bind edit & delete
     tbody.querySelectorAll(".btn-edit").forEach(btn => {
       btn.addEventListener("click", () => openEditForm(btn.dataset.id));
     });
@@ -328,11 +330,10 @@ async function loadArticleList(page = 1) {
       btn.addEventListener("click", () => deleteArticle(btn.dataset.id, btn.dataset.title));
     });
 
-    // Pagination
     renderListPagination(articles.length);
 
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="6" class="table-error" role="alert">Gagal memuat: ${escapeHtml(e.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="tbl-error" role="alert">Gagal memuat: ${escapeHtml(e.message)}</td></tr>`;
   }
 }
 
@@ -348,25 +349,27 @@ function renderListPagination(count) {
     <span class="pagination-info">Halaman ${listPage}</span>
     <button class="btn-secondary" id="btn-next-page" ${nextDisabled ? "disabled" : ""}>Berikutnya →</button>`;
 
-  if (!prevDisabled) $("#btn-prev-page").addEventListener("click", () => loadArticleList(listPage - 1));
-  if (!nextDisabled) $("#btn-next-page").addEventListener("click", () => loadArticleList(listPage + 1));
+  if (!prevDisabled) $("#btn-prev-page")?.addEventListener("click", () => loadArticleList(listPage - 1));
+  if (!nextDisabled) $("#btn-next-page")?.addEventListener("click", () => loadArticleList(listPage + 1));
 }
 
 // ============================================================
 // HALAMAN: FORM ARTIKEL (Tambah / Edit)
+// FIX: gunakan style.display bukan .hidden
 // ============================================================
 
 function showView(viewId) {
-  $$(".admin-view").forEach(v => v.hidden = true);
-  const target = $(`#view-${viewId}`);
-  if (target) target.hidden = false;
+  // Sembunyikan semua view
+  $$(".apage").forEach(v => v.style.display = "none");
+  // Tampilkan view yang diminta
+  const target = document.getElementById(`view-${viewId}`);
+  if (target) target.style.display = "block";
 }
 
 async function openNewForm() {
   await loadDropdownData();
   resetForm();
 
-  // Tawarkan draft tersimpan
   const draft = loadDraft();
   if (draft && !draft.editingId) {
     const useDraft = confirm(`Ada draft tersimpan pada ${formatDate(draft.savedAt)}.\nMau dilanjutkan?`);
@@ -384,7 +387,7 @@ async function openEditForm(id) {
 
   try {
     const articles = await dbFetch(`/articles?id=eq.${id}&select=*&limit=1`);
-    if (!articles.length) { showToast("Artikel tidak ditemukan.", "error"); return; }
+    if (!articles || !articles.length) { showToast("Artikel tidak ditemukan.", "error"); return; }
 
     const article = articles[0];
     const form    = $("#article-form");
@@ -409,9 +412,12 @@ function resetForm() {
   delete form.dataset.editingId;
   clearDraft();
 
-  $("#f-slug").value  = "";
-  $("#f-status").value = "draft";
-  $("#f-type").value  = "article";
+  const slugEl = $("#f-slug");
+  if (slugEl) { slugEl.value = ""; delete slugEl.dataset.manual; }
+  const statusEl = $("#f-status");
+  if (statusEl) statusEl.value = "draft";
+  const typeEl = $("#f-type");
+  if (typeEl) typeEl.value = "article";
 
   const indicator = $("#autosave-indicator");
   if (indicator) indicator.textContent = "";
@@ -421,7 +427,6 @@ function resetForm() {
 
 function fillFormFromArticle(article) {
   const set = (id, val) => { const el = $(id); if (el) el.value = val ?? ""; };
-
   set("#f-title",         article.title);
   set("#f-slug",          article.slug);
   set("#f-excerpt",       article.excerpt);
@@ -436,7 +441,6 @@ function fillFormFromArticle(article) {
 
 function fillFormFromDraft(draft) {
   const set = (id, val) => { const el = $(id); if (el) el.value = val ?? ""; };
-
   set("#f-title",         draft.title);
   set("#f-slug",          draft.slug);
   set("#f-excerpt",       draft.excerpt);
@@ -448,15 +452,8 @@ function fillFormFromDraft(draft) {
   set("#f-tags",          draft.tags);
 
   populateDropdowns();
-
-  if (draft.category_id) {
-    const catEl = $("#f-category");
-    if (catEl) catEl.value = draft.category_id;
-  }
-  if (draft.author_id) {
-    const authorEl = $("#f-author");
-    if (authorEl) authorEl.value = draft.author_id;
-  }
+  if (draft.category_id) { const el = $("#f-category"); if (el) el.value = draft.category_id; }
+  if (draft.author_id)   { const el = $("#f-author");   if (el) el.value = draft.author_id; }
 }
 
 function getFormData() {
@@ -502,17 +499,13 @@ async function submitArticleForm(e) {
   try {
     if (editingId) {
       await dbFetch(`/articles?id=eq.${editingId}`, {
-        method: "PATCH",
-        prefer: "return=minimal",
+        method: "PATCH", prefer: "return=minimal",
         body: JSON.stringify(data),
       });
       showToast("Artikel berhasil diperbarui.");
     } else {
-      await dbFetch("/articles", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-      showToast("Artikel berhasil diterbitkan.");
+      await dbFetch("/articles", { method: "POST", body: JSON.stringify(data) });
+      showToast("Artikel berhasil disimpan.");
     }
 
     clearDraft();
@@ -523,18 +516,14 @@ async function submitArticleForm(e) {
   } catch (err) {
     showToast("Gagal menyimpan: " + err.message, "error");
   } finally {
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Simpan"; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "💾 Simpan"; }
   }
 }
 
 async function deleteArticle(id, title) {
   if (!confirmDialog(`Hapus artikel "${title}"?\nTindakan ini tidak bisa dibatalkan.`)) return;
-
   try {
-    await dbFetch(`/articles?id=eq.${id}`, {
-      method: "DELETE",
-      prefer: "return=minimal",
-    });
+    await dbFetch(`/articles?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
     showToast("Artikel berhasil dihapus.");
     loadArticleList(listPage);
   } catch (e) {
@@ -550,13 +539,13 @@ async function loadCategories() {
   const tbody = $("#category-table-body");
   if (!tbody) return;
 
-  tbody.innerHTML = `<tr><td colspan="3" class="table-loading">Memuat...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="3" class="tbl-loading">Memuat...</td></tr>`;
 
   try {
     const cats = await dbFetch("/categories?select=id,name,slug,description&order=name.asc");
 
-    if (!cats.length) {
-      tbody.innerHTML = `<tr><td colspan="3" class="table-empty">Belum ada kategori.</td></tr>`;
+    if (!cats || !cats.length) {
+      tbody.innerHTML = `<tr><td colspan="3" class="tbl-empty">Belum ada kategori.</td></tr>`;
       return;
     }
 
@@ -577,30 +566,31 @@ async function loadCategories() {
       btn.addEventListener("click", () => deleteCategory(btn.dataset.id, btn.dataset.name));
     });
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="3" class="table-error" role="alert">Gagal memuat: ${escapeHtml(e.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="tbl-error" role="alert">Gagal memuat: ${escapeHtml(e.message)}</td></tr>`;
   }
 }
 
 function openCategoryForm(data = {}) {
-  $("#cat-form-id").value   = data.id   || "";
-  $("#cat-form-name").value = data.name || "";
-  $("#cat-form-slug").value = data.slug || "";
-  $("#cat-form-desc").value = data.desc || "";
-  $("#category-form-section").hidden = false;
-  $("#cat-form-name").focus();
+  const sec = $("#category-form-section");
+  if (sec) sec.style.display = "block";
+  if ($("#cat-form-id"))   $("#cat-form-id").value   = data.id   || "";
+  if ($("#cat-form-name")) $("#cat-form-name").value = data.name || "";
+  if ($("#cat-form-slug")) $("#cat-form-slug").value = data.slug || "";
+  if ($("#cat-form-desc")) $("#cat-form-desc").value = data.desc || "";
+  $("#cat-form-name")?.focus();
 }
 
 function resetCategoryForm() {
-  $("#cat-form-id").value   = "";
-  $("#cat-form-name").value = "";
-  $("#cat-form-slug").value = "";
-  $("#cat-form-desc").value = "";
-  $("#category-form-section").hidden = true;
+  const sec = $("#category-form-section");
+  if (sec) sec.style.display = "none";
+  if ($("#cat-form-id"))   $("#cat-form-id").value   = "";
+  if ($("#cat-form-name")) $("#cat-form-name").value = "";
+  if ($("#cat-form-slug")) $("#cat-form-slug").value = "";
+  if ($("#cat-form-desc")) $("#cat-form-desc").value = "";
 }
 
 async function submitCategoryForm(e) {
   e.preventDefault();
-
   const id   = $("#cat-form-id").value;
   const name = $("#cat-form-name").value.trim();
   const slug = $("#cat-form-slug").value.trim() || slugify(name);
@@ -648,13 +638,13 @@ async function loadAuthors() {
   const tbody = $("#author-table-body");
   if (!tbody) return;
 
-  tbody.innerHTML = `<tr><td colspan="3" class="table-loading">Memuat...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="3" class="tbl-loading">Memuat...</td></tr>`;
 
   try {
     const authors = await dbFetch("/authors?select=id,name,slug,bio,avatar_url&order=name.asc");
 
-    if (!authors.length) {
-      tbody.innerHTML = `<tr><td colspan="3" class="table-empty">Belum ada penulis.</td></tr>`;
+    if (!authors || !authors.length) {
+      tbody.innerHTML = `<tr><td colspan="3" class="tbl-empty">Belum ada penulis.</td></tr>`;
       return;
     }
 
@@ -662,7 +652,9 @@ async function loadAuthors() {
       <tr>
         <td>
           <div class="author-cell">
-            ${a.avatar_url ? `<img src="${escapeHtml(a.avatar_url)}" class="author-thumb" alt="${escapeHtml(a.name)}" loading="lazy">` : `<div class="author-thumb-placeholder">${escapeHtml(a.name.charAt(0))}</div>`}
+            ${a.avatar_url
+              ? `<img src="${escapeHtml(a.avatar_url)}" class="author-thumb" alt="${escapeHtml(a.name)}" loading="lazy">`
+              : `<div class="author-thumb-placeholder">${escapeHtml(a.name.charAt(0))}</div>`}
             <span>${escapeHtml(a.name)}</span>
           </div>
         </td>
@@ -680,31 +672,32 @@ async function loadAuthors() {
       btn.addEventListener("click", () => deleteAuthor(btn.dataset.id, btn.dataset.name));
     });
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="3" class="table-error" role="alert">Gagal: ${escapeHtml(e.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="tbl-error" role="alert">Gagal: ${escapeHtml(e.message)}</td></tr>`;
   }
 }
 
 function openAuthorForm(data = {}) {
-  $("#author-form-id").value     = data.id     || "";
-  $("#author-form-name").value   = data.name   || "";
-  $("#author-form-slug").value   = data.slug   || "";
-  $("#author-form-bio").value    = data.bio    || "";
-  $("#author-form-avatar").value = data.avatar || "";
-  $("#author-form-section").hidden = false;
-  $("#author-form-name").focus();
+  const sec = $("#author-form-section");
+  if (sec) sec.style.display = "block";
+  if ($("#author-form-id"))     $("#author-form-id").value     = data.id     || "";
+  if ($("#author-form-name"))   $("#author-form-name").value   = data.name   || "";
+  if ($("#author-form-slug"))   $("#author-form-slug").value   = data.slug   || "";
+  if ($("#author-form-bio"))    $("#author-form-bio").value    = data.bio    || "";
+  if ($("#author-form-avatar")) $("#author-form-avatar").value = data.avatar || "";
+  $("#author-form-name")?.focus();
 }
 
 function resetAuthorForm() {
-  $$([
-    "#author-form-id", "#author-form-name", "#author-form-slug",
-    "#author-form-bio", "#author-form-avatar"
-  ].join(",")).forEach(el => el.value = "");
-  $("#author-form-section").hidden = true;
+  const sec = $("#author-form-section");
+  if (sec) sec.style.display = "none";
+  ["#author-form-id","#author-form-name","#author-form-slug",
+   "#author-form-bio","#author-form-avatar"].forEach(sel => {
+    const el = $(sel); if (el) el.value = "";
+  });
 }
 
 async function submitAuthorForm(e) {
   e.preventDefault();
-
   const id     = $("#author-form-id").value;
   const name   = $("#author-form-name").value.trim();
   const slug   = $("#author-form-slug").value.trim() || slugify(name);
@@ -742,57 +735,69 @@ async function deleteAuthor(id, name) {
 
 // ============================================================
 // LOGIN / LOGOUT
+// FIX: gunakan style.display, bukan .hidden
+//      tambah try-catch menyeluruh
 // ============================================================
 
 async function initLogin() {
-  const loginSection = $("#login-section");
-  const appSection   = $("#app-section");
+  const loginSection = document.getElementById("login-section");
+  const appSection   = document.getElementById("app-section");
+  const errEl        = document.getElementById("login-error");
+
+  // Pastikan state awal benar
+  if (loginSection) loginSection.style.display = "";
+  if (appSection)   appSection.style.display   = "none";
 
   // Cek sesi tersimpan
-  const token = await getValidToken();
+  let token = null;
+  try { token = await getValidToken(); } catch { token = null; }
+
   if (token) {
-    loginSection.hidden = true;
-    appSection.hidden   = false;
+    if (loginSection) loginSection.style.display = "none";
+    if (appSection)   appSection.style.display   = "";
     initApp();
     return;
   }
 
-  loginSection.hidden = false;
-  appSection.hidden   = true;
-
-  const form = $("#login-form");
+  // Pasang event listener login form
+  const form = document.getElementById("login-form");
   if (!form) return;
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email    = $("#login-email").value.trim();
-    const password = $("#login-password").value;
-    const btn      = $("#btn-login");
-    const errEl    = $("#login-error");
+    e.stopPropagation();
 
-    btn.disabled    = true;
-    btn.textContent = "Masuk...";
+    const email    = document.getElementById("login-email")?.value.trim() || "";
+    const password = document.getElementById("login-password")?.value || "";
+    const btn      = document.getElementById("btn-login");
+
+    if (!email || !password) {
+      if (errEl) errEl.textContent = "Email dan password tidak boleh kosong.";
+      return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = "Masuk..."; }
     if (errEl) errEl.textContent = "";
 
     try {
       const session = await supabaseAuth(email, password);
       saveSession(session);
-      loginSection.hidden = true;
-      appSection.hidden   = false;
+
+      if (loginSection) loginSection.style.display = "none";
+      if (appSection)   appSection.style.display   = "";
+
       initApp();
     } catch (err) {
       if (errEl) errEl.textContent = err.message;
-      else showToast(err.message, "error");
     } finally {
-      btn.disabled    = false;
-      btn.textContent = "Masuk";
+      if (btn) { btn.disabled = false; btn.textContent = "Masuk →"; }
     }
   });
 }
 
 async function handleLogout() {
-  const token = await getValidToken();
-  if (token) await supabaseLogout(token).catch(() => {});
+  const token = await getValidToken().catch(() => null);
+  if (token) await supabaseLogout(token);
   clearSession();
   window.location.reload();
 }
@@ -808,14 +813,18 @@ function initNavTabs() {
       btn.classList.add("active");
 
       const target = btn.dataset.nav;
-      showView("list"); // default reset ke list view
+      const titleEl = document.getElementById("topbar-title");
 
       if (target === "articles") {
+        if (titleEl) titleEl.textContent = "Artikel";
+        showView("list");
         loadArticleList(1);
       } else if (target === "categories") {
+        if (titleEl) titleEl.textContent = "Kategori";
         showView("categories");
         loadCategories();
       } else if (target === "authors") {
+        if (titleEl) titleEl.textContent = "Penulis";
         showView("authors");
         loadAuthors();
       }
@@ -831,7 +840,6 @@ function initListFilters() {
   const typeFilter   = $("#filter-type");
   const statusFilter = $("#filter-status");
   const searchInput  = $("#filter-search");
-  const searchBtn    = $("#btn-filter-search");
 
   typeFilter?.addEventListener("change", () => {
     listFilter.type = typeFilter.value;
@@ -848,8 +856,12 @@ function initListFilters() {
     loadArticleList(1);
   };
 
-  searchBtn?.addEventListener("click", doSearch);
   searchInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+  searchInput?.addEventListener("input", () => {
+    // Auto-search setelah berhenti mengetik 600ms
+    clearTimeout(window._searchTimer);
+    window._searchTimer = setTimeout(doSearch, 600);
+  });
 }
 
 // ============================================================
@@ -860,21 +872,18 @@ function initFormBindings() {
   const titleInput = $("#f-title");
   const slugInput  = $("#f-slug");
 
-  // Auto-generate slug dari judul (hanya jika slug masih kosong)
   titleInput?.addEventListener("input", () => {
-    if (!slugInput.dataset.manual) {
+    if (slugInput && !slugInput.dataset.manual) {
       slugInput.value = slugify(titleInput.value);
     }
     debounceSave();
   });
 
-  // Tandai slug sebagai manual jika user mengeditnya sendiri
   slugInput?.addEventListener("input", () => {
-    slugInput.dataset.manual = "1";
+    if (slugInput) slugInput.dataset.manual = "1";
     debounceSave();
   });
 
-  // Debounce autosave untuk semua field lain
   ["#f-excerpt","#f-content","#f-thumbnail","#f-thumbnail-alt","#f-tags"].forEach(sel => {
     $(sel)?.addEventListener("input", debounceSave);
   });
@@ -882,37 +891,54 @@ function initFormBindings() {
     $(sel)?.addEventListener("change", debounceSave);
   });
 
-  // Auto-slug untuk form kategori
+  // Auto-slug kategori
   $("#cat-form-name")?.addEventListener("input", function () {
-    if (!$("#cat-form-id").value) {
-      $("#cat-form-slug").value = slugify(this.value);
+    const idEl = $("#cat-form-id");
+    if (!idEl?.value) {
+      const slugEl = $("#cat-form-slug");
+      if (slugEl) slugEl.value = slugify(this.value);
     }
   });
 
-  // Auto-slug untuk form penulis
+  // Auto-slug penulis
   $("#author-form-name")?.addEventListener("input", function () {
-    if (!$("#author-form-id").value) {
-      $("#author-form-slug").value = slugify(this.value);
+    const idEl = $("#author-form-id");
+    if (!idEl?.value) {
+      const slugEl = $("#author-form-slug");
+      if (slugEl) slugEl.value = slugify(this.value);
     }
   });
 }
 
 // ============================================================
-// INIT APP (setelah login)
+// INIT APP (setelah login berhasil)
 // ============================================================
 
 function initApp() {
+  // Sembunyikan semua view, tampilkan view-list
+  $$(".apage").forEach(v => v.style.display = "none");
+  const listView = document.getElementById("view-list");
+  if (listView) listView.style.display = "block";
+
+  // Sembunyikan form inline
+  const catSec    = document.getElementById("category-form-section");
+  const authorSec = document.getElementById("author-form-section");
+  if (catSec)    catSec.style.display    = "none";
+  if (authorSec) authorSec.style.display = "none";
+
   initNavTabs();
   initListFilters();
   initFormBindings();
 
-  // Tombol tambah artikel baru
+  // Tombol tambah artikel
   $("#btn-new-article")?.addEventListener("click", openNewForm);
 
   // Tombol kembali ke list
   $$("[data-back-to-list]").forEach(btn => {
     btn.addEventListener("click", () => {
       if (autosaveTimer) clearInterval(autosaveTimer);
+      const titleEl = document.getElementById("topbar-title");
+      if (titleEl) titleEl.textContent = "Artikel";
       showView("list");
       loadArticleList(listPage);
     });
@@ -921,12 +947,12 @@ function initApp() {
   // Submit form artikel
   $("#article-form")?.addEventListener("submit", submitArticleForm);
 
-  // Submit form kategori
+  // Kategori
   $("#category-form")?.addEventListener("submit", submitCategoryForm);
   $("#btn-cancel-cat")?.addEventListener("click", resetCategoryForm);
   $("#btn-new-category")?.addEventListener("click", () => openCategoryForm());
 
-  // Submit form penulis
+  // Penulis
   $("#author-form")?.addEventListener("submit", submitAuthorForm);
   $("#btn-cancel-author")?.addEventListener("click", resetAuthorForm);
   $("#btn-new-author")?.addEventListener("click", () => openAuthorForm());
@@ -934,7 +960,7 @@ function initApp() {
   // Logout
   $("#btn-logout")?.addEventListener("click", handleLogout);
 
-  // Muat list artikel pertama kali
+  // Load list awal
   loadArticleList(1);
 }
 
