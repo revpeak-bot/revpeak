@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Agen Konten — Revpeak</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0C0C0A;
+      --surface: #141412;
+      --surface2: #1C1C19;
+      --border: #2A2A26;
+      --border2: #333330;
+      --text: #F0EDE6;
+      --muted: #706D66;
+      --accent: #E03E0B;
+      --accent2: #FF6B35;
+      --green: #10B981;
+      --yellow: #F59E0B;
+      --red: #EF4444;
+      --mono: 'DM Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 40px 20px 60px;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      width: 100%;
+      max-width: 580px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 40px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 16px; color: #fff;
+    }
+    .logo-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 18px; color: var(--text);
+    }
+    .logo-text span { color: var(--accent); }
+    .back-link {
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--text); }
+
+    /* ===== CARD ===== */
+    .card {
+      width: 100%;
+      max-width: 580px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 24px 28px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .card-header-left {}
+    .card-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-family: var(--mono); font-size: 10px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--accent2); background: rgba(224,62,11,0.1);
+      border: 1px solid rgba(224,62,11,0.2);
+      padding: 3px 10px; border-radius: 50px; margin-bottom: 10px;
+    }
+    .dot-pulse {
+      width: 6px; height: 6px;
+      background: var(--accent2); border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px; font-weight: 800;
+      color: var(--text); line-height: 1.25;
+      letter-spacing: -0.5px;
+    }
+    .card-desc {
+      font-size: 13px; color: var(--muted);
+      line-height: 1.6; margin-top: 6px;
+    }
+    .status-pill {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 11px;
+      padding: 5px 12px; border-radius: 50px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--muted); white-space: nowrap; flex-shrink: 0;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%; background: var(--muted);
+    }
+    .status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.running { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: pulse 0.8s ease-in-out infinite; }
+    .status-dot.error { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+    /* ===== FORM ===== */
+    .card-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; }
+
+    .field {}
+    .field-label {
+      display: block;
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+    .field-input {
+      width: 100%; padding: 11px 14px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; color: var(--text);
+      font-family: var(--mono); font-size: 14px;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(224,62,11,0.15);
+    }
+    .field-input::placeholder { color: #3A3A35; }
+    .field-input[type="password"] { letter-spacing: 3px; }
+    .field-input[type="password"]::placeholder { letter-spacing: 0; }
+
+    .field-hint {
+      font-size: 12px; color: var(--muted);
+      margin-top: 6px; line-height: 1.5;
+    }
+    .field-hint code {
+      font-family: var(--mono); font-size: 11px;
+      background: var(--surface2); padding: 1px 6px;
+      border-radius: 4px; color: var(--accent2);
+    }
+
+    /* ===== TRIGGER BUTTON ===== */
+    .btn-trigger {
+      width: 100%; padding: 14px;
+      background: var(--accent);
+      border: none; border-radius: 12px;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px; font-weight: 800;
+      color: #fff; cursor: pointer;
+      position: relative; overflow: hidden;
+      transition: opacity 0.2s, transform 0.15s;
+      letter-spacing: 0.2px;
+    }
+    .btn-trigger::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+      pointer-events: none;
+    }
+    .btn-trigger:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-trigger:active { transform: translateY(0); opacity: 1; }
+    .btn-trigger:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-trigger .btn-inner {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== LOG TERMINAL ===== */
+    .log-section { padding: 0 28px 24px; }
+    .log-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .log-title {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;
+    }
+    .log-clear {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--muted); cursor: pointer; background: none; border: none;
+      transition: color 0.2s; padding: 2px 6px;
+    }
+    .log-clear:hover { color: var(--text); }
+    .terminal {
+      background: #080807;
+      border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+    }
+    .terminal-bar {
+      display: flex; align-items: center; gap: 7px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: #0E0E0C;
+    }
+    .t-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .t-red   { background: #FF5F57; }
+    .t-yellow{ background: #FEBC2E; }
+    .t-green { background: #28C840; }
+    .t-label {
+      font-family: var(--mono); font-size: 11px;
+      color: #3A3A35; margin-left: auto;
+    }
+    .terminal-body {
+      padding: 14px 16px;
+      min-height: 160px; max-height: 320px;
+      overflow-y: auto;
+      font-family: var(--mono); font-size: 12px;
+      line-height: 1.8;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .terminal-body::-webkit-scrollbar { width: 4px; }
+    .terminal-body::-webkit-scrollbar-track { background: transparent; }
+    .terminal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .log-line { display: flex; gap: 10px; }
+    .log-time { color: #3A3A35; flex-shrink: 0; }
+    .log-msg { flex: 1; word-break: break-all; }
+    .log-msg.info    { color: #8B8B82; }
+    .log-msg.success { color: var(--green); }
+    .log-msg.error   { color: var(--red); }
+    .log-msg.warn    { color: var(--yellow); }
+    .log-msg.accent  { color: var(--accent2); }
+    .log-msg.title   { color: var(--text); font-weight: 500; }
+
+    .terminal-prompt {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 16px 12px;
+      font-family: var(--mono); font-size: 12px; color: #3A3A35;
+    }
+    .prompt-symbol { color: var(--accent); }
+
+    /* ===== RESULT CARD ===== */
+    .result-card {
+      margin: 0 28px 24px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 12px; padding: 16px;
+      display: none;
+      animation: fadeUp 0.3s ease;
+    }
+    .result-card.success-card { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.05); }
+    .result-card.error-card   { border-color: rgba(239,68,68,0.3);  background: rgba(239,68,68,0.05); }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .result-header {
+      display: flex; align-items: center; gap: 8px;
+      font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .result-icon { font-size: 18px; }
+    .result-body { font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .result-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--accent2); margin-top: 10px;
+      text-decoration: none; word-break: break-all;
+    }
+    .result-link:hover { text-decoration: underline; }
+
+    /* ===== CRON INFO ===== */
+    .cron-section {
+      margin: 0 28px 24px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px;
+    }
+    .cron-title {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 12px;
+    }
+    .cron-list { display: flex; flex-direction: column; gap: 6px; }
+    .cron-item {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px;
+    }
+    .cron-wib { color: var(--text); font-weight: 500; }
+    .cron-utc { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .cron-next {
+      font-size: 11px; color: var(--green);
+      padding: 2px 8px; background: rgba(16,185,129,0.1);
+      border-radius: 50px;
+    }
+
+    /* ===== FOOTER ===== */
+    .card-footer {
+      padding: 14px 28px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+    }
+    .footer-info {
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+    }
+    .footer-model {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--muted); display: flex; align-items: center; gap: 6px;
+    }
+    .model-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <a href="/" class="logo">
+      <div class="logo-icon">R</div>
+      <span class="logo-text">Rev<span>peak</span></span>
+    </a>
+    <a href="/admin.html" class="back-link">← Admin Panel</a>
+  </div>
+
+  <!-- Main Card -->
+  <div class="card">
+
+    <!-- Card Header -->
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-tag">
+          <div class="dot-pulse"></div>
+          Cloudflare Workers AI
+        </div>
+        <h1 class="card-title">Agen Konten AI</h1>
+        <p class="card-desc">Trigger manual untuk menggenerate dan mempublish artikel baru ke Revpeak menggunakan AI.</p>
+      </div>
+      <div class="status-pill" id="status-pill">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Siap</span>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div class="card-body">
+      <div class="field">
+        <label class="field-label" for="worker-url">URL Worker</label>
+        <input type="url" id="worker-url" class="field-input"
+          placeholder="https://revpeak-agen-konten.revpeak2.workers.dev"
+          value="https://revpeak-agen-konten.revpeak2.workers.dev">
+        <p class="field-hint">URL worker Cloudflare yang sudah di-deploy.</p>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="admin-token">Admin Token</label>
+        <input type="password" id="admin-token" class="field-input"
+          placeholder="••••••••••••••••">
+        <p class="field-hint">Nilai <code>ADMIN_TOKEN</code> yang Anda set di Worker Secrets.</p>
+      </div>
+
+      <button class="btn-trigger" id="btn-trigger" onclick="jalankanAgen()">
+        <div class="btn-inner">
+          <div class="spinner" id="spinner"></div>
+          <span id="btn-text">⚡ Jalankan Agen Sekarang</span>
+        </div>
+      </button>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card" id="result-card">
+      <div class="result-header">
+        <span class="result-icon" id="result-icon"></span>
+        <span id="result-title"></span>
+      </div>
+      <div class="result-body" id="result-body"></div>
+      <a class="result-link" id="result-link" href="#" target="_blank" rel="noopener" style="display:none">
+        🔗 <span id="result-link-text"></span>
+      </a>
+    </div>
+
+    <!-- Log Terminal -->
+    <div class="log-section">
+      <div class="log-header">
+        <span class="log-title">📋 Log Proses</span>
+        <button class="log-clear" onclick="clearLog()">Bersihkan</button>
+      </div>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="t-dot t-red"></div>
+          <div class="t-dot t-yellow"></div>
+          <div class="t-dot t-green"></div>
+          <span class="t-label">agen-konten • revpeak</span>
+        </div>
+        <div class="terminal-body" id="terminal-body">
+          <div class="log-line">
+            <span class="log-time">--:--:--</span>
+            <span class="log-msg info">Siap menerima perintah. Klik "Jalankan Agen" untuk mulai.</span>
+          </div>
+        </div>
+        <div class="terminal-prompt">
+          <span class="prompt-symbol">$</span>
+          <span>_</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jadwal Cron -->
+    <div class="cron-section">
+      <div class="cron-title">⏰ Jadwal Otomatis (Cron Trigger)</div>
+      <div class="cron-list" id="cron-list"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="card-footer">
+      <span class="footer-info">revpeak-agen-konten.revpeak2.workers.dev</span>
+      <span class="footer-model">
+        <div class="model-dot"></div>
+        llama-3.1-8b-instruct
+      </span>
+    </div>
+
+  </div>
+
+  <script>
+    // ============================================================
+    // LOG
+    // ============================================================
+
+    function addLog(msg, type = "info") {
+      const body = document.getElementById("terminal-body");
+      const now  = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const line = document.createElement("div");
+      line.className = "log-line";
+      line.innerHTML = `<span class="log-time">${now}</span><span class="log-msg ${type}">${escapeHtml(msg)}</span>`;
+      body.appendChild(line);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById("terminal-body").innerHTML = `
+        <div class="log-line">
+          <span class="log-time">--:--:--</span>
+          <span class="log-msg info">Log dibersihkan.</span>
+        </div>`;
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    // ============================================================
+    // STATUS PILL
+    // ============================================================
+
+    function setStatus(state) {
+      const dot  = document.getElementById("status-dot");
+      const text = document.getElementById("status-text");
+      dot.className = "status-dot";
+
+      const states = {
+        idle:    { cls: "",        label: "Siap" },
+        running: { cls: "running", label: "Berjalan..." },
+        success: { cls: "online",  label: "Berhasil" },
+        error:   { cls: "error",   label: "Error" },
+      };
+      const s = states[state] || states.idle;
+      if (s.cls) dot.classList.add(s.cls);
+      text.textContent = s.label;
+    }
+
+    // ============================================================
+    // RESULT CARD
+    // ============================================================
+
+    function showResult(ok, data) {
+      const card     = document.getElementById("result-card");
+      const icon     = document.getElementById("result-icon");
+      const title    = document.getElementById("result-title");
+      const body     = document.getElementById("result-body");
+      const link     = document.getElementById("result-link");
+      const linkText = document.getElementById("result-link-text");
+
+      card.style.display = "block";
+      card.className = ok ? "result-card success-card" : "result-card error-card";
+      icon.textContent  = ok ? "✅" : "❌";
+      title.textContent = ok ? "Artikel Berhasil Diterbitkan!" : "Gagal Menjalankan Agen";
+
+      if (ok && data?.data) {
+        const d = data.data;
+        body.textContent = `Judul: "${d.title}"`;
+        const url = `https://revpeak.web.id/${d.slug}`;
+        link.href = url;
+        linkText.textContent = url;
+        link.style.display = "inline-flex";
+      } else {
+        body.textContent = data?.error || "Terjadi kesalahan tidak diketahui.";
+        link.style.display = "none";
+      }
+    }
+
+    // ============================================================
+    // JALANKAN AGEN
+    // ============================================================
+
+    async function jalankanAgen() {
+      const url   = document.getElementById("worker-url").value.trim();
+      const token = document.getElementById("admin-token").value.trim();
+      const btn   = document.getElementById("btn-trigger");
+      const spin  = document.getElementById("spinner");
+      const btxt  = document.getElementById("btn-text");
+
+      // Validasi
+      if (!url) { addLog("❌ URL Worker tidak boleh kosong.", "error"); return; }
+      if (!token) { addLog("❌ Admin Token tidak boleh kosong.", "error"); return; }
+
+      // Sembunyikan result lama
+      document.getElementById("result-card").style.display = "none";
+
+      // State: loading
+      btn.disabled = true;
+      spin.style.display = "block";
+      btxt.textContent = "Menghubungi Worker...";
+      setStatus("running");
+
+      addLog("🚀 Menghubungi Worker Cloudflare...", "accent");
+      addLog(`📡 POST → ${url}`, "info");
+
+      const startTime = Date.now();
+
+      try {
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        addLog(`📶 Respons diterima dalam ${elapsed} detik (HTTP ${res.status})`, "info");
+
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          setStatus("success");
+          addLog(`✅ Berhasil! Artikel: "${data.data?.title}"`, "success");
+          addLog(`🔗 URL: https://revpeak.web.id/${data.data?.slug}`, "success");
+          addLog(`🆔 ID artikel: ${data.data?.id}`, "info");
+          showResult(true, data);
+        } else {
+          setStatus("error");
+          const errMsg = data.error || `HTTP ${res.status}`;
+          addLog(`❌ Gagal: ${errMsg}`, "error");
+          showResult(false, data);
+        }
+
+      } catch (e) {
+        setStatus("error");
+        addLog(`❌ Koneksi gagal: ${e.message}`, "error");
+        addLog("💡 Pastikan URL Worker benar dan CORS tidak diblokir.", "warn");
+        showResult(false, { error: e.message });
+      } finally {
+        btn.disabled = false;
+        spin.style.display = "none";
+        btxt.textContent = "⚡ Jalankan Agen Sekarang";
+      }
+    }
+
+    // ============================================================
+    // JADWAL CRON (tampilkan dalam WIB)
+    // ============================================================
+
+    function renderCronSchedule() {
+      const jadwal = [
+        { utc: "00:00", wib: "07:00 WIB" },
+        { utc: "04:00", wib: "11:00 WIB" },
+        { utc: "08:00", wib: "15:00 WIB" },
+        { utc: "12:00", wib: "19:00 WIB" },
+        { utc: "16:00", wib: "23:00 WIB" },
+        { utc: "20:00", wib: "03:00 WIB +1" },
+      ];
+
+      const now      = new Date();
+      const nowUTC   = now.getUTCHours() * 60 + now.getUTCMinutes();
+      let nextFound  = false;
+
+      const list = document.getElementById("cron-list");
+      list.innerHTML = jadwal.map(j => {
+        const [h, m] = j.utc.split(":").map(Number);
+        const totalMin = h * 60 + m;
+        const isNext   = !nextFound && totalMin > nowUTC;
+        if (isNext) nextFound = true;
+
+        return `
+          <div class="cron-item">
+            <span class="cron-wib">${j.wib}</span>
+            <span class="cron-utc">${j.utc} UTC</span>
+            ${isNext ? `<span class="cron-next">berikutnya</span>` : ""}
+          </div>`;
+      }).join("");
+    }
+
+    // ============================================================
+    // SIMPAN TOKEN di localStorage
+    // ============================================================
+
+    const tokenInput = document.getElementById("admin-token");
+    const saved = localStorage.getItem("rp_agen_token");
+    if (saved) tokenInput.value = saved;
+    tokenInput.addEventListener("input", () => {
+      localStorage.setItem("rp_agen_token", tokenInput.value);
+    });
+
+    // ============================================================
+    // INIT
+    // ============================================================
+
+    setStatus("idle");
+    renderCronSchedule();
+  </script>
+</body>
+</html>
