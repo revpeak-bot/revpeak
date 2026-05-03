@@ -208,102 +208,87 @@ function renderBreadcrumb(article) {
 }
 
 // ============================================================
-// RENDER ARTIKEL
+// RENDER ARTIKEL — bangun HTML langsung ke wrapper
 // ============================================================
 
 function renderArticle(article) {
-  const author = article.authors || {};
-  const cat    = article.categories || {};
+  const author  = article.authors    || {};
+  const cat     = article.categories || {};
+  const wrapper = $("#article-wrapper");
+  if (!wrapper) return;
 
-  // Thumbnail
-  const thumbnailEl = $("#article-thumbnail");
-  if (thumbnailEl && article.thumbnail_url) {
-    thumbnailEl.src = article.thumbnail_url;
-    thumbnailEl.alt = article.thumbnail_alt || article.title;
-  } else if (thumbnailEl) {
-    thumbnailEl.closest(".article-thumbnail-wrap")?.remove();
-  }
+  const badge    = article.post_type === "news" ? "Berita" : "Artikel";
+  const badgeCls = article.post_type === "news" ? "badge-news" : "badge-article";
 
-  // Badge type
-  const badgeEl = $("#article-type-badge");
-  if (badgeEl) {
-    badgeEl.textContent = article.post_type === "news" ? "Berita" : "Artikel";
-    badgeEl.className   = `article-badge ${article.post_type === "news" ? "badge-news" : "badge-article"}`;
-  }
+  const catLink = cat.slug
+    ? `<a href="/kategori-detail.html?slug=${escapeHtml(cat.slug)}" class="article-category-link">${escapeHtml(cat.name)}</a>`
+    : "";
 
-  // Kategori
-  const catEl = $("#article-category");
-  if (catEl) {
-    if (cat.slug) {
-      catEl.href        = `/kategori-detail.html?slug=${escapeHtml(cat.slug)}`;
-      catEl.textContent = cat.name;
-    } else {
-      catEl.remove();
-    }
-  }
+  const thumbnail = article.thumbnail_url
+    ? `<div class="article-thumbnail-wrap">
+         <img class="article-thumbnail"
+              src="${escapeHtml(article.thumbnail_url)}"
+              alt="${escapeHtml(article.thumbnail_alt || article.title)}"
+              loading="eager">
+       </div>` : "";
 
-  // Judul
-  const titleEl = $("#article-title");
-  if (titleEl) titleEl.textContent = article.title;
+  const avatarHtml = author.avatar_url
+    ? `<div class="author-avatar-wrap">
+         <img class="article-author-avatar"
+              src="${escapeHtml(author.avatar_url)}"
+              alt="${escapeHtml(author.name || "")}" loading="lazy">
+       </div>` : "";
 
-  // Excerpt / intro
-  const excerptEl = $("#article-excerpt");
-  if (excerptEl && article.excerpt) {
-    excerptEl.textContent = article.excerpt;
-  } else if (excerptEl) {
-    excerptEl.remove();
-  }
+  const excerptHtml = article.excerpt
+    ? `<p class="article-excerpt">${escapeHtml(article.excerpt)}</p>` : "";
 
-  // Penulis
-  const authorNameEl   = $("#article-author-name");
-  const authorAvatarEl = $("#article-author-avatar");
-  const authorLinkEl   = $("#article-author-link");
+  const tagsHtml = article.tags?.length
+    ? `<div class="article-tags">
+         ${article.tags.map(t =>
+           `<a href="/search.html?q=${encodeURIComponent(t)}" class="article-tag">${escapeHtml(t)}</a>`
+         ).join("")}
+       </div>` : "";
 
-  if (authorNameEl) authorNameEl.textContent = author.name || "Revpeak";
-  if (authorAvatarEl) {
-    if (author.avatar_url) {
-      authorAvatarEl.src = author.avatar_url;
-      authorAvatarEl.alt = author.name || "";
-    } else {
-      authorAvatarEl.closest(".author-avatar-wrap")?.remove();
-    }
-  }
-  if (authorLinkEl && author.slug) {
-    authorLinkEl.href = `/penulis-detail.html?slug=${encodeURIComponent(author.slug)}`;
-  }
+  wrapper.innerHTML = `
+    <div id="breadcrumb" class="article-breadcrumb"></div>
+    <header class="article-header">
+      <div class="article-meta-top">
+        ${catLink}
+        <span class="article-badge ${badgeCls}">${badge}</span>
+      </div>
+      <h1 class="article-title">${escapeHtml(article.title)}</h1>
+      ${excerptHtml}
+      <div class="article-meta-bar">
+        <div class="article-author-info">
+          ${avatarHtml}
+          <div class="article-author-text">
+            <a href="/penulis-detail.html?slug=${encodeURIComponent(author.slug || "")}"
+               class="article-author-name-link">
+              <span class="article-author-name">${escapeHtml(author.name || "Revpeak")}</span>
+            </a>
+            <div class="article-meta-secondary">
+              <time class="article-date">${formatDate(article.published_at)}</time>
+              <span class="meta-sep" aria-hidden="true">·</span>
+              <span class="article-views">${article.view_count || 0} kali dibaca</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+    ${thumbnail}
+    <div id="article-content" class="article-content"></div>
+    ${tagsHtml}`;
 
-  // Tanggal & views
-  const dateEl  = $("#article-date");
-  const viewsEl = $("#article-views");
-  if (dateEl)  dateEl.textContent  = formatDate(article.published_at);
-  if (viewsEl) viewsEl.textContent = `${article.view_count || 0} kali dibaca`;
-
-  // Tags
-  const tagsEl = $("#article-tags");
-  if (tagsEl) {
-    if (article.tags?.length) {
-      tagsEl.innerHTML = article.tags.map(tag =>
-        `<a href="/search.html?q=${encodeURIComponent(tag)}" class="article-tag">${escapeHtml(tag)}</a>`
-      ).join("");
-    } else {
-      tagsEl.remove();
-    }
-  }
-
-  // Konten utama
-  const contentEl = $("#article-content");
+  // Isi konten secara terpisah agar HTML dari AI tidak di-escape
+  const contentEl = document.getElementById("article-content");
   if (contentEl) {
-    // Render sebagai HTML (pastikan konten sudah di-sanitize di sisi admin)
     contentEl.innerHTML = article.content || "<p>Konten tidak tersedia.</p>";
-
-    // Lazy load semua gambar dalam konten
     contentEl.querySelectorAll("img").forEach(img => {
       img.setAttribute("loading", "lazy");
       if (!img.alt) img.alt = article.title;
     });
   }
 }
-
 // ============================================================
 // ARTIKEL TERKAIT
 // ============================================================
