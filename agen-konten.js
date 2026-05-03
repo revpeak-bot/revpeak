@@ -1,7 +1,8 @@
 // ============================================================
 // REVPEAK — agen-konten.js
-// Dijalankan via GitHub Actions
-// Menggunakan Cloudflare Workers AI REST API (gratis)
+// GitHub Actions + Cloudflare Workers AI REST API
+// Menggunakan pendekatan dua langkah untuk menghindari
+// masalah parsing JSON dari respons AI
 // ============================================================
 
 const SUPABASE_URL  = process.env.SUPABASE_URL;
@@ -75,7 +76,7 @@ const TOPIK = [
       "peluncuran produk teknologi terbaru yang menggemparkan industri",
       "kebijakan baru platform media sosial yang berdampak luas",
       "regulasi AI terbaru dan dampaknya bagi pengembang",
-      "update sistem operasi terbaru dengan fitur-fitur baru",
+      "update sistem operasi terbaru dengan fitur baru",
     ],
   },
   {
@@ -107,12 +108,10 @@ function log(msg) {
 }
 
 // ============================================================
-// CLOUDFLARE WORKERS AI — REST API
+// CLOUDFLARE WORKERS AI — panggil model
 // ============================================================
 
-async function generateKonten(topik, subtopik, postType) {
-  const isBerita = postType === "news";
-
+async function callAI(prompt) {
   const res = await fetch(CF_AI_URL, {
     method: "POST",
     headers: {
@@ -123,23 +122,9 @@ async function generateKonten(topik, subtopik, postType) {
       messages: [
         {
           role: "system",
-          content: "Anda adalah editor konten profesional website Indonesia bernama Revpeak. Balas HANYA dengan JSON valid tanpa teks lain.",
+          content: "Anda adalah editor konten profesional untuk website Indonesia bernama Revpeak. Ikuti instruksi dengan tepat.",
         },
-        {
-          role: "user",
-          content: `Tulis ${isBerita ? "berita" : "artikel"} tentang: "${subtopik}" kategori ${topik}.
-
-Balas HANYA JSON ini:
-{
-  "title": "judul menarik maksimal 80 karakter",
-  "excerpt": "ringkasan 1-2 kalimat maksimal 160 karakter",
-  "content": "konten HTML minimal 500 kata dengan tag h2 h3 p ul li strong",
-  "tags": ["tag1", "tag2", "tag3"],
-  "image_query": "english keywords for unsplash 2-3 words"
-}
-
-Panduan: Bahasa Indonesia baku, faktual, informatif. ${isBerita ? "Format berita." : "Format artikel dengan sub-bagian."}`,
-        },
+        { role: "user", content: prompt },
       ],
       max_tokens:  2048,
       temperature: 0.7,
@@ -148,18 +133,72 @@ Panduan: Bahasa Indonesia baku, faktual, informatif. ${isBerita ? "Format berita
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`CF AI error ${res.status}: ${err}`);
+    throw new Error(`CF AI ${res.status}: ${err.substring(0, 200)}`);
   }
 
   const data = await res.json();
-  const rawText = data?.result?.response || "";
-  if (!rawText) throw new Error("CF AI tidak mengembalikan respons");
+  const text = data?.result?.response || "";
+  if (!text) throw new Error("CF AI tidak mengembalikan respons");
+  return text.trim();
+}
 
-  // Ekstrak JSON — Llama kadang menambahkan teks di luar JSON
-  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error(`Bukan JSON valid. Respons: ${rawText.substring(0, 300)}`);
+// ============================================================
+// GENERATE KONTEN — dua langkah terpisah
+// Langkah 1: metadata (title, excerpt, tags, image_query)
+// Langkah 2: konten HTML
+// Tidak menggunakan JSON.parse untuk menghindari error karakter
+// ============================================================
 
-  return JSON.parse(jsonMatch[0]);
+async function generateMetadata(topik, subtopik, postType) {
+  const isBerita = postType === "news";
+
+  const prompt = `Buat metadata untuk ${isBerita ? "berita" : "artikel"} tentang "${subtopik}" kategori ${topik}.
+
+Balas dengan format ini PERSIS (satu nilai per baris, tanpa penjelasan lain):
+TITLE: [judul menarik maksimal 80 karakter dalam bahasa Indonesia]
+EXCERPT: [ringkasan 1-2 kalimat maksimal 160 karakter dalam bahasa Indonesia]
+TAGS: [tag1, tag2, tag3]
+IMAGE: [2-3 kata bahasa Inggris untuk cari foto di Unsplash]`;
+
+  const raw = await callAI(prompt);
+
+  // Ekstrak dengan regex — tidak ada JSON sama sekali
+  const get = (key) => {
+    const m = raw.match(new RegExp(`${key}:\\s*(.+)`, "i"));
+    return m ? m[1].trim() : "";
+  };
+
+  const title      = get("TITLE")   || subtopik.substring(0, 70);
+  const excerpt    = get("EXCERPT") || "";
+  const tagsRaw    = get("TAGS")    || "";
+  const imageQuery = get("IMAGE")   || topik.toLowerCase();
+
+  const tags = tagsRaw
+    .replace(/[\[\]]/g, "")
+    .split(",")
+    .map(t => t.trim().replace(/^["']|["']$/g, ""))
+    .filter(Boolean);
+
+  return { title, excerpt, tags, imageQuery };
+}
+
+async function generateContent(topik, subtopik, postType, title) {
+  const isBerita = postType === "news";
+
+  const prompt = `Tulis ${isBerita ? "berita" : "artikel"} lengkap dalam bahasa Indonesia tentang "${subtopik}" untuk website Revpeak.
+
+Judul artikel: ${title}
+
+Persyaratan:
+- Minimal 500 kata
+- Tulis dalam format HTML dengan tag: <h2>, <h3>, <p>, <ul>, <li>, <strong>
+- ${isBerita ? "Format berita: paragraf utama berisi inti berita, lalu detail dan konteks" : "Format artikel: pendahuluan menarik, isi mendalam dengan beberapa sub-bagian, kesimpulan"}
+- Bahasa Indonesia baku yang mudah dipahami
+- Isi dengan fakta dan informasi yang bermanfaat
+- JANGAN tambahkan judul utama (h1) karena sudah ada di halaman
+- Mulai langsung dengan konten, bukan dengan kata "Berikut" atau sejenisnya`;
+
+  return await callAI(prompt);
 }
 
 // ============================================================
@@ -190,10 +229,10 @@ async function sbFetch(path, options = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
     ...options,
     headers: {
-      "apikey": SUPABASE_KEY,
+      "apikey":        SUPABASE_KEY,
       "Authorization": `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      "Prefer": options.prefer || "return=representation",
+      "Content-Type":  "application/json",
+      "Prefer":        options.prefer || "return=representation",
     },
   });
   if (res.status === 204) return null;
@@ -250,19 +289,40 @@ async function main() {
   log(`📌 Topik : [${topikDipilih.kategori}] ${subtopik}`);
   log(`📄 Tipe  : ${topikDipilih.post_type}`);
 
-  // Generate konten
-  log("✍️  Mengenerate via Cloudflare Workers AI...");
-  let konten;
+  // Langkah 1: Generate metadata
+  log("📋 Membuat metadata (judul, excerpt, tags)...");
+  let meta;
   try {
-    konten = await generateKonten(topikDipilih.kategori, subtopik, topikDipilih.post_type);
-    log(`✅ Judul : "${konten.title}"`);
+    meta = await generateMetadata(
+      topikDipilih.kategori,
+      subtopik,
+      topikDipilih.post_type
+    );
+    log(`✅ Judul : "${meta.title}"`);
+    log(`📎 Tags  : ${meta.tags.join(", ")}`);
   } catch (e) {
-    console.error(`❌ Gagal generate: ${e.message}`);
+    console.error(`❌ Gagal buat metadata: ${e.message}`);
+    process.exit(1);
+  }
+
+  // Langkah 2: Generate konten HTML
+  log("✍️  Membuat konten artikel...");
+  let content;
+  try {
+    content = await generateContent(
+      topikDipilih.kategori,
+      subtopik,
+      topikDipilih.post_type,
+      meta.title
+    );
+    log(`✅ Konten: ${content.length} karakter`);
+  } catch (e) {
+    console.error(`❌ Gagal buat konten: ${e.message}`);
     process.exit(1);
   }
 
   // Slug unik
-  let slug = slugify(konten.title);
+  let slug = slugify(meta.title);
   let slugFinal = slug;
   for (let i = 1; (await slugExists(slugFinal)) && i <= 5; i++) {
     slugFinal = `${slug}-${i}`;
@@ -270,8 +330,8 @@ async function main() {
   }
 
   // Thumbnail
-  log(`🖼️  Mencari gambar: "${konten.image_query}"...`);
-  const thumb = await fetchThumbnail(konten.image_query);
+  log(`🖼️  Mencari gambar: "${meta.imageQuery}"...`);
+  const thumb = await fetchThumbnail(meta.imageQuery);
   log(thumb.url ? `✅ Gambar: ${thumb.url}` : "⚠️  Tanpa gambar.");
 
   // Category & author
@@ -281,21 +341,21 @@ async function main() {
   ]);
   log(`🗂️  Category: ${categoryId ?? "null"} | Author: ${authorId ?? "null"}`);
 
-  // Simpan
+  // Simpan ke Supabase
   log("💾 Menyimpan ke Supabase...");
   try {
     const hasil = await sbFetch("/articles", {
       method: "POST",
       body: JSON.stringify({
-        title:         konten.title,
+        title:         meta.title,
         slug:          slugFinal,
-        excerpt:       konten.excerpt || "",
-        content:       konten.content || "",
+        excerpt:       meta.excerpt,
+        content:       content,
         post_type:     topikDipilih.post_type,
         status:        "published",
         category_id:   categoryId,
         author_id:     authorId,
-        tags:          Array.isArray(konten.tags) ? konten.tags : [],
+        tags:          meta.tags,
         thumbnail_url: thumb.url,
         thumbnail_alt: thumb.alt,
         published_at:  new Date().toISOString(),
