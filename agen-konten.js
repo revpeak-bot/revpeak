@@ -9,13 +9,30 @@
 //   Langkah 5 : generate gambar via CF Workers AI → upload R2
 // ============================================================
 
-const SUPABASE_URL      = process.env.SUPABASE_URL;
-const SUPABASE_KEY      = process.env.SUPABASE_SERVICE_KEY;
-const CF_ACCOUNT_ID     = process.env.CF_ACCOUNT_ID;
-const CF_AI_TOKEN       = process.env.CF_AI_TOKEN;
-const CF_R2_BUCKET      = process.env.CF_R2_BUCKET;          // nama bucket R2
-const CF_R2_PUBLIC_URL  = process.env.CF_R2_PUBLIC_URL;      // base URL publik R2, e.g. https://images.revpeak.web.id
-const CF_R2_TOKEN       = process.env.CF_R2_TOKEN;           // token API R2 (bisa sama dengan CF_AI_TOKEN jika pakai token global)
+const SUPABASE_URL           = process.env.SUPABASE_URL;
+const SUPABASE_KEY           = process.env.SUPABASE_KEY;           // SUPABASE_KEY (anon/service key)
+const CF_ACCOUNT_ID          = process.env.CF_ACCOUNT_ID;
+const CF_AI_TOKEN            = process.env.CF_AI_TOKEN;
+const CF_R2_PUBLIC_URL       = process.env.CF_R2_PUBLIC_URL;       // base URL publik R2
+const CF_R2_ACCESS_KEY_ID    = process.env.CF_R2_ACCESS_KEY_ID;    // S3-compatible access key
+const CF_R2_SECRET_ACCESS_KEY = process.env.CF_R2_SECRET_ACCESS_KEY; // S3-compatible secret key
+
+// Nama bucket R2 diambil dari CF_R2_PUBLIC_URL atau di-hardcode
+// Format CF_R2_PUBLIC_URL: https://<accountid>.r2.cloudflarestorage.com/<bucket>
+// atau custom domain. Bucket diparse otomatis dari URL jika menggunakan
+// endpoint r2.cloudflarestorage.com, atau bisa di-set manual di sini:
+const CF_R2_BUCKET = (() => {
+  if (!CF_R2_PUBLIC_URL) return "";
+  // Coba parse bucket dari URL r2.cloudflarestorage.com/<bucket>
+  const m = CF_R2_PUBLIC_URL.match(/cloudflarestorage\.com\/([^/?#]+)/);
+  if (m) return m[1];
+  // Fallback: ambil segment pertama setelah domain sebagai bucket
+  try {
+    const u = new URL(CF_R2_PUBLIC_URL);
+    const seg = u.pathname.replace(/^\//, "").split("/")[0];
+    return seg || "revpeak-media";
+  } catch { return "revpeak-media"; }
+})();
 
 // ============================================================
 // URL ENDPOINT
@@ -27,7 +44,8 @@ const CF_AI_IMAGE   = `${CF_AI_BASE}/@cf/stabilityai/stable-diffusion-xl-base-1.
 // Alternatif model gambar yang lebih cepat (uncomment jika perlu):
 // const CF_AI_IMAGE = `${CF_AI_BASE}/@cf/bytedance/stable-diffusion-xl-lightning`;
 
-const CF_R2_API     = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/r2/buckets/${CF_R2_BUCKET}/objects`;
+// Endpoint S3-compatible Cloudflare R2
+const CF_R2_ENDPOINT = `https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 
 // Jumlah section per tipe konten
 const SECTION_COUNT = { article: 7, news: 4 };
@@ -223,20 +241,99 @@ async function generateImage(prompt) {
 // CLOUDFLARE R2 — upload gambar
 // ============================================================
 
+// ── AWS Signature v4 helpers (untuk S3-compatible R2) ──────────────
+
+/** Encode string ke hex */
+const toHex = buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+/** SHA-256 hash → hex string */
+async function sha256Hex(data) {
+  const buf = typeof data === "string" ? new TextEncoder().encode(data) : data;
+  return toHex(await crypto.subtle.digest("SHA-256", buf));
+}
+
+/** HMAC-SHA256 → ArrayBuffer */
+async function hmacSha256(key, data) {
+  const keyBuf  = typeof key === "string" ? new TextEncoder().encode(key) : key;
+  const dataBuf = typeof data === "string" ? new TextEncoder().encode(data) : data;
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", keyBuf, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  return crypto.subtle.sign("HMAC", cryptoKey, dataBuf);
+}
+
+/** Derive AWS Sig v4 signing key */
+async function getSigningKey(secretKey, dateStamp, region, service) {
+  const kDate    = await hmacSha256(`AWS4${secretKey}`, dateStamp);
+  const kRegion  = await hmacSha256(kDate, region);
+  const kService = await hmacSha256(kRegion, service);
+  return hmacSha256(kService, "aws4_request");
+}
+
 /**
- * Upload ArrayBuffer PNG ke Cloudflare R2 melalui REST API.
+ * Upload ArrayBuffer PNG ke Cloudflare R2 melalui S3-compatible API
+ * menggunakan AWS Signature v4 (HMAC credentials).
  * Mengembalikan URL publik gambar.
  */
 async function uploadToR2(imageBuffer, fileName) {
   log(`☁️  Upload ke R2: ${fileName}...`);
 
-  const uploadUrl = `${CF_R2_API}/${encodeURIComponent(fileName)}`;
+  const region  = "auto";
+  const service = "s3";
+  const now     = new Date();
+
+  // Format tanggal untuk Sig v4
+  const dateStamp  = now.toISOString().replace(/[-:]/g, "").split("T")[0];          // YYYYMMDD
+  const amzDate    = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");   // YYYYMMDDTHHmmssZ
+
+  const bucket    = CF_R2_BUCKET;
+  const objectKey = fileName;                          // e.g. "thumbnails/slug-ts-rand.png"
+  const host      = `${CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+  const uploadUrl = `${CF_R2_ENDPOINT}/${bucket}/${objectKey}`;
+
+  const contentType   = "image/png";
+  const payloadHash   = await sha256Hex(imageBuffer);
+
+  // Canonical headers (harus lowercase, sorted)
+  const canonicalHeaders =
+    `content-type:${contentType}\n` +
+    `host:${host}\n` +
+    `x-amz-content-sha256:${payloadHash}\n` +
+    `x-amz-date:${amzDate}\n`;
+
+  const signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date";
+
+  const canonicalRequest = [
+    "PUT",
+    `/${bucket}/${objectKey}`,
+    "",                    // query string (kosong)
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join("\n");
+
+  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    amzDate,
+    credentialScope,
+    await sha256Hex(canonicalRequest),
+  ].join("\n");
+
+  const signingKey = await getSigningKey(CF_R2_SECRET_ACCESS_KEY, dateStamp, region, service);
+  const signature  = toHex(await hmacSha256(signingKey, stringToSign));
+
+  const authorizationHeader =
+    `AWS4-HMAC-SHA256 Credential=${CF_R2_ACCESS_KEY_ID}/${credentialScope}, ` +
+    `SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
   const res = await fetch(uploadUrl, {
     method:  "PUT",
     headers: {
-      "Authorization": `Bearer ${CF_R2_TOKEN}`,
-      "Content-Type":  "image/png",
+      "Authorization":        authorizationHeader,
+      "Content-Type":         contentType,
+      "x-amz-date":           amzDate,
+      "x-amz-content-sha256": payloadHash,
     },
     body: imageBuffer,
   });
@@ -246,6 +343,7 @@ async function uploadToR2(imageBuffer, fileName) {
     throw new Error(`R2 Upload ${res.status}: ${err.substring(0, 300)}`);
   }
 
+  // URL publik: gunakan CF_R2_PUBLIC_URL (custom domain atau URL publik bucket)
   const publicUrl = `${CF_R2_PUBLIC_URL.replace(/\/$/, "")}/${fileName}`;
   log(`✅ Upload R2 berhasil: ${publicUrl}`);
   return publicUrl;
@@ -457,13 +555,13 @@ async function main() {
 
   // Validasi env vars
   const required = [
-    ["SUPABASE_URL",         SUPABASE_URL],
-    ["SUPABASE_SERVICE_KEY", SUPABASE_KEY],
-    ["CF_ACCOUNT_ID",        CF_ACCOUNT_ID],
-    ["CF_AI_TOKEN",          CF_AI_TOKEN],
-    ["CF_R2_BUCKET",         CF_R2_BUCKET],
-    ["CF_R2_PUBLIC_URL",     CF_R2_PUBLIC_URL],
-    ["CF_R2_TOKEN",          CF_R2_TOKEN],
+    ["SUPABASE_URL",              SUPABASE_URL],
+    ["SUPABASE_KEY",              SUPABASE_KEY],
+    ["CF_ACCOUNT_ID",             CF_ACCOUNT_ID],
+    ["CF_AI_TOKEN",               CF_AI_TOKEN],
+    ["CF_R2_PUBLIC_URL",          CF_R2_PUBLIC_URL],
+    ["CF_R2_ACCESS_KEY_ID",       CF_R2_ACCESS_KEY_ID],
+    ["CF_R2_SECRET_ACCESS_KEY",   CF_R2_SECRET_ACCESS_KEY],
   ];
 
   const missing = required.filter(([, v]) => !v).map(([k]) => k);
