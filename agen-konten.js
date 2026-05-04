@@ -443,6 +443,27 @@ Balas HANYA dengan daftar tepat ${jumlah} judul sub-bagian (tanpa nomor, tanpa p
 }
 
 // ============================================================
+// SANITASI OUTPUT AI
+// LLM kadang menghasilkan tag tidak valid (<2> alih-alih <h2>)
+// atau format Markdown. Fungsi ini membersihkannya ke HTML valid.
+// ============================================================
+
+function sanitizeHTML(html) {
+  return html
+    // Fix tag heading tidak valid: <2> → <h2>, </3> → </h3>, dst.
+    .replace(/<(\/?)\s*([1-6])\s*>/g, "<$1h$2>")
+    // Konversi Markdown header: ## Judul → <h2>Judul</h2>
+    .replace(/^(#{1,6})\s+(.+)$/gm, (_, hashes, text) =>
+      `<h${hashes.length}>${text.trim()}</h${hashes.length}>`)
+    // Konversi Markdown bold: **teks** → <strong>teks</strong>
+    .replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>")
+    // Konversi Markdown italic: *teks* → <em>teks</em>
+    .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>")
+    // Bungkus baris teks polos yang belum punya tag HTML ke dalam <p>
+    .replace(/^(?!<[a-z/])(.{20,})$/gm, "<p>$1</p>");
+}
+
+// ============================================================
 // LANGKAH 3 — Generate tiap section
 // ============================================================
 
@@ -475,7 +496,8 @@ Instruksi:
 - JANGAN ulangi hal yang sudah jelas ada di bagian lain
 - Jangan sertakan tag <html>, <body>, atau <h1>`;
 
-  return await callAI(prompt, 1200);
+  const raw = await callAI(prompt, 1200);
+  return sanitizeHTML(raw);
 }
 
 // ============================================================
