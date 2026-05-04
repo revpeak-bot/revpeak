@@ -2,23 +2,34 @@
 // REVPEAK — agen-konten.js
 // GitHub Actions + Cloudflare Workers AI REST API
 // Pendekatan multi-bagian untuk artikel 2000–4000 kata:
-//   Langkah 1 : metadata (title, excerpt, tags, image_query)
+//   Langkah 1 : metadata (title, excerpt, tags, image_prompt)
 //   Langkah 2 : outline (daftar sub-judul section)
 //   Langkah 3 : konten tiap section secara terpisah
 //   Langkah 4 : gabung semua section → satu HTML lengkap
+//   Langkah 5 : generate gambar via CF Workers AI → upload R2
 // ============================================================
 
-const SUPABASE_URL  = process.env.SUPABASE_URL;
-const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_KEY;
-const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
-const CF_AI_TOKEN   = process.env.CF_AI_TOKEN;
-const UNSPLASH_KEY  = process.env.UNSPLASH_ACCESS_KEY;
+const SUPABASE_URL      = process.env.SUPABASE_URL;
+const SUPABASE_KEY      = process.env.SUPABASE_SERVICE_KEY;
+const CF_ACCOUNT_ID     = process.env.CF_ACCOUNT_ID;
+const CF_AI_TOKEN       = process.env.CF_AI_TOKEN;
+const CF_R2_BUCKET      = process.env.CF_R2_BUCKET;          // nama bucket R2
+const CF_R2_PUBLIC_URL  = process.env.CF_R2_PUBLIC_URL;      // base URL publik R2, e.g. https://images.revpeak.web.id
+const CF_R2_TOKEN       = process.env.CF_R2_TOKEN;           // token API R2 (bisa sama dengan CF_AI_TOKEN jika pakai token global)
 
-const CF_AI_URL = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/@cf/meta/llama-3.1-8b-instruct`;
+// ============================================================
+// URL ENDPOINT
+// ============================================================
+
+const CF_AI_BASE    = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run`;
+const CF_AI_TEXT    = `${CF_AI_BASE}/@cf/meta/llama-3.1-8b-instruct`;
+const CF_AI_IMAGE   = `${CF_AI_BASE}/@cf/stabilityai/stable-diffusion-xl-base-1.0`;
+// Alternatif model gambar yang lebih cepat (uncomment jika perlu):
+// const CF_AI_IMAGE = `${CF_AI_BASE}/@cf/bytedance/stable-diffusion-xl-lightning`;
+
+const CF_R2_API     = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/r2/buckets/${CF_R2_BUCKET}/objects`;
 
 // Jumlah section per tipe konten
-// artikel : 7 section × ~400 kata = ~2800 kata
-// news    : 4 section × ~350 kata = ~1400 kata (berita tidak perlu sepanjang artikel)
 const SECTION_COUNT = { article: 7, news: 4 };
 
 // ============================================================
@@ -119,13 +130,24 @@ function hitungKata(html) {
   return html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
 }
 
+/** Hitung estimasi waktu baca dalam menit (asumsi 200 kata/menit) */
+function hitungReadingTime(html) {
+  return Math.max(1, Math.round(hitungKata(html) / 200));
+}
+
+/** Generate nama file unik untuk R2 */
+function generateFileName(slug) {
+  const ts   = Date.now();
+  const rand = Math.random().toString(36).substring(2, 8);
+  return `thumbnails/${slug}-${ts}-${rand}.png`;
+}
+
 // ============================================================
-// CLOUDFLARE WORKERS AI — panggil model
-// maxTokens bisa disesuaikan per kebutuhan call
+// CLOUDFLARE WORKERS AI — panggil model teks
 // ============================================================
 
 async function callAI(prompt, maxTokens = 1200) {
-  const res = await fetch(CF_AI_URL, {
+  const res = await fetch(CF_AI_TEXT, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${CF_AI_TOKEN}`,
@@ -156,7 +178,97 @@ async function callAI(prompt, maxTokens = 1200) {
 }
 
 // ============================================================
-// LANGKAH 1 — Metadata
+// CLOUDFLARE WORKERS AI — generate gambar (binary PNG)
+// ============================================================
+
+/**
+ * Menghasilkan gambar PNG dari prompt teks menggunakan
+ * Stable Diffusion XL via Cloudflare Workers AI.
+ * Mengembalikan ArrayBuffer berisi byte PNG.
+ */
+async function generateImage(prompt) {
+  log(`🎨 Generating gambar AI: "${prompt}"...`);
+
+  const res = await fetch(CF_AI_IMAGE, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${CF_AI_TOKEN}`,
+      "Content-Type":  "application/json",
+    },
+    body: JSON.stringify({
+      prompt,
+      num_steps: 20,          // kualitas vs kecepatan (8–50)
+      guidance:  7.5,         // kesetiaan ke prompt
+      width:     1024,
+      height:    576,         // rasio 16:9 untuk thumbnail web
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`CF AI Image ${res.status}: ${err.substring(0, 200)}`);
+  }
+
+  // Workers AI Image endpoint mengembalikan binary langsung (ReadableStream)
+  const buffer = await res.arrayBuffer();
+  if (!buffer || buffer.byteLength < 1000) {
+    throw new Error("Gambar yang dihasilkan terlalu kecil atau kosong");
+  }
+
+  log(`✅ Gambar berhasil dibuat: ${(buffer.byteLength / 1024).toFixed(1)} KB`);
+  return buffer;
+}
+
+// ============================================================
+// CLOUDFLARE R2 — upload gambar
+// ============================================================
+
+/**
+ * Upload ArrayBuffer PNG ke Cloudflare R2 melalui REST API.
+ * Mengembalikan URL publik gambar.
+ */
+async function uploadToR2(imageBuffer, fileName) {
+  log(`☁️  Upload ke R2: ${fileName}...`);
+
+  const uploadUrl = `${CF_R2_API}/${encodeURIComponent(fileName)}`;
+
+  const res = await fetch(uploadUrl, {
+    method:  "PUT",
+    headers: {
+      "Authorization": `Bearer ${CF_R2_TOKEN}`,
+      "Content-Type":  "image/png",
+    },
+    body: imageBuffer,
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`R2 Upload ${res.status}: ${err.substring(0, 300)}`);
+  }
+
+  const publicUrl = `${CF_R2_PUBLIC_URL.replace(/\/$/, "")}/${fileName}`;
+  log(`✅ Upload R2 berhasil: ${publicUrl}`);
+  return publicUrl;
+}
+
+/**
+ * Orkestrator: generate gambar AI → upload ke R2 → kembalikan URL publik.
+ * Jika gagal, kembalikan null (konten tetap disimpan tanpa gambar).
+ */
+async function generateAndUploadImage(imagePrompt, slug) {
+  try {
+    const imageBuffer = await generateImage(imagePrompt);
+    const fileName    = generateFileName(slug);
+    const publicUrl   = await uploadToR2(imageBuffer, fileName);
+    return { url: publicUrl, alt: imagePrompt, fileName };
+  } catch (e) {
+    log(`⚠️  Gagal generate/upload gambar: ${e.message}`);
+    return { url: null, alt: imagePrompt, fileName: null };
+  }
+}
+
+// ============================================================
+// LANGKAH 1 — Metadata (termasuk prompt gambar untuk AI)
 // ============================================================
 
 async function generateMetadata(topik, subtopik, postType) {
@@ -167,20 +279,22 @@ async function generateMetadata(topik, subtopik, postType) {
 Balas dengan format ini PERSIS (satu nilai per baris, tanpa penjelasan lain):
 TITLE: [judul menarik maksimal 80 karakter dalam bahasa Indonesia]
 EXCERPT: [ringkasan 1-2 kalimat maksimal 160 karakter dalam bahasa Indonesia]
-TAGS: [tag1, tag2, tag3]
-IMAGE: [2-3 kata bahasa Inggris untuk cari foto di Unsplash]`;
+TAGS: [tag1, tag2, tag3, tag4, tag5]
+META_DESC: [meta description SEO 120-155 karakter bahasa Indonesia]
+IMAGE_PROMPT: [deskripsi gambar dalam bahasa Inggris untuk AI image generator, spesifik dan visual, 10-20 kata, gaya fotorealistik profesional, contoh: "modern laptop on clean desk with glowing holographic AI interface, professional studio lighting, 4k"]`;
 
-  const raw = await callAI(prompt, 512);
+  const raw = await callAI(prompt, 600);
 
   const get = (key) => {
     const m = raw.match(new RegExp(`${key}:\\s*(.+)`, "i"));
     return m ? m[1].trim() : "";
   };
 
-  const title      = get("TITLE")   || subtopik.substring(0, 70);
-  const excerpt    = get("EXCERPT") || "";
-  const tagsRaw    = get("TAGS")    || "";
-  const imageQuery = get("IMAGE")   || topik.toLowerCase();
+  const title        = get("TITLE")        || subtopik.substring(0, 70);
+  const excerpt      = get("EXCERPT")      || "";
+  const metaDesc     = get("META_DESC")    || excerpt;
+  const tagsRaw      = get("TAGS")         || "";
+  const imagePrompt  = get("IMAGE_PROMPT") || `${topik.toLowerCase()} concept, professional photography, high quality`;
 
   const tags = tagsRaw
     .replace(/[\[\]]/g, "")
@@ -188,11 +302,11 @@ IMAGE: [2-3 kata bahasa Inggris untuk cari foto di Unsplash]`;
     .map(t => t.trim().replace(/^["']|["']$/g, ""))
     .filter(Boolean);
 
-  return { title, excerpt, tags, imageQuery };
+  return { title, excerpt, metaDesc, tags, imagePrompt };
 }
 
 // ============================================================
-// LANGKAH 2 — Outline (daftar sub-judul section)
+// LANGKAH 2 — Outline
 // ============================================================
 
 async function generateOutline(topik, subtopik, postType, title) {
@@ -214,14 +328,13 @@ Balas HANYA dengan daftar tepat ${jumlah} judul sub-bagian (tanpa nomor, tanpa p
   const sections = raw
     .split("\n")
     .map(l => l.trim()
-      .replace(/^[-•*\d.]+\s*/, "")   // hapus bullet / nomor
-      .replace(/\*\*/g, "")            // hapus markdown bold
-      .replace(/^["']|["']$/g, "")     // hapus tanda kutip
+      .replace(/^[-•*\d.]+\s*/, "")
+      .replace(/\*\*/g, "")
+      .replace(/^["']|["']$/g, "")
     )
     .filter(l => l.length > 4)
     .slice(0, SECTION_COUNT[postType] ?? 6);
 
-  // Fallback jika model mengembalikan respons aneh
   if (sections.length < 2) {
     return isBerita
       ? ["Latar Belakang", "Detail Peristiwa", "Dampak dan Analisis", "Kesimpulan"]
@@ -232,7 +345,7 @@ Balas HANYA dengan daftar tepat ${jumlah} judul sub-bagian (tanpa nomor, tanpa p
 }
 
 // ============================================================
-// LANGKAH 3 — Generate tiap section secara terpisah
+// LANGKAH 3 — Generate tiap section
 // ============================================================
 
 async function generateSection(subtopik, title, sectionTitle, index, total) {
@@ -272,51 +385,26 @@ Instruksi:
 // ============================================================
 
 async function generateArticleByParts(topik, subtopik, postType, title) {
-  // 1. Buat outline
   log("📐 Membuat outline artikel...");
   const sections = await generateOutline(topik, subtopik, postType, title);
   log(`✅ Outline (${sections.length} section): ${sections.join(" | ")}`);
 
-  // 2. Generate tiap section
   const parts = [];
   for (let i = 0; i < sections.length; i++) {
     log(`✍️  Menulis section ${i + 1}/${sections.length}: "${sections[i]}"...`);
     try {
       const part = await generateSection(subtopik, title, sections[i], i, sections.length);
       parts.push(part);
-      const kata = hitungKata(part);
-      log(`✅ Section ${i + 1} selesai: ~${kata} kata`);
+      log(`✅ Section ${i + 1} selesai: ~${hitungKata(part)} kata`);
     } catch (e) {
       log(`⚠️  Section ${i + 1} gagal: ${e.message}, dilewati`);
     }
-    // Jeda kecil antar call untuk menghindari rate limit
     if (i < sections.length - 1) await new Promise(r => setTimeout(r, 500));
   }
 
   const fullContent = parts.join("\n\n");
-  const totalKata   = hitungKata(fullContent);
-  log(`📊 Total konten: ${fullContent.length} karakter | ~${totalKata} kata`);
+  log(`📊 Total konten: ${fullContent.length} karakter | ~${hitungKata(fullContent)} kata`);
   return fullContent;
-}
-
-// ============================================================
-// UNSPLASH
-// ============================================================
-
-async function fetchThumbnail(query) {
-  if (!UNSPLASH_KEY) return { url: null, alt: query };
-  try {
-    const res = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=landscape&content_filter=high`,
-      { headers: { "Authorization": `Client-ID ${UNSPLASH_KEY}` } }
-    );
-    if (!res.ok) throw new Error(`${res.status}`);
-    const data = await res.json();
-    return { url: data.urls?.regular || null, alt: data.alt_description || query };
-  } catch (e) {
-    log(`⚠️  Unsplash gagal: ${e.message}`);
-    return { url: null, alt: query };
-  }
 }
 
 // ============================================================
@@ -367,58 +455,44 @@ async function slugExists(slug) {
 async function main() {
   log("🤖 Agen konten Revpeak mulai...");
 
-  const missing = [
-    ["SUPABASE_URL",        SUPABASE_URL],
+  // Validasi env vars
+  const required = [
+    ["SUPABASE_URL",         SUPABASE_URL],
     ["SUPABASE_SERVICE_KEY", SUPABASE_KEY],
-    ["CF_ACCOUNT_ID",       CF_ACCOUNT_ID],
-    ["CF_AI_TOKEN",         CF_AI_TOKEN],
-  ].filter(([, v]) => !v).map(([k]) => k);
+    ["CF_ACCOUNT_ID",        CF_ACCOUNT_ID],
+    ["CF_AI_TOKEN",          CF_AI_TOKEN],
+    ["CF_R2_BUCKET",         CF_R2_BUCKET],
+    ["CF_R2_PUBLIC_URL",     CF_R2_PUBLIC_URL],
+    ["CF_R2_TOKEN",          CF_R2_TOKEN],
+  ];
 
+  const missing = required.filter(([, v]) => !v).map(([k]) => k);
   if (missing.length) {
     console.error(`❌ ENV tidak ditemukan: ${missing.join(", ")}`);
     process.exit(1);
   }
 
-  // Pilih topik
+  // ── Pilih topik ──────────────────────────────────────────────
   const topikDipilih = pilihAcak(TOPIK);
   const subtopik     = pilihAcak(topikDipilih.subtopik);
 
   log(`📌 Topik : [${topikDipilih.kategori}] ${subtopik}`);
   log(`📄 Tipe  : ${topikDipilih.post_type}`);
 
-  // Langkah 1 — Metadata
+  // ── Langkah 1 — Metadata ─────────────────────────────────────
   log("📋 Membuat metadata...");
   let meta;
   try {
     meta = await generateMetadata(topikDipilih.kategori, subtopik, topikDipilih.post_type);
-    log(`✅ Judul : "${meta.title}"`);
-    log(`📎 Tags  : ${meta.tags.join(", ")}`);
+    log(`✅ Judul        : "${meta.title}"`);
+    log(`📎 Tags         : ${meta.tags.join(", ")}`);
+    log(`🎨 Image prompt : "${meta.imagePrompt}"`);
   } catch (e) {
     console.error(`❌ Gagal buat metadata: ${e.message}`);
     process.exit(1);
   }
 
-  // Langkah 2 & 3 — Outline + konten per section
-  log("✍️  Membuat konten artikel (multi-bagian)...");
-  let content;
-  try {
-    content = await generateArticleByParts(
-      topikDipilih.kategori,
-      subtopik,
-      topikDipilih.post_type,
-      meta.title
-    );
-  } catch (e) {
-    console.error(`❌ Gagal buat konten: ${e.message}`);
-    process.exit(1);
-  }
-
-  if (!content || content.trim().length < 100) {
-    console.error("❌ Konten terlalu pendek atau kosong.");
-    process.exit(1);
-  }
-
-  // Slug unik
+  // ── Slug unik ────────────────────────────────────────────────
   let slug      = slugify(meta.title);
   let slugFinal = slug;
   for (let i = 1; (await slugExists(slugFinal)) && i <= 5; i++) {
@@ -426,42 +500,103 @@ async function main() {
     log(`⚠️  Slug duplikat, coba: ${slugFinal}`);
   }
 
-  // Thumbnail
-  log(`🖼️  Mencari gambar: "${meta.imageQuery}"...`);
-  const thumb = await fetchThumbnail(meta.imageQuery);
-  log(thumb.url ? `✅ Gambar: ${thumb.url}` : "⚠️  Tanpa gambar.");
+  // ── Langkah 5 — Generate & Upload Gambar (paralel dengan konten) ──
+  // Gambar dan konten di-generate secara paralel untuk menghemat waktu
+  log("🚀 Memulai generate gambar & konten secara paralel...");
 
-  // Category & Author
+  const [imageResult, content] = await Promise.allSettled([
+    generateAndUploadImage(meta.imagePrompt, slugFinal),
+    generateArticleByParts(topikDipilih.kategori, subtopik, topikDipilih.post_type, meta.title),
+  ]);
+
+  // Ambil hasil gambar
+  const thumb = imageResult.status === "fulfilled"
+    ? imageResult.value
+    : { url: null, alt: meta.imagePrompt, fileName: null };
+
+  if (imageResult.status === "rejected") {
+    log(`⚠️  Generate gambar gagal total: ${imageResult.reason}`);
+  }
+  log(thumb.url ? `✅ Thumbnail URL : ${thumb.url}` : "⚠️  Artikel disimpan tanpa gambar.");
+
+  // Ambil hasil konten
+  if (content.status === "rejected") {
+    console.error(`❌ Gagal buat konten: ${content.reason}`);
+    process.exit(1);
+  }
+  const articleContent = content.value;
+
+  if (!articleContent || articleContent.trim().length < 100) {
+    console.error("❌ Konten terlalu pendek atau kosong.");
+    process.exit(1);
+  }
+
+  // ── Category & Author ────────────────────────────────────────
   const [categoryId, authorId] = await Promise.all([
     getCategoryId(topikDipilih.slug_kategori),
     getAuthorId(),
   ]);
   log(`🗂️  Category: ${categoryId ?? "null"} | Author: ${authorId ?? "null"}`);
 
-  // Simpan ke Supabase
+  // ── Hitung reading time ──────────────────────────────────────
+  const readingTime = hitungReadingTime(articleContent);
+  const wordCount   = hitungKata(articleContent);
+  log(`📊 Word count: ${wordCount} | Reading time: ${readingTime} menit`);
+
+  // ── Simpan ke Supabase ───────────────────────────────────────
   log("💾 Menyimpan ke Supabase...");
   try {
+    const publishedAt = new Date().toISOString();
+    const payload = {
+      // ── Kolom wajib konten ──
+      title:             meta.title,
+      slug:              slugFinal,
+      excerpt:           meta.excerpt,
+      content:           articleContent,
+      post_type:         topikDipilih.post_type,   // 'article' | 'news'
+      status:            "published",
+
+      // ── Relasi ──
+      category_id:       categoryId,
+      author_id:         authorId,
+
+      // ── Taksonomi ──
+      tags:              meta.tags,                 // TEXT[] atau JSONB
+
+      // ── Gambar (dari R2) ──
+      thumbnail_url:     thumb.url,                 // URL publik R2
+      thumbnail_alt:     thumb.alt,                 // teks alt aksesibel
+      thumbnail_file:    thumb.fileName,            // path di dalam bucket R2
+
+      // ── SEO ──
+      meta_title:        meta.title,
+      meta_description:  meta.metaDesc,
+      og_image:          thumb.url,                 // Open Graph image = thumbnail
+
+      // ── Statistik awal ──
+      view_count:        0,
+      reading_time:      readingTime,               // dalam menit
+      word_count:        wordCount,
+
+      // ── Flag ──
+      featured:          false,
+      is_ai_generated:   true,                      // penanda konten AI
+
+      // ── Timestamp ──
+      published_at:      publishedAt,
+      created_at:        publishedAt,
+      updated_at:        publishedAt,
+    };
+
     const hasil = await sbFetch("/articles", {
       method: "POST",
-      body: JSON.stringify({
-        title:         meta.title,
-        slug:          slugFinal,
-        excerpt:       meta.excerpt,
-        content:       content,
-        post_type:     topikDipilih.post_type,
-        status:        "published",
-        category_id:   categoryId,
-        author_id:     authorId,
-        tags:          meta.tags,
-        thumbnail_url: thumb.url,
-        thumbnail_alt: thumb.alt,
-        published_at:  new Date().toISOString(),
-      }),
+      body:   JSON.stringify(payload),
     });
-    log(`✅ ID: ${hasil?.[0]?.id ?? "?"}`);
-    log(`🔗 URL: https://revpeak.web.id/${slugFinal}`);
+
+    log(`✅ Artikel tersimpan — ID: ${hasil?.[0]?.id ?? "?"}`);
+    log(`🔗 URL: https://revpeak.web.id/${topikDipilih.slug_kategori}/${slugFinal}`);
   } catch (e) {
-    console.error(`❌ Gagal simpan: ${e.message}`);
+    console.error(`❌ Gagal simpan ke Supabase: ${e.message}`);
     process.exit(1);
   }
 
