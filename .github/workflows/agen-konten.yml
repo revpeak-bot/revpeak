@@ -2,6 +2,17 @@
 # REVPEAK — Agen Konten AI
 # GitHub Actions + Cloudflare Workers AI REST API
 # Berjalan 6x sehari (setiap 4 jam)
+#
+# Alur per run:
+#   1. Generate metadata (title, excerpt, tags, meta_desc, image_prompt)
+#   2. Generate outline → konten per section (paralel dengan gambar)
+#   3. Generate gambar AI via CF Workers AI (Stable Diffusion XL)
+#   4. Upload gambar ke Cloudflare R2
+#   5. Simpan semua kolom ke Supabase
+#
+# Estimasi waktu:
+#   article: 1(meta) + 1(outline) + 7(section) + 1(gambar+upload) = ~10 calls
+#   news   : 1(meta) + 1(outline) + 4(section) + 1(gambar+upload) = ~7 calls
 # ============================================================
 
 name: Agen Konten AI
@@ -24,7 +35,11 @@ jobs:
   generate:
     name: Generate & Publish Artikel
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Dinaikkan ke 30 menit karena:
+    # - Generate gambar AI (Stable Diffusion XL) ~30–60 detik
+    # - Upload ke R2 ~5–10 detik
+    # - Multi-section text generation seperti sebelumnya
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -37,9 +52,25 @@ jobs:
 
       - name: Jalankan Agen Konten
         env:
+          # ── Supabase ──────────────────────────────────────────
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+          # ── Cloudflare Workers AI ─────────────────────────────
           CF_ACCOUNT_ID:        ${{ secrets.CF_ACCOUNT_ID }}
           CF_AI_TOKEN:          ${{ secrets.CF_AI_TOKEN }}
-          UNSPLASH_ACCESS_KEY:  ${{ secrets.UNSPLASH_ACCESS_KEY }}
+
+          # ── Cloudflare R2 ─────────────────────────────────────
+          # CF_R2_BUCKET    : nama bucket R2 (e.g. revpeak-media)
+          # CF_R2_PUBLIC_URL: base URL publik bucket R2
+          #                   (e.g. https://images.revpeak.web.id)
+          #                   Aktifkan "Public Access" di dashboard R2
+          #                   atau pakai Custom Domain
+          # CF_R2_TOKEN     : Cloudflare API Token dengan izin:
+          #                   R2 Object Read & Write → bucket tertentu
+          #                   (bisa pakai token yang sama dgn CF_AI_TOKEN
+          #                    jika token tersebut punya izin R2)
+          CF_R2_BUCKET:         ${{ secrets.CF_R2_BUCKET }}
+          CF_R2_PUBLIC_URL:     ${{ secrets.CF_R2_PUBLIC_URL }}
+          CF_R2_TOKEN:          ${{ secrets.CF_R2_TOKEN }}
         run: node agen-konten.js
