@@ -1,8 +1,11 @@
 // ============================================================
 // REVPEAK — agen-konten.js
 // GitHub Actions + Cloudflare Workers AI REST API
-// Menggunakan pendekatan dua langkah untuk menghindari
-// masalah parsing JSON dari respons AI
+// Pendekatan multi-bagian untuk artikel 2000–4000 kata:
+//   Langkah 1 : metadata (title, excerpt, tags, image_query)
+//   Langkah 2 : outline (daftar sub-judul section)
+//   Langkah 3 : konten tiap section secara terpisah
+//   Langkah 4 : gabung semua section → satu HTML lengkap
 // ============================================================
 
 const SUPABASE_URL  = process.env.SUPABASE_URL;
@@ -12,6 +15,11 @@ const CF_AI_TOKEN   = process.env.CF_AI_TOKEN;
 const UNSPLASH_KEY  = process.env.UNSPLASH_ACCESS_KEY;
 
 const CF_AI_URL = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/@cf/meta/llama-3.1-8b-instruct`;
+
+// Jumlah section per tipe konten
+// artikel : 7 section × ~400 kata = ~2800 kata
+// news    : 4 section × ~350 kata = ~1400 kata (berita tidak perlu sepanjang artikel)
+const SECTION_COUNT = { article: 7, news: 4 };
 
 // ============================================================
 // TOPIK
@@ -107,11 +115,16 @@ function log(msg) {
   console.log(`[${new Date().toISOString()}] ${msg}`);
 }
 
+function hitungKata(html) {
+  return html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+}
+
 // ============================================================
 // CLOUDFLARE WORKERS AI — panggil model
+// maxTokens bisa disesuaikan per kebutuhan call
 // ============================================================
 
-async function callAI(prompt) {
+async function callAI(prompt, maxTokens = 1200) {
   const res = await fetch(CF_AI_URL, {
     method: "POST",
     headers: {
@@ -126,7 +139,7 @@ async function callAI(prompt) {
         },
         { role: "user", content: prompt },
       ],
-      max_tokens:  2048,
+      max_tokens:  maxTokens,
       temperature: 0.7,
     }),
   });
@@ -143,10 +156,7 @@ async function callAI(prompt) {
 }
 
 // ============================================================
-// GENERATE KONTEN — dua langkah terpisah
-// Langkah 1: metadata (title, excerpt, tags, image_query)
-// Langkah 2: konten HTML
-// Tidak menggunakan JSON.parse untuk menghindari error karakter
+// LANGKAH 1 — Metadata
 // ============================================================
 
 async function generateMetadata(topik, subtopik, postType) {
@@ -160,9 +170,8 @@ EXCERPT: [ringkasan 1-2 kalimat maksimal 160 karakter dalam bahasa Indonesia]
 TAGS: [tag1, tag2, tag3]
 IMAGE: [2-3 kata bahasa Inggris untuk cari foto di Unsplash]`;
 
-  const raw = await callAI(prompt);
+  const raw = await callAI(prompt, 512);
 
-  // Ekstrak dengan regex — tidak ada JSON sama sekali
   const get = (key) => {
     const m = raw.match(new RegExp(`${key}:\\s*(.+)`, "i"));
     return m ? m[1].trim() : "";
@@ -182,23 +191,112 @@ IMAGE: [2-3 kata bahasa Inggris untuk cari foto di Unsplash]`;
   return { title, excerpt, tags, imageQuery };
 }
 
-async function generateContent(topik, subtopik, postType, title) {
-  const isBerita = postType === "news";
+// ============================================================
+// LANGKAH 2 — Outline (daftar sub-judul section)
+// ============================================================
 
-  const prompt = `Tulis ${isBerita ? "berita" : "artikel"} lengkap dalam bahasa Indonesia tentang "${subtopik}" untuk website Revpeak.
+async function generateOutline(topik, subtopik, postType, title) {
+  const isBerita   = postType === "news";
+  const jumlah     = SECTION_COUNT[postType] ?? 6;
 
-Judul artikel: ${title}
+  const tipeKonten = isBerita
+    ? "artikel berita dengan struktur: latar belakang, detail peristiwa, dampak, analisis, penutup"
+    : "artikel informatif mendalam dengan pendahuluan, beberapa sub-topik utama, dan kesimpulan";
 
-Persyaratan:
-- Minimal 500 kata
-- Tulis dalam format HTML dengan tag: <h2>, <h3>, <p>, <ul>, <li>, <strong>
-- ${isBerita ? "Format berita: paragraf utama berisi inti berita, lalu detail dan konteks" : "Format artikel: pendahuluan menarik, isi mendalam dengan beberapa sub-bagian, kesimpulan"}
-- Bahasa Indonesia baku yang mudah dipahami
-- Isi dengan fakta dan informasi yang bermanfaat
-- JANGAN tambahkan judul utama (h1) karena sudah ada di halaman
-- Mulai langsung dengan konten, bukan dengan kata "Berikut" atau sejenisnya`;
+  const prompt = `Buat outline untuk ${isBerita ? "berita" : "artikel"} panjang tentang "${subtopik}" kategori ${topik}.
+Judul: ${title}
+Tipe konten: ${tipeKonten}
 
-  return await callAI(prompt);
+Balas HANYA dengan daftar tepat ${jumlah} judul sub-bagian (tanpa nomor, tanpa penjelasan, satu per baris):`;
+
+  const raw = await callAI(prompt, 512);
+
+  const sections = raw
+    .split("\n")
+    .map(l => l.trim()
+      .replace(/^[-•*\d.]+\s*/, "")   // hapus bullet / nomor
+      .replace(/\*\*/g, "")            // hapus markdown bold
+      .replace(/^["']|["']$/g, "")     // hapus tanda kutip
+    )
+    .filter(l => l.length > 4)
+    .slice(0, SECTION_COUNT[postType] ?? 6);
+
+  // Fallback jika model mengembalikan respons aneh
+  if (sections.length < 2) {
+    return isBerita
+      ? ["Latar Belakang", "Detail Peristiwa", "Dampak dan Analisis", "Kesimpulan"]
+      : ["Pendahuluan", "Pengertian dan Konsep Dasar", "Manfaat Utama", "Cara Penerapan", "Tantangan yang Perlu Diwaspadai", "Tren dan Masa Depan", "Kesimpulan"];
+  }
+
+  return sections;
+}
+
+// ============================================================
+// LANGKAH 3 — Generate tiap section secara terpisah
+// ============================================================
+
+async function generateSection(subtopik, title, sectionTitle, index, total) {
+  const isFirst = index === 0;
+  const isLast  = index === total - 1;
+
+  let instruksi;
+  if (isFirst) {
+    instruksi = "Ini adalah bagian pembuka artikel. Mulai dengan paragraf hook yang menarik perhatian pembaca, lalu perkenalkan topik secara singkat.";
+  } else if (isLast) {
+    instruksi = "Ini adalah bagian penutup artikel. Tulis kesimpulan yang kuat, rangkum poin utama, dan beri pesan penutup yang berkesan.";
+  } else {
+    instruksi = "Ini adalah bagian isi artikel. Fokus pada sub-topik ini secara mendalam dengan informasi faktual dan contoh konkret.";
+  }
+
+  const prompt = `Tulis satu bagian dari artikel tentang "${subtopik}" untuk website Revpeak Indonesia.
+
+Artikel berjudul: ${title}
+Judul sub-bagian ini: ${sectionTitle}
+
+Instruksi:
+- ${instruksi}
+- Tulis antara 350–500 kata untuk sub-bagian ini
+- Mulai dengan tag <h2>${sectionTitle}</h2>
+- Gunakan tag HTML: <p>, <ul>, <li>, <strong> sesuai kebutuhan
+- Bahasa Indonesia baku yang mengalir dan mudah dipahami
+- Isi dengan informasi faktual dan bermanfaat
+- JANGAN tambahkan kalimat penutup seperti "Semoga bermanfaat" kecuali di bagian terakhir
+- JANGAN ulangi hal yang sudah jelas ada di bagian lain
+- Jangan sertakan tag <html>, <body>, atau <h1>`;
+
+  return await callAI(prompt, 1200);
+}
+
+// ============================================================
+// ORCHESTRATOR — gabungkan semua section
+// ============================================================
+
+async function generateArticleByParts(topik, subtopik, postType, title) {
+  // 1. Buat outline
+  log("📐 Membuat outline artikel...");
+  const sections = await generateOutline(topik, subtopik, postType, title);
+  log(`✅ Outline (${sections.length} section): ${sections.join(" | ")}`);
+
+  // 2. Generate tiap section
+  const parts = [];
+  for (let i = 0; i < sections.length; i++) {
+    log(`✍️  Menulis section ${i + 1}/${sections.length}: "${sections[i]}"...`);
+    try {
+      const part = await generateSection(subtopik, title, sections[i], i, sections.length);
+      parts.push(part);
+      const kata = hitungKata(part);
+      log(`✅ Section ${i + 1} selesai: ~${kata} kata`);
+    } catch (e) {
+      log(`⚠️  Section ${i + 1} gagal: ${e.message}, dilewati`);
+    }
+    // Jeda kecil antar call untuk menghindari rate limit
+    if (i < sections.length - 1) await new Promise(r => setTimeout(r, 500));
+  }
+
+  const fullContent = parts.join("\n\n");
+  const totalKata   = hitungKata(fullContent);
+  log(`📊 Total konten: ${fullContent.length} karakter | ~${totalKata} kata`);
+  return fullContent;
 }
 
 // ============================================================
@@ -269,7 +367,6 @@ async function slugExists(slug) {
 async function main() {
   log("🤖 Agen konten Revpeak mulai...");
 
-  // Validasi env
   const missing = [
     ["SUPABASE_URL",        SUPABASE_URL],
     ["SUPABASE_SERVICE_KEY", SUPABASE_KEY],
@@ -289,15 +386,11 @@ async function main() {
   log(`📌 Topik : [${topikDipilih.kategori}] ${subtopik}`);
   log(`📄 Tipe  : ${topikDipilih.post_type}`);
 
-  // Langkah 1: Generate metadata
-  log("📋 Membuat metadata (judul, excerpt, tags)...");
+  // Langkah 1 — Metadata
+  log("📋 Membuat metadata...");
   let meta;
   try {
-    meta = await generateMetadata(
-      topikDipilih.kategori,
-      subtopik,
-      topikDipilih.post_type
-    );
+    meta = await generateMetadata(topikDipilih.kategori, subtopik, topikDipilih.post_type);
     log(`✅ Judul : "${meta.title}"`);
     log(`📎 Tags  : ${meta.tags.join(", ")}`);
   } catch (e) {
@@ -305,24 +398,28 @@ async function main() {
     process.exit(1);
   }
 
-  // Langkah 2: Generate konten HTML
-  log("✍️  Membuat konten artikel...");
+  // Langkah 2 & 3 — Outline + konten per section
+  log("✍️  Membuat konten artikel (multi-bagian)...");
   let content;
   try {
-    content = await generateContent(
+    content = await generateArticleByParts(
       topikDipilih.kategori,
       subtopik,
       topikDipilih.post_type,
       meta.title
     );
-    log(`✅ Konten: ${content.length} karakter`);
   } catch (e) {
     console.error(`❌ Gagal buat konten: ${e.message}`);
     process.exit(1);
   }
 
+  if (!content || content.trim().length < 100) {
+    console.error("❌ Konten terlalu pendek atau kosong.");
+    process.exit(1);
+  }
+
   // Slug unik
-  let slug = slugify(meta.title);
+  let slug      = slugify(meta.title);
   let slugFinal = slug;
   for (let i = 1; (await slugExists(slugFinal)) && i <= 5; i++) {
     slugFinal = `${slug}-${i}`;
@@ -334,7 +431,7 @@ async function main() {
   const thumb = await fetchThumbnail(meta.imageQuery);
   log(thumb.url ? `✅ Gambar: ${thumb.url}` : "⚠️  Tanpa gambar.");
 
-  // Category & author
+  // Category & Author
   const [categoryId, authorId] = await Promise.all([
     getCategoryId(topikDipilih.slug_kategori),
     getAuthorId(),
