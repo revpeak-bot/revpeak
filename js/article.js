@@ -152,7 +152,7 @@ function injectSchema(article) {
       }
     },
     "mainEntityOfPage": {
-      "@type": "@WebPage",
+      "@type": "WebPage",
       "@id":   pageUrl,
     },
   };
@@ -279,10 +279,20 @@ function renderArticle(article) {
     <div id="article-content" class="article-content"></div>
     ${tagsHtml}`;
 
+  // Sanitasi konten — menangani artikel lama yang tersimpan
+  // dengan tag tidak valid (<2>, ##, **bold**, dll.)
+  function sanitizeContent(html) {
+    return html
+      .replace(/<(\/?)\s*([1-6])\s*>/g, "<$1h$2>")
+      .replace(/^(#{1,6})\s+(.+)$/gm, (_, h, t) => `<h${h.length}>${t.trim()}</h${h.length}>`)
+      .replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>")
+      .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
+  }
+
   // Isi konten secara terpisah agar HTML dari AI tidak di-escape
   const contentEl = document.getElementById("article-content");
   if (contentEl) {
-    contentEl.innerHTML = article.content || "<p>Konten tidak tersedia.</p>";
+    contentEl.innerHTML = sanitizeContent(article.content || "<p>Konten tidak tersedia.</p>");
     contentEl.querySelectorAll("img").forEach(img => {
       img.setAttribute("loading", "lazy");
       if (!img.alt) img.alt = article.title;
