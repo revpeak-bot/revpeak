@@ -645,51 +645,47 @@ async function main() {
   log("💾 Menyimpan ke Supabase...");
   try {
     const publishedAt = new Date().toISOString();
-    const payload = {
-      // ── Kolom wajib konten ──
-      title:             meta.title,
-      slug:              slugFinal,
-      excerpt:           meta.excerpt,
-      content:           articleContent,
-      post_type:         topikDipilih.post_type,   // 'article' | 'news'
-      status:            "published",
 
-      // ── Relasi ──
-      category_id:       categoryId,
-      author_id:         authorId,
-
-      // ── Taksonomi ──
-      tags:              meta.tags,                 // TEXT[] atau JSONB
-
-      // ── Gambar (dari R2) ──
-      thumbnail_url:     thumb.url,                 // URL publik R2
-      thumbnail_alt:     thumb.alt,                 // teks alt aksesibel
-      thumbnail_file:    thumb.fileName,            // path di dalam bucket R2
-
-      // ── SEO ──
-      meta_title:        meta.title,
-      meta_description:  meta.metaDesc,
-      og_image:          thumb.url,                 // Open Graph image = thumbnail
-
-      // ── Statistik awal ──
-      view_count:        0,
-      reading_time:      readingTime,               // dalam menit
-      word_count:        wordCount,
-
-      // ── Flag ──
-      featured:          false,
-      is_ai_generated:   true,                      // penanda konten AI
-
-      // ── Timestamp ──
-      published_at:      publishedAt,
-      created_at:        publishedAt,
-      updated_at:        publishedAt,
+    // Kolom inti yang hampir pasti ada di semua skema articles
+    const payloadCore = {
+      title:        meta.title,
+      slug:         slugFinal,
+      excerpt:      meta.excerpt,
+      content:      articleContent,
+      status:       "published",
+      category_id:  categoryId,
+      author_id:    authorId,
+      published_at: publishedAt,
+      created_at:   publishedAt,
+      updated_at:   publishedAt,
     };
 
-    const hasil = await sbFetch("/articles", {
-      method: "POST",
-      body:   JSON.stringify(payload),
-    });
+    // Kolom opsional — hapus baris yang kolomnya tidak ada di tabel Supabase kamu
+    const payloadOptional = {
+      post_type:     topikDipilih.post_type,  // 'article' | 'news'
+      tags:          meta.tags,               // TEXT[] atau JSONB
+      thumbnail_url: thumb.url,               // URL publik R2
+      reading_time:  readingTime,             // dalam menit
+      view_count:    0,
+    };
+
+    const payload = { ...payloadCore, ...payloadOptional };
+
+    // Coba simpan dengan payload lengkap dulu
+    let hasil;
+    try {
+      hasil = await sbFetch("/articles", {
+        method: "POST",
+        body:   JSON.stringify(payload),
+      });
+    } catch (eFull) {
+      // Jika gagal karena kolom tidak dikenal, fallback ke kolom inti saja
+      log(`⚠️  Payload lengkap gagal (${eFull.message}), coba kolom inti...`);
+      hasil = await sbFetch("/articles", {
+        method: "POST",
+        body:   JSON.stringify(payloadCore),
+      });
+    }
 
     log(`✅ Artikel tersimpan — ID: ${hasil?.[0]?.id ?? "?"}`);
     log(`🔗 URL: https://revpeak.web.id/${topikDipilih.slug_kategori}/${slugFinal}`);
