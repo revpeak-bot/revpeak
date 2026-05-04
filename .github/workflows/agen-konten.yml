@@ -53,24 +53,21 @@ jobs:
       - name: Jalankan Agen Konten
         env:
           # ── Supabase ──────────────────────────────────────────
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:              ${{ secrets.SUPABASE_KEY }}
 
           # ── Cloudflare Workers AI ─────────────────────────────
-          CF_ACCOUNT_ID:        ${{ secrets.CF_ACCOUNT_ID }}
-          CF_AI_TOKEN:          ${{ secrets.CF_AI_TOKEN }}
+          CF_ACCOUNT_ID:             ${{ secrets.CF_ACCOUNT_ID }}
+          CF_AI_TOKEN:               ${{ secrets.CF_AI_TOKEN }}
 
-          # ── Cloudflare R2 ─────────────────────────────────────
-          # CF_R2_BUCKET    : nama bucket R2 (e.g. revpeak-media)
-          # CF_R2_PUBLIC_URL: base URL publik bucket R2
-          #                   (e.g. https://images.revpeak.web.id)
-          #                   Aktifkan "Public Access" di dashboard R2
-          #                   atau pakai Custom Domain
-          # CF_R2_TOKEN     : Cloudflare API Token dengan izin:
-          #                   R2 Object Read & Write → bucket tertentu
-          #                   (bisa pakai token yang sama dgn CF_AI_TOKEN
-          #                    jika token tersebut punya izin R2)
-          CF_R2_BUCKET:         ${{ secrets.CF_R2_BUCKET }}
-          CF_R2_PUBLIC_URL:     ${{ secrets.CF_R2_PUBLIC_URL }}
-          CF_R2_TOKEN:          ${{ secrets.CF_R2_TOKEN }}
+          # ── Cloudflare R2 (S3-compatible HMAC credentials) ────
+          # CF_R2_PUBLIC_URL       : base URL publik bucket R2
+          #                          (e.g. https://images.revpeak.web.id)
+          #                          Aktifkan "Public Access" di dashboard R2
+          #                          atau pakai Custom Domain
+          # CF_R2_ACCESS_KEY_ID    : R2 Access Key ID (dari dashboard R2 → Manage R2 API Tokens)
+          # CF_R2_SECRET_ACCESS_KEY: R2 Secret Access Key (pasangan dari Access Key ID)
+          CF_R2_PUBLIC_URL:          ${{ secrets.CF_R2_PUBLIC_URL }}
+          CF_R2_ACCESS_KEY_ID:       ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+          CF_R2_SECRET_ACCESS_KEY:   ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
         run: node agen-konten.js
