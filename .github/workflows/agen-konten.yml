@@ -50,6 +50,9 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Install dependencies
+        run: npm install sharp
+
       - name: Jalankan Agen Konten
         env:
           # ── Supabase ──────────────────────────────────────────
