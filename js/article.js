@@ -353,6 +353,13 @@ async function loadRelatedArticles(article) {
 async function incrementView(slug) {
   try {
     await fetch(`${API_BASE}/api/views/${encodeURIComponent(slug)}`, { method: "POST" });
+
+    // Perbarui tampilan view count di DOM setelah increment berhasil
+    const viewEl = document.querySelector(".article-views");
+    if (viewEl) {
+      const current = parseInt(viewEl.textContent, 10) || 0;
+      viewEl.textContent = `${current + 1} kali dibaca`;
+    }
   } catch {
     // Gagal increment tidak perlu ditangani secara visual
   }
