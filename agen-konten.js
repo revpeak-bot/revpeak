@@ -9,6 +9,8 @@
 //   Langkah 5 : generate gambar via CF Workers AI → upload R2
 // ============================================================
 
+import sharp from "sharp";
+
 const SUPABASE_URL           = process.env.SUPABASE_URL;
 const SUPABASE_KEY           = process.env.SUPABASE_KEY;           // SUPABASE_KEY (anon/service key)
 const CF_ACCOUNT_ID          = process.env.CF_ACCOUNT_ID;
@@ -155,9 +157,10 @@ function hitungReadingTime(html) {
 
 /** Generate nama file unik untuk R2 */
 function generateFileName(slug) {
-  const ts   = Date.now();
   const rand = Math.random().toString(36).substring(2, 8);
-  return `thumbnails/${slug}-${ts}-${rand}.png`;
+  // Potong slug maks 40 karakter, buang tanda hubung di akhir
+  const shortSlug = slug.substring(0, 40).replace(/-+$/, "");
+  return `thumbnails/${shortSlug}-${rand}.webp`;
 }
 
 // ============================================================
@@ -291,7 +294,7 @@ async function uploadToR2(imageBuffer, fileName) {
   const host      = `${CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   const uploadUrl = `${CF_R2_ENDPOINT}/${bucket}/${objectKey}`;
 
-  const contentType   = "image/png";
+  const contentType   = "image/webp";
   const payloadHash   = await sha256Hex(imageBuffer);
 
   // Canonical headers (harus lowercase, sorted)
@@ -356,8 +359,16 @@ async function uploadToR2(imageBuffer, fileName) {
 async function generateAndUploadImage(imagePrompt, slug) {
   try {
     const imageBuffer = await generateImage(imagePrompt);
-    const fileName    = generateFileName(slug);
-    const publicUrl   = await uploadToR2(imageBuffer, fileName);
+
+    // Konversi PNG → WebP (kualitas 85, hemat ~30–50% ukuran)
+    log("🔄 Mengkonversi gambar ke WebP...");
+    const webpBuffer = await sharp(Buffer.from(imageBuffer))
+      .webp({ quality: 85 })
+      .toBuffer();
+    log(`✅ Konversi WebP selesai: ${(webpBuffer.byteLength / 1024).toFixed(1)} KB`);
+
+    const fileName  = generateFileName(slug);
+    const publicUrl = await uploadToR2(webpBuffer.buffer, fileName);
     return { url: publicUrl, alt: imagePrompt, fileName };
   } catch (e) {
     log(`⚠️  Gagal generate/upload gambar: ${e.message}`);
