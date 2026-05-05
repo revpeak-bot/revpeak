@@ -455,6 +455,10 @@ function sanitizeHTML(html) {
     // Konversi Markdown header: ## Judul → <h2>Judul</h2>
     .replace(/^(#{1,6})\s+(.+)$/gm, (_, hashes, text) =>
       `<h${hashes.length}>${text.trim()}</h${hashes.length}>`)
+    // Safety net: <h1> di dalam konten section dikonversi ke <h2>
+    // karena <h1> adalah judul artikel — ditampilkan oleh halaman, bukan konten
+    .replace(/<h1(\s[^>]*)?>/gi, "<h2>")
+    .replace(/<\/h1>/gi, "</h2>")
     // Konversi Markdown bold: **teks** → <strong>teks</strong>
     .replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>")
     // Konversi Markdown italic: *teks* → <em>teks</em>
@@ -488,13 +492,16 @@ Judul sub-bagian ini: ${sectionTitle}
 Instruksi:
 - ${instruksi}
 - Tulis antara 350–500 kata untuk sub-bagian ini
-- Mulai dengan tag <h2>${sectionTitle}</h2>
-- Gunakan tag HTML: <p>, <ul>, <li>, <strong> sesuai kebutuhan
+- Mulai dengan tag <h2>${sectionTitle}</h2> sebagai judul sub-bagian utama
+- Jika ada sub-judul di dalam sub-bagian ini, gunakan <h3>Sub-judul</h3>
+- Jika ada poin lebih spesifik di dalam <h3>, gunakan <h4>Poin</h4>
+- JANGAN gunakan <h1> — judul artikel sudah ditampilkan oleh halaman website sebagai <h1>
+- Gunakan tag HTML lain sesuai kebutuhan: <p>, <ul>, <ol>, <li>, <strong>, <em>
 - Bahasa Indonesia baku yang mengalir dan mudah dipahami
 - Isi dengan informasi faktual dan bermanfaat
 - JANGAN tambahkan kalimat penutup seperti "Semoga bermanfaat" kecuali di bagian terakhir
 - JANGAN ulangi hal yang sudah jelas ada di bagian lain
-- Jangan sertakan tag <html>, <body>, atau <h1>`;
+- Jangan sertakan tag <html>, <body>, <head>, atau <h1>`;
 
   const raw = await callAI(prompt, 1200);
   return sanitizeHTML(raw);
