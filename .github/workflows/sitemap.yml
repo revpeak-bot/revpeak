@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   schedule:
-    - cron: '0 0 * * *' # Update otomatis setiap hari
+    - cron: '0 0 * * *'
 
 jobs:
   sitemap_job:
@@ -19,7 +19,7 @@ jobs:
       uses: cicirello/generate-sitemap@v1
       with:
         base-url-path: https://revpeak.web.id/
-        
+
     - name: Commit and push sitemap
       run: |
         git config user.name "github-actions"
