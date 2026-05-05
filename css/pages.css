@@ -107,8 +107,8 @@
 
 /* Article content */
 .article-content { font-size: 1rem; line-height: 1.85; color: var(--text); }
-.article-content h2 { font-family: 'Syne', sans-serif; font-size: 1.35rem; font-weight: 800; color: var(--text); margin: 2em 0 0.75em; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
-.article-content h3 { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--text); margin: 1.75em 0 0.6em; }
+.article-content h2 { font-family: 'DM Sans', sans-serif; font-size: 1.35rem; font-weight: 700; color: var(--text); margin: 2em 0 0.75em; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+.article-content h3 { font-family: 'DM Sans', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text); margin: 1.75em 0 0.6em; }
 .article-content p { margin-bottom: 1.2em; color: var(--text-muted); }
 .article-content a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .article-content ul, .article-content ol { margin: 0 0 1.2em 1.5em; color: var(--text-muted); }
