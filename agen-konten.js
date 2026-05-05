@@ -12,15 +12,14 @@
 import sharp from "sharp";
 
 const SUPABASE_URL           = process.env.SUPABASE_URL;
-const SUPABASE_KEY           = process.env.SUPABASE_KEY;           // SUPABASE_KEY (anon/service key)
+const SUPABASE_KEY           = process.env.SUPABASE_KEY;
 const CF_ACCOUNT_ID          = process.env.CF_ACCOUNT_ID;
 const CF_AI_TOKEN            = process.env.CF_AI_TOKEN;
-const CF_R2_PUBLIC_URL       = process.env.CF_R2_PUBLIC_URL;       // base URL publik R2 (custom domain)
-const CF_R2_ACCESS_KEY_ID    = process.env.CF_R2_ACCESS_KEY_ID;    // S3-compatible access key
-const CF_R2_SECRET_ACCESS_KEY = process.env.CF_R2_SECRET_ACCESS_KEY; // S3-compatible secret key
+const CF_R2_PUBLIC_URL       = process.env.CF_R2_PUBLIC_URL;
+const CF_R2_ACCESS_KEY_ID    = process.env.CF_R2_ACCESS_KEY_ID;
+const CF_R2_SECRET_ACCESS_KEY = process.env.CF_R2_SECRET_ACCESS_KEY;
 
-// Nama bucket R2 - diambil dari environment variable (wajib di set di GitHub Secrets)
-// Karena menggunakan custom domain, parsing otomatis tidak bisa, jadi harus di-set manual
+// Nama bucket R2 - wajib di set di GitHub Secrets
 const CF_R2_BUCKET = process.env.CF_R2_BUCKET;
 if (!CF_R2_BUCKET) {
   console.error("❌ CF_R2_BUCKET environment variable is required!");
@@ -29,6 +28,11 @@ if (!CF_R2_BUCKET) {
 
 // Endpoint S3-compatible Cloudflare R2
 const CF_R2_ENDPOINT = `https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+
+// Endpoint Cloudflare Workers AI
+const CF_AI_BASE    = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run`;
+const CF_AI_TEXT    = `${CF_AI_BASE}/@cf/meta/llama-3.1-8b-instruct`;
+const CF_AI_IMAGE   = `${CF_AI_BASE}/@cf/stabilityai/stable-diffusion-xl-base-1.0`;
 
 // Jumlah section per tipe konten
 const SECTION_COUNT = { article: 7, news: 4 };
@@ -131,15 +135,12 @@ function hitungKata(html) {
   return html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
 }
 
-/** Hitung estimasi waktu baca dalam menit (asumsi 200 kata/menit) */
 function hitungReadingTime(html) {
   return Math.max(1, Math.round(hitungKata(html) / 200));
 }
 
-/** Generate nama file unik untuk R2 */
 function generateFileName(slug) {
   const rand = Math.random().toString(36).substring(2, 8);
-  // Potong slug maks 40 karakter, buang tanda hubung di akhir
   const shortSlug = slug.substring(0, 40).replace(/-+$/, "");
   return `thumbnails/${shortSlug}-${rand}.webp`;
 }
@@ -180,14 +181,9 @@ async function callAI(prompt, maxTokens = 1200) {
 }
 
 // ============================================================
-// CLOUDFLARE WORKERS AI — generate gambar (binary PNG)
+// CLOUDFLARE WORKERS AI — generate gambar
 // ============================================================
 
-/**
- * Menghasilkan gambar PNG dari prompt teks menggunakan
- * Stable Diffusion XL via Cloudflare Workers AI.
- * Mengembalikan ArrayBuffer berisi byte PNG.
- */
 async function generateImage(prompt) {
   log(`🎨 Generating gambar AI: "${prompt}"...`);
 
@@ -199,10 +195,10 @@ async function generateImage(prompt) {
     },
     body: JSON.stringify({
       prompt,
-      num_steps: 20,          // kualitas vs kecepatan (8–50)
-      guidance:  7.5,         // kesetiaan ke prompt
+      num_steps: 20,
+      guidance:  7.5,
       width:     1024,
-      height:    576,         // rasio 16:9 untuk thumbnail web
+      height:    576,
     }),
   });
 
@@ -211,7 +207,6 @@ async function generateImage(prompt) {
     throw new Error(`CF AI Image ${res.status}: ${err.substring(0, 200)}`);
   }
 
-  // Workers AI Image endpoint mengembalikan binary langsung (ReadableStream)
   const buffer = await res.arrayBuffer();
   if (!buffer || buffer.byteLength < 1000) {
     throw new Error("Gambar yang dihasilkan terlalu kecil atau kosong");
@@ -222,21 +217,16 @@ async function generateImage(prompt) {
 }
 
 // ============================================================
-// CLOUDFLARE R2 — upload gambar
+// CLOUDFLARE R2 — upload gambar (AWS Signature v4)
 // ============================================================
 
-// ── AWS Signature v4 helpers (untuk S3-compatible R2) ──────────────
-
-/** Encode string ke hex */
 const toHex = buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 
-/** SHA-256 hash → hex string */
 async function sha256Hex(data) {
   const buf = typeof data === "string" ? new TextEncoder().encode(data) : data;
   return toHex(await crypto.subtle.digest("SHA-256", buf));
 }
 
-/** HMAC-SHA256 → ArrayBuffer */
 async function hmacSha256(key, data) {
   const keyBuf  = typeof key === "string" ? new TextEncoder().encode(key) : key;
   const dataBuf = typeof data === "string" ? new TextEncoder().encode(data) : data;
@@ -246,7 +236,6 @@ async function hmacSha256(key, data) {
   return crypto.subtle.sign("HMAC", cryptoKey, dataBuf);
 }
 
-/** Derive AWS Sig v4 signing key */
 async function getSigningKey(secretKey, dateStamp, region, service) {
   const kDate    = await hmacSha256(`AWS4${secretKey}`, dateStamp);
   const kRegion  = await hmacSha256(kDate, region);
@@ -254,11 +243,6 @@ async function getSigningKey(secretKey, dateStamp, region, service) {
   return hmacSha256(kService, "aws4_request");
 }
 
-/**
- * Upload ArrayBuffer PNG ke Cloudflare R2 melalui S3-compatible API
- * menggunakan AWS Signature v4 (HMAC credentials).
- * Mengembalikan URL publik gambar.
- */
 async function uploadToR2(imageBuffer, fileName) {
   const bucket = CF_R2_BUCKET;
   const objectKey = fileName;
@@ -272,14 +256,12 @@ async function uploadToR2(imageBuffer, fileName) {
   const service = "s3";
   const now = new Date();
 
-  // Format tanggal untuk Sig v4
-  const dateStamp = now.toISOString().replace(/[-:]/g, "").split("T")[0];          // YYYYMMDD
-  const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");   // YYYYMMDDTHHmmssZ
+  const dateStamp = now.toISOString().replace(/[-:]/g, "").split("T")[0];
+  const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
 
   const contentType = "image/webp";
   const payloadHash = await sha256Hex(imageBuffer);
 
-  // Canonical headers (harus lowercase, sorted)
   const canonicalHeaders =
     `content-length:${imageBuffer.byteLength}\n` +
     `content-type:${contentType}\n` +
@@ -292,7 +274,7 @@ async function uploadToR2(imageBuffer, fileName) {
   const canonicalRequest = [
     "PUT",
     `/${bucket}/${objectKey}`,
-    "",                    // query string (kosong)
+    "",
     canonicalHeaders,
     signedHeaders,
     payloadHash,
@@ -330,41 +312,16 @@ async function uploadToR2(imageBuffer, fileName) {
     throw new Error(`R2 Upload ${res.status}: ${err.substring(0, 300)}`);
   }
 
-  // URL publik: gunakan CF_R2_PUBLIC_URL (custom domain)
   const publicUrl = `${CF_R2_PUBLIC_URL.replace(/\/$/, "")}/${fileName}`;
   log(`✅ Upload R2 berhasil: ${publicUrl}`);
-  
-  // VERIFIKASI: cek apakah file benar ada di origin R2
-  try {
-    const headRes = await fetch(uploadUrl, { 
-      method: "HEAD", 
-      headers: { 
-        "Authorization": authorizationHeader,
-        "x-amz-date": amzDate,
-      } 
-    });
-    log(`🔍 Verifikasi: HEAD ${uploadUrl} → ${headRes.status} ${headRes.statusText}`);
-    if (headRes.ok) {
-      log(`✅ File terkonfirmasi ada di origin R2`);
-    } else {
-      log(`⚠️ File TIDAK ditemukan di origin R2 meskipun upload sukses!`);
-    }
-  } catch (e) {
-    log(`⚠️ Verifikasi gagal: ${e.message}`);
-  }
   
   return publicUrl;
 }
 
-/**
- * Orkestrator: generate gambar AI → upload ke R2 → kembalikan URL publik.
- * Jika gagal, kembalikan null (konten tetap disimpan tanpa gambar).
- */
 async function generateAndUploadImage(imagePrompt, slug) {
   try {
     const imageBuffer = await generateImage(imagePrompt);
 
-    // Konversi PNG → WebP (kualitas 85, hemat ~30–50% ukuran)
     log("🔄 Mengkonversi gambar ke WebP...");
     const webpBuffer = await sharp(Buffer.from(imageBuffer))
       .webp({ quality: 85 })
@@ -381,7 +338,7 @@ async function generateAndUploadImage(imagePrompt, slug) {
 }
 
 // ============================================================
-// LANGKAH 1 — Metadata (termasuk prompt gambar untuk AI)
+// METADATA, OUTLINE, SECTION, SUPABASE (sama seperti sebelumnya)
 // ============================================================
 
 async function generateMetadata(topik, subtopik, postType) {
@@ -394,7 +351,7 @@ TITLE: [judul menarik maksimal 80 karakter dalam bahasa Indonesia]
 EXCERPT: [ringkasan 1-2 kalimat maksimal 160 karakter dalam bahasa Indonesia]
 TAGS: [tag1, tag2, tag3, tag4, tag5]
 META_DESC: [meta description SEO 120-155 karakter bahasa Indonesia]
-IMAGE_PROMPT: [deskripsi gambar dalam bahasa Inggris untuk AI image generator, spesifik dan visual, 10-20 kata, gaya fotorealistik profesional, contoh: "modern laptop on clean desk with glowing holographic AI interface, professional studio lighting, 4k"]`;
+IMAGE_PROMPT: [deskripsi gambar dalam bahasa Inggris untuk AI image generator, spesifik dan visual, 10-20 kata, gaya fotorealistik profesional]`;
 
   const raw = await callAI(prompt, 600);
 
@@ -417,10 +374,6 @@ IMAGE_PROMPT: [deskripsi gambar dalam bahasa Inggris untuk AI image generator, s
 
   return { title, excerpt, metaDesc, tags, imagePrompt };
 }
-
-// ============================================================
-// LANGKAH 2 — Outline
-// ============================================================
 
 async function generateOutline(topik, subtopik, postType, title) {
   const isBerita   = postType === "news";
@@ -457,34 +410,17 @@ Balas HANYA dengan daftar tepat ${jumlah} judul sub-bagian (tanpa nomor, tanpa p
   return sections;
 }
 
-// ============================================================
-// SANITASI OUTPUT AI
-// LLM kadang menghasilkan tag tidak valid (<2> alih-alih <h2>)
-// atau format Markdown. Fungsi ini membersihkannya ke HTML valid.
-// ============================================================
-
 function sanitizeHTML(html) {
   return html
-    // Fix tag heading tidak valid: <2> → <h2>, </3> → </h3>, dst.
     .replace(/<(\/?)\s*([1-6])\s*>/g, "<$1h$2>")
-    // Konversi Markdown header: ## Judul → <h2>Judul</h2>
     .replace(/^(#{1,6})\s+(.+)$/gm, (_, hashes, text) =>
       `<h${hashes.length}>${text.trim()}</h${hashes.length}>`)
-    // Safety net: <h1> di dalam konten section dikonversi ke <h2>
-    // karena <h1> adalah judul artikel — ditampilkan oleh halaman, bukan konten
     .replace(/<h1(\s[^>]*)?>/gi, "<h2>")
     .replace(/<\/h1>/gi, "</h2>")
-    // Konversi Markdown bold: **teks** → <strong>teks</strong>
     .replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>")
-    // Konversi Markdown italic: *teks* → <em>teks</em>
     .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>")
-    // Bungkus baris teks polos yang belum punya tag HTML ke dalam <p>
     .replace(/^(?!<[a-z/])(.{20,})$/gm, "<p>$1</p>");
 }
-
-// ============================================================
-// LANGKAH 3 — Generate tiap section
-// ============================================================
 
 async function generateSection(subtopik, title, sectionTitle, index, total) {
   const isFirst = index === 0;
@@ -508,23 +444,13 @@ Instruksi:
 - ${instruksi}
 - Tulis antara 350–500 kata untuk sub-bagian ini
 - Mulai dengan tag <h2>${sectionTitle}</h2> sebagai judul sub-bagian utama
-- Jika ada sub-judul di dalam sub-bagian ini, gunakan <h3>Sub-judul</h3>
-- Jika ada poin lebih spesifik di dalam <h3>, gunakan <h4>Poin</h4>
-- JANGAN gunakan <h1> — judul artikel sudah ditampilkan oleh halaman website sebagai <h1>
-- Gunakan tag HTML lain sesuai kebutuhan: <p>, <ul>, <ol>, <li>, <strong>, <em>
-- Bahasa Indonesia baku yang mengalir dan mudah dipahami
-- Isi dengan informasi faktual dan bermanfaat
-- JANGAN tambahkan kalimat penutup seperti "Semoga bermanfaat" kecuali di bagian terakhir
-- JANGAN ulangi hal yang sudah jelas ada di bagian lain
-- Jangan sertakan tag <html>, <body>, <head>, atau <h1>`;
+- Gunakan tag HTML: <p>, <ul>, <ol>, <li>, <strong>, <em>
+- JANGAN gunakan <h1>
+- Bahasa Indonesia baku yang mengalir`;
 
   const raw = await callAI(prompt, 1200);
   return sanitizeHTML(raw);
 }
-
-// ============================================================
-// ORCHESTRATOR — gabungkan semua section
-// ============================================================
 
 async function generateArticleByParts(topik, subtopik, postType, title) {
   log("📐 Membuat outline artikel...");
@@ -550,7 +476,7 @@ async function generateArticleByParts(topik, subtopik, postType, title) {
 }
 
 // ============================================================
-// SUPABASE
+// SUPABASE FUNCTIONS
 // ============================================================
 
 async function sbFetch(path, options = {}) {
@@ -597,16 +523,15 @@ async function slugExists(slug) {
 async function main() {
   log("🤖 Agen konten Revpeak mulai...");
 
-  // Validasi env vars
   const required = [
-    ["SUPABASE_URL",              SUPABASE_URL],
-    ["SUPABASE_KEY",              SUPABASE_KEY],
-    ["CF_ACCOUNT_ID",             CF_ACCOUNT_ID],
-    ["CF_AI_TOKEN",               CF_AI_TOKEN],
-    ["CF_R2_PUBLIC_URL",          CF_R2_PUBLIC_URL],
-    ["CF_R2_BUCKET",              CF_R2_BUCKET],
-    ["CF_R2_ACCESS_KEY_ID",       CF_R2_ACCESS_KEY_ID],
-    ["CF_R2_SECRET_ACCESS_KEY",   CF_R2_SECRET_ACCESS_KEY],
+    ["SUPABASE_URL", SUPABASE_URL],
+    ["SUPABASE_KEY", SUPABASE_KEY],
+    ["CF_ACCOUNT_ID", CF_ACCOUNT_ID],
+    ["CF_AI_TOKEN", CF_AI_TOKEN],
+    ["CF_R2_PUBLIC_URL", CF_R2_PUBLIC_URL],
+    ["CF_R2_BUCKET", CF_R2_BUCKET],
+    ["CF_R2_ACCESS_KEY_ID", CF_R2_ACCESS_KEY_ID],
+    ["CF_R2_SECRET_ACCESS_KEY", CF_R2_SECRET_ACCESS_KEY],
   ];
 
   const missing = required.filter(([, v]) => !v).map(([k]) => k);
@@ -615,7 +540,6 @@ async function main() {
     process.exit(1);
   }
 
-  // ── Pilih topik ──────────────────────────────────────────────
   const topikDipilih = pilihAcak(TOPIK);
   const subtopik     = pilihAcak(topikDipilih.subtopik);
 
@@ -623,7 +547,6 @@ async function main() {
   log(`📄 Tipe  : ${topikDipilih.post_type}`);
   log(`📦 Menggunakan bucket: ${CF_R2_BUCKET}`);
 
-  // ── Langkah 1 — Metadata ─────────────────────────────────────
   log("📋 Membuat metadata...");
   let meta;
   try {
@@ -636,7 +559,6 @@ async function main() {
     process.exit(1);
   }
 
-  // ── Slug unik ────────────────────────────────────────────────
   let slug      = slugify(meta.title);
   let slugFinal = slug;
   for (let i = 1; (await slugExists(slugFinal)) && i <= 5; i++) {
@@ -644,8 +566,6 @@ async function main() {
     log(`⚠️  Slug duplikat, coba: ${slugFinal}`);
   }
 
-  // ── Langkah 5 — Generate & Upload Gambar (paralel dengan konten) ──
-  // Gambar dan konten di-generate secara paralel untuk menghemat waktu
   log("🚀 Memulai generate gambar & konten secara paralel...");
 
   const [imageResult, content] = await Promise.allSettled([
@@ -653,7 +573,6 @@ async function main() {
     generateArticleByParts(topikDipilih.kategori, subtopik, topikDipilih.post_type, meta.title),
   ]);
 
-  // Ambil hasil gambar
   const thumb = imageResult.status === "fulfilled"
     ? imageResult.value
     : { url: null, alt: meta.imagePrompt, fileName: null };
@@ -663,7 +582,6 @@ async function main() {
   }
   log(thumb.url ? `✅ Thumbnail URL : ${thumb.url}` : "⚠️  Artikel disimpan tanpa gambar.");
 
-  // Ambil hasil konten
   if (content.status === "rejected") {
     console.error(`❌ Gagal buat konten: ${content.reason}`);
     process.exit(1);
@@ -675,24 +593,20 @@ async function main() {
     process.exit(1);
   }
 
-  // ── Category & Author ────────────────────────────────────────
   const [categoryId, authorId] = await Promise.all([
     getCategoryId(topikDipilih.slug_kategori),
     getAuthorId(),
   ]);
   log(`🗂️  Category: ${categoryId ?? "null"} | Author: ${authorId ?? "null"}`);
 
-  // ── Hitung reading time ──────────────────────────────────────
   const readingTime = hitungReadingTime(articleContent);
   const wordCount   = hitungKata(articleContent);
   log(`📊 Word count: ${wordCount} | Reading time: ${readingTime} menit`);
 
-  // ── Simpan ke Supabase ───────────────────────────────────────
   log("💾 Menyimpan ke Supabase...");
   try {
     const publishedAt = new Date().toISOString();
 
-    // Kolom inti yang hampir pasti ada di semua skema articles
     const payloadCore = {
       title:        meta.title,
       slug:         slugFinal,
@@ -706,18 +620,16 @@ async function main() {
       updated_at:   publishedAt,
     };
 
-    // Kolom opsional — hapus baris yang kolomnya tidak ada di tabel Supabase kamu
     const payloadOptional = {
-      post_type:     topikDipilih.post_type,  // 'article' | 'news'
-      tags:          meta.tags,               // TEXT[] atau JSONB
-      thumbnail_url: thumb.url,               // URL publik R2
-      reading_time:  readingTime,             // dalam menit
+      post_type:     topikDipilih.post_type,
+      tags:          meta.tags,
+      thumbnail_url: thumb.url,
+      reading_time:  readingTime,
       view_count:    0,
     };
 
     const payload = { ...payloadCore, ...payloadOptional };
 
-    // Coba simpan dengan payload lengkap dulu
     let hasil;
     try {
       hasil = await sbFetch("/articles", {
@@ -725,7 +637,6 @@ async function main() {
         body:   JSON.stringify(payload),
       });
     } catch (eFull) {
-      // Jika gagal karena kolom tidak dikenal, fallback ke kolom inti saja
       log(`⚠️  Payload lengkap gagal (${eFull.message}), coba kolom inti...`);
       hasil = await sbFetch("/articles", {
         method: "POST",
