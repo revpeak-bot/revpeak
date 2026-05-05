@@ -160,12 +160,12 @@ async function callAI(prompt, maxTokens = 1200) {
       messages: [
         {
           role: "system",
-          content: "Anda adalah editor konten profesional untuk website Indonesia bernama Revpeak. Ikuti instruksi dengan tepat.",
+          content: `Anda adalah jurnalis dan editor senior untuk media digital Indonesia bernama Revpeak. Anda menulis dengan gaya jurnalisme profesional: lugas, informatif, mengalir, dan tidak terasa seperti ditulis oleh AI. Hindari kalimat generik seperti "Dalam era modern ini..." atau "Sangat penting untuk diketahui bahwa...". Tulis selalu dalam bahasa Indonesia baku yang hidup. Ikuti instruksi format HTML dengan tepat.`,
         },
         { role: "user", content: prompt },
       ],
       max_tokens:  maxTokens,
-      temperature: 0.7,
+      temperature: 0.72,
     }),
   });
 
@@ -412,13 +412,18 @@ Balas HANYA dengan daftar tepat ${jumlah} judul sub-bagian (tanpa nomor, tanpa p
 
 function sanitizeHTML(html) {
   return html
-    .replace(/<(\/?)\s*([1-6])\s*>/g, "<$1h$2>")
-    .replace(/^(#{1,6})\s+(.+)$/gm, (_, hashes, text) =>
-      `<h${hashes.length}>${text.trim()}</h${hashes.length}>`)
+    // Markdown heading → HTML heading (h2–h4 saja, h1 tidak dipakai dalam konten)
+    .replace(/^#{1}\s+(.+)$/gm, "<h2>$1</h2>")
+    .replace(/^#{2}\s+(.+)$/gm, "<h2>$1</h2>")
+    .replace(/^#{3}\s+(.+)$/gm, "<h3>$1</h3>")
+    .replace(/^#{4,6}\s+(.+)$/gm, "<h4>$1</h4>")
+    // Pastikan tidak ada h1 di dalam konten
     .replace(/<h1(\s[^>]*)?>/gi, "<h2>")
     .replace(/<\/h1>/gi, "</h2>")
+    // Bold dan italic dari markdown
     .replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>")
     .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>")
+    // Baris teks biasa yang belum dibungkus tag → jadikan <p>
     .replace(/^(?!<[a-z/])(.{20,})$/gm, "<p>$1</p>");
 }
 
@@ -426,29 +431,53 @@ async function generateSection(subtopik, title, sectionTitle, index, total) {
   const isFirst = index === 0;
   const isLast  = index === total - 1;
 
-  let instruksi;
+  let instruksiPosisi;
   if (isFirst) {
-    instruksi = "Ini adalah bagian pembuka artikel. Mulai dengan paragraf hook yang menarik perhatian pembaca, lalu perkenalkan topik secara singkat.";
+    instruksiPosisi = `Ini adalah bagian PEMBUKA artikel. Mulai dengan kalimat pertama yang langsung menarik—bisa berupa fakta mengejutkan, kutipan pendek, atau pernyataan kuat. Jangan mulai dengan "Dalam era modern ini" atau sejenisnya. Perkenalkan topik secara konkret dan beri pembaca alasan kuat untuk terus membaca.`;
   } else if (isLast) {
-    instruksi = "Ini adalah bagian penutup artikel. Tulis kesimpulan yang kuat, rangkum poin utama, dan beri pesan penutup yang berkesan.";
+    instruksiPosisi = `Ini adalah bagian PENUTUP artikel. Tulis kesimpulan yang tegas dan berkesan—rangkum poin utama secara padat, lalu tutup dengan kalimat yang memberi perspektif atau ajakan berpikir bagi pembaca. Hindari penutup klise seperti "Demikianlah artikel ini...".`;
   } else {
-    instruksi = "Ini adalah bagian isi artikel. Fokus pada sub-topik ini secara mendalam dengan informasi faktual dan contoh konkret.";
+    instruksiPosisi = `Ini adalah bagian ISI artikel. Bahas sub-topik ini secara mendalam dengan data, contoh nyata, atau analisis yang tajam. Jadikan setiap paragraf bernilai—tidak ada kalimat pengisi.`;
   }
 
-  const prompt = `Tulis satu bagian dari artikel tentang "${subtopik}" untuk website Revpeak Indonesia.
+  const prompt = `Tulis satu bagian dari artikel jurnalistik profesional tentang "${subtopik}" untuk Revpeak.
 
-Artikel berjudul: ${title}
+Judul artikel: ${title}
 Judul sub-bagian ini: ${sectionTitle}
+Posisi: ${instruksiPosisi}
 
-Instruksi:
-- ${instruksi}
-- Tulis antara 350–500 kata untuk sub-bagian ini
-- Mulai dengan tag <h2>${sectionTitle}</h2> sebagai judul sub-bagian utama
-- Gunakan tag HTML: <p>, <ul>, <ol>, <li>, <strong>, <em>
-- JANGAN gunakan <h1>
-- Bahasa Indonesia baku yang mengalir`;
+═══ ATURAN FORMAT HTML (WAJIB DIIKUTI) ═══
 
-  const raw = await callAI(prompt, 1200);
+1. JUDUL SUB-BAGIAN — Gunakan tepat satu tag <h2> di baris pertama:
+   <h2>${sectionTitle}</h2>
+
+2. SUB-POIN DI DALAM BAGIAN — Jika ada sub-topik di bawahnya, gunakan <h3>:
+   <h3>Judul Sub-Poin</h3>
+   Baru kemudian paragraf <p>...</p> di bawahnya.
+
+3. PARAGRAF — Setiap paragraf dibungkus <p>...</p>. Satu paragraf = 3–5 kalimat.
+
+4. PENEKANAN — Gunakan <strong> untuk istilah penting, angka, atau fakta kunci.
+   Gunakan <em> hanya untuk penekanan makna, bukan dekorasi.
+
+5. DAFTAR — Jika ada 3+ item serupa, gunakan <ul><li>...</li></ul> atau <ol><li>...</li></ul>.
+   Setiap <li> minimal 1 kalimat lengkap, bukan hanya kata.
+
+6. LARANGAN:
+   - JANGAN gunakan <h1> sama sekali
+   - JANGAN tulis heading dan isi dengan ukuran/bobot yang sama
+   - JANGAN gunakan Markdown (**, ##, dsb.)
+   - JANGAN tambahkan komentar atau penjelasan di luar konten artikel
+
+═══ GAYA PENULISAN ═══
+- Bahasa Indonesia baku, kalimat aktif, langsung ke inti
+- Hindari basa-basi pembuka seperti "Perlu diketahui bahwa..." atau "Tidak dapat dipungkiri..."
+- Setiap paragraf harus punya satu ide utama yang jelas
+- Target panjang: 300–450 kata untuk bagian ini
+
+Langsung tulis konten HTML-nya, mulai dari tag <h2>:`;
+
+  const raw = await callAI(prompt, 1400);
   return sanitizeHTML(raw);
 }
 
@@ -608,24 +637,24 @@ async function main() {
     const publishedAt = new Date().toISOString();
 
     const payloadCore = {
-      title:        meta.title,
-      slug:         slugFinal,
-      excerpt:      meta.excerpt,
-      content:      articleContent,
-      status:       "published",
-      category_id:  categoryId,
-      author_id:    authorId,
-      published_at: publishedAt,
-      created_at:   publishedAt,
-      updated_at:   publishedAt,
+      title:         meta.title,
+      slug:          slugFinal,
+      excerpt:       meta.excerpt,
+      content:       articleContent,
+      status:        "published",
+      category_id:   categoryId,
+      author_id:     authorId,
+      published_at:  publishedAt,
+      created_at:    publishedAt,
+      updated_at:    publishedAt,
+      thumbnail_url: thumb.url,   // selalu disertakan agar tidak hilang saat fallback
     };
 
     const payloadOptional = {
-      post_type:     topikDipilih.post_type,
-      tags:          meta.tags,
-      thumbnail_url: thumb.url,
-      reading_time:  readingTime,
-      view_count:    0,
+      post_type:    topikDipilih.post_type,
+      tags:         meta.tags,
+      reading_time: readingTime,
+      view_count:   0,
     };
 
     const payload = { ...payloadCore, ...payloadOptional };
