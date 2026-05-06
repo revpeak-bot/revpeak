@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Hubungi RevPeak untuk pertanyaan, saran, atau masukan.">
+  <meta name="description" content="Hubungi RevPeak untuk pertanyaan, saran, atau masukan seputar konten artikel dan berita.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://revpeak.web.id/kontak.html">
   <link rel="icon" type="image/webp" href="https://assets.revpeak.web.id/logo-revpeak.webp">
@@ -19,130 +19,221 @@
 </head>
 <body>
 
-<div class="page-hero">
-  <div class="container">
-    <h1 class="page-hero-title">Hubungi Saya</h1>
-    <p class="page-hero-desc">Jika Anda memiliki pertanyaan atau saran, silakan kirim pesan.</p>
-  </div>
-</div>
-
-<main>
-  <div class="container">
-    <div class="kontak-layout">
-
-      <!-- FORM -->
-      <div class="kontak-form-card">
-
-        <h2 class="kontak-form-title">Kirim Pesan</h2>
-        <p class="kontak-form-desc">Saya akan berusaha membalas secepat mungkin.</p>
-
-        <div class="form-group-k">
-          <label class="form-label-k">Nama</label>
-          <input type="text" id="nama" class="form-input-k" placeholder="Nama Anda">
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="drawer-logo">
+        <div class="logo-icon">
+          <img src="https://assets.revpeak.web.id/logo-revpeak.webp" alt="RevPeak logo" style="width:100%;height:100%;object-fit:contain;">
         </div>
-
-        <div class="form-group-k">
-          <label class="form-label-k">Email</label>
-          <input type="email" id="email" class="form-input-k" placeholder="email@contoh.com">
-        </div>
-
-        <div class="form-group-k">
-          <label class="form-label-k">Pesan</label>
-          <textarea id="pesan" class="form-input-k" rows="5" placeholder="Tulis pesan Anda..."></textarea>
-        </div>
-
-        <button class="btn-kirim" onclick="kirimPesan()">Kirim Pesan</button>
-
-        <!-- SUCCESS -->
-        <div class="form-success" id="form-success">
-          <div class="form-success-icon">✅</div>
-          <div class="form-success-title">Pesan Terkirim!</div>
-          <div class="form-success-desc">
-            Terima kasih, saya akan segera membalas pesan Anda.
-          </div>
-        </div>
-
+        <span class="logo-text">Rev<span>Peak</span></span>
       </div>
+      <button class="drawer-close" id="drawer-close">✕</button>
+    </div>
 
-      <!-- INFO -->
-      <div class="kontak-info-cards">
+    <nav class="drawer-nav">
+      <a href="/" class="drawer-link"><span class="drawer-link-icon">🏠</span><span>Beranda</span></a>
+      <a href="berita.html" class="drawer-link"><span class="drawer-link-icon">📰</span><span>Berita</span></a>
+      <a href="tentang.html" class="drawer-link"><span class="drawer-link-icon">ℹ️</span><span>Tentang</span></a>
+      <a href="kontak.html" class="drawer-link active"><span class="drawer-link-icon">💬</span><span>Dukungan</span></a>
+    </nav>
 
-        <div class="kontak-info-card">
-          <div class="kontak-info-icon">👤</div>
-          <div>
-            <div class="kontak-info-title">Pemilik</div>
-            <div class="kontak-info-val">Asran</div>
-          </div>
-        </div>
-
-        <div class="kontak-info-card">
-          <div class="kontak-info-icon">🌐</div>
-          <div>
-            <div class="kontak-info-title">Website</div>
-            <div class="kontak-info-val">revpeak.web.id</div>
-          </div>
-        </div>
-
-        <div class="kontak-info-card">
-          <div class="kontak-info-icon">⏰</div>
-          <div>
-            <div class="kontak-info-title">Respons</div>
-            <div class="kontak-info-val">1–2 hari</div>
-          </div>
-        </div>
-
+    <div class="drawer-footer">
+      <div class="drawer-theme-row">
+        <span class="drawer-theme-label">Mode Gelap</span>
+        <button class="theme-toggle-pill" id="theme-toggle" role="switch" aria-checked="false"><span class="theme-toggle-thumb"></span></button>
       </div>
+      <p class="drawer-version">RevPeak v3.0</p>
+    </div>
+  </aside>
 
+  <header class="header" id="header">
+    <div class="header-top">
+      <div class="header-top-inner container">
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+
+        <a href="/" class="header-logo">
+          <div class="logo-icon">
+            <img src="https://assets.revpeak.web.id/logo-revpeak.webp" alt="RevPeak logo">
+          </div>
+          <div class="header-logo-text">
+            <span class="logo-text">Rev<span>Peak</span></span>
+            <span class="logo-tagline">Artikel & Berita Terkini</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-hero">
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="/">Beranda</a><span>›</span><span>Kontak</span>
+      </nav>
+      <h1 class="page-hero-title">Hubungi Kami</h1>
+      <p class="page-hero-desc">Ada pertanyaan, saran, atau masukan? Kami senang mendengar dari Anda.</p>
     </div>
   </div>
-</main>
 
-<script>
-async function kirimPesan() {
-  const nama = document.getElementById('nama').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const pesan = document.getElementById('pesan').value.trim();
+  <main>
+    <div class="container">
+      <div class="kontak-layout">
 
-  if (!nama || !email || !pesan) {
-    alert("Mohon isi semua field terlebih dahulu.");
-    return;
-  }
+        <!-- FORM -->
+        <div class="kontak-form-card">
 
-  const btn = document.querySelector('.btn-kirim');
-  btn.innerText = "Mengirim...";
-  btn.disabled = true;
+          <h2 class="kontak-form-title">Kirim Pesan</h2>
+          <p class="kontak-form-desc">Kami akan berusaha membalas secepat mungkin.</p>
 
-  try {
-    const response = await fetch("https://api.web3forms.com/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        access_key: "185e19dd-5b23-401b-9108-b9cb63100058",
-        subject: "Pesan Baru dari " + nama + " – RevPeak",
-        name: nama,
-        email: email,
-        message: pesan
-      })
-    });
+          <div class="form-group-k">
+            <label class="form-label-k">Nama</label>
+            <input type="text" id="nama" class="form-input-k" placeholder="Nama Anda">
+          </div>
 
-    const result = await response.json();
+          <div class="form-group-k">
+            <label class="form-label-k">Email</label>
+            <input type="email" id="email" class="form-input-k" placeholder="email@contoh.com">
+          </div>
 
-    if (result.success) {
-      document.querySelectorAll('.form-group-k').forEach(el => el.style.display = 'none');
-      btn.style.display = 'none';
-      document.getElementById('form-success').style.display = 'block';
-    } else {
-      alert("Gagal mengirim pesan. Silakan coba lagi.");
+          <div class="form-group-k">
+            <label class="form-label-k">Pesan</label>
+            <textarea id="pesan" class="form-input-k" rows="5" placeholder="Tulis pesan Anda..."></textarea>
+          </div>
+
+          <button class="btn-kirim" onclick="kirimPesan()">Kirim Pesan</button>
+
+          <!-- SUCCESS -->
+          <div class="form-success" id="form-success">
+            <div class="form-success-icon">✅</div>
+            <div class="form-success-title">Pesan Terkirim!</div>
+            <div class="form-success-desc">
+              Terima kasih, kami akan segera membalas pesan Anda.
+            </div>
+          </div>
+
+        </div>
+
+        <!-- INFO -->
+        <div class="kontak-info-cards">
+
+          <div class="kontak-info-card">
+            <div class="kontak-info-icon">👤</div>
+            <div>
+              <div class="kontak-info-title">Pemilik</div>
+              <div class="kontak-info-val">Asran</div>
+            </div>
+          </div>
+
+          <div class="kontak-info-card">
+            <div class="kontak-info-icon">🌐</div>
+            <div>
+              <div class="kontak-info-title">Website</div>
+              <div class="kontak-info-val">revpeak.web.id</div>
+            </div>
+          </div>
+
+          <div class="kontak-info-card">
+            <div class="kontak-info-icon">📧</div>
+            <div>
+              <div class="kontak-info-title">Email</div>
+              <div class="kontak-info-val">admin@revpeak.web.id</div>
+            </div>
+          </div>
+
+          <div class="kontak-info-card">
+            <div class="kontak-info-icon">⏰</div>
+            <div>
+              <div class="kontak-info-title">Respons</div>
+              <div class="kontak-info-val">1–2 hari kerja</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <div class="logo-icon"><img src="https://assets.revpeak.web.id/logo-revpeak.webp" alt="RevPeak logo" style="width:100%;height:100%;object-fit:contain;"></div>
+            <span class="logo-text">Rev<span>Peak</span></span>
+          </div>
+          <p class="footer-desc">Platform artikel dan berita terkini yang informatif, akurat, dan mudah dipahami.</p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navigasi</h4>
+          <a href="/">Beranda</a>
+          <a href="berita.html">Berita</a>
+          <a href="tentang.html">Tentang</a>
+          <a href="kontak.html">Kontak</a>
+        </div>
+
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="kebijakan.html">Kebijakan Privasi</a>
+          <a href="disclaimer.html">Disclaimer</a>
+          <a href="sitemap.xml">Sitemap</a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© 2026 RevPeak. Semua hak dilindungi.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  async function kirimPesan() {
+    const nama = document.getElementById('nama').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const pesan = document.getElementById('pesan').value.trim();
+
+    if (!nama || !email || !pesan) {
+      alert("Mohon isi semua field terlebih dahulu.");
+      return;
+    }
+
+    const btn = document.querySelector('.btn-kirim');
+    btn.innerText = "Mengirim...";
+    btn.disabled = true;
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_key: "185e19dd-5b23-401b-9108-b9cb63100058",
+          subject: "Pesan Baru dari " + nama + " – RevPeak",
+          name: nama,
+          email: email,
+          message: pesan
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        document.querySelectorAll('.form-group-k').forEach(el => el.style.display = 'none');
+        btn.style.display = 'none';
+        document.getElementById('form-success').style.display = 'block';
+      } else {
+        alert("Gagal mengirim pesan. Silakan coba lagi.");
+        btn.innerText = "Kirim Pesan";
+        btn.disabled = false;
+      }
+    } catch (error) {
+      alert("Terjadi kesalahan jaringan. Silakan coba lagi.");
       btn.innerText = "Kirim Pesan";
       btn.disabled = false;
     }
-  } catch (error) {
-    alert("Terjadi kesalahan jaringan. Silakan coba lagi.");
-    btn.innerText = "Kirim Pesan";
-    btn.disabled = false;
   }
-}
-</script>
+  </script>
 
+  <script src="js/app.js"></script>
 </body>
 </html>
