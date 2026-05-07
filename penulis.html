@@ -1,92 +1,158 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Penulis — Revpeak</title>
   <meta name="description" content="Kenali para penulis dan editor di balik konten Revpeak.">
-  <link rel="icon" href="/logo-revpeak.webp" type="image/webp">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://revpeak.web.id/penulis.html">
+  <link rel="icon" type="image/webp" href="/logo-revpeak.webp">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/pages.css">
+  <title>Penulis — Revpeak</title>
 </head>
 <body>
 
-  <!-- HEADER -->
-  <header class="site-header" role="banner">
-    <div class="container header-inner">
-      <a href="/" class="site-logo" aria-label="Revpeak - Beranda">
-        <img src="/logo-revpeak.webp" alt="Revpeak" width="120" height="36">
-      </a>
-      <nav class="site-nav" aria-label="Navigasi utama">
-        <a href="/">Beranda</a>
-        <a href="/berita.html">Berita</a>
-        <a href="/artikel.html">Artikel</a>
-        <a href="/kategori.html">Kategori</a>
-      </nav>
-      <form id="header-search-form" class="header-search" role="search" aria-label="Cari artikel">
-        <input id="header-search-input" type="search" placeholder="Cari..." aria-label="Kata kunci pencarian">
-        <button type="submit" aria-label="Cari">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+
+  <aside class="drawer" id="drawer" aria-label="Menu navigasi">
+    <div class="drawer-header">
+      <div class="drawer-logo">
+        <div class="logo-icon"><img src="/logo-revpeak.webp" alt="Revpeak" style="width:100%;height:100%;object-fit:contain;"></div>
+        <span class="logo-text">Rev<span>peak</span></span>
+      </div>
+      <button class="drawer-close" id="drawer-close" aria-label="Tutup menu">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <nav class="drawer-nav">
+      <a href="/" class="drawer-link"><span class="drawer-link-icon">🏠</span><span>Beranda</span></a>
+      <a href="/berita.html" class="drawer-link"><span class="drawer-link-icon">📰</span><span>Berita</span></a>
+      <a href="/artikel.html" class="drawer-link"><span class="drawer-link-icon">📝</span><span>Artikel</span></a>
+      <a href="/kategori.html" class="drawer-link"><span class="drawer-link-icon">🗂️</span><span>Kategori</span></a>
+      <a href="/penulis.html" class="drawer-link active"><span class="drawer-link-icon">👤</span><span>Penulis</span></a>
+      <a href="/search.html" class="drawer-link"><span class="drawer-link-icon">🔍</span><span>Cari</span></a>
+      <a href="/tentang.html" class="drawer-link"><span class="drawer-link-icon">ℹ️</span><span>Tentang</span></a>
+      <a href="/kontak.html" class="drawer-link"><span class="drawer-link-icon">💬</span><span>Kontak</span></a>
+    </nav>
+    <div class="drawer-footer">
+      <div class="drawer-theme-row">
+        <span class="drawer-theme-label">Mode Gelap</span>
+        <button class="theme-toggle-pill" id="theme-toggle" role="switch" aria-checked="false" aria-label="Ganti tema">
+          <span class="theme-toggle-thumb"></span>
+        </button>
+      </div>
+      <p class="drawer-version">Revpeak v3.0</p>
+    </div>
+  </aside>
+
+  <header class="header" id="header">
+    <div class="header-top">
+      <div class="header-top-inner container">
+        <button class="hamburger" id="hamburger" aria-label="Buka menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <a href="/" class="header-logo">
+          <div class="logo-icon">
+            <img src="/logo-revpeak.webp" alt="Revpeak" onerror="this.style.display='none'">
+            <span>R</span>
+          </div>
+          <div class="header-logo-text">
+            <span class="logo-text">Rev<span>peak</span></span>
+            <span class="logo-tagline">Berita &amp; Artikel Terpercaya</span>
+          </div>
+        </a>
+      </div>
+    </div>
+    <div class="header-search-wrap">
+      <div class="container">
+        <form id="header-search-form" class="header-search-inner" role="search" aria-label="Cari konten">
+          <svg class="search-icon-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-        </button>
-      </form>
-      <button class="nav-toggle" aria-label="Buka menu" aria-expanded="false" aria-controls="site-nav">
-        <span></span><span></span><span></span>
-      </button>
+          <input type="search" id="header-search-input" class="search-input" placeholder="Cari berita, artikel, topik..." autocomplete="off" aria-label="Cari konten">
+          <button type="button" class="search-clear" id="search-clear" aria-label="Hapus pencarian">✕</button>
+        </form>
+      </div>
     </div>
   </header>
 
-  <!-- MAIN -->
-  <main id="main-content">
+  <!-- PAGE HEADER -->
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:28px 0 20px;">
+    <div class="container">
+      <p style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">👤 Tim Editorial</p>
+      <h1 class="section-title page-title" style="margin-bottom:6px;">Penulis</h1>
+      <p style="font-size:0.85rem;color:var(--text-muted);">Kenali para penulis dan editor di balik setiap konten Revpeak.</p>
+    </div>
+  </div>
 
-    <!-- PAGE HERO -->
-    <section class="page-hero" aria-label="Header halaman">
-      <div class="container">
-        <div class="page-hero-inner">
-          <div class="page-hero-label">Tim Editorial</div>
-          <h1 class="page-title">Penulis</h1>
-          <p class="page-subtitle">Kenali para penulis dan editor di balik setiap konten Revpeak.</p>
+  <main id="main-content" class="main-section" style="padding-top:24px;padding-bottom:48px;">
+    <div class="container">
+      <div id="authors-grid" class="authors-grid" aria-live="polite">
+        <div class="skeleton-card" aria-hidden="true" style="border-radius:14px;padding:18px;display:flex;gap:14px;align-items:center;">
+          <div class="skeleton" style="width:52px;height:52px;border-radius:50%;flex-shrink:0;"></div>
+          <div style="flex:1;"><div class="skeleton sk-line" style="width:60%;height:14px;margin-bottom:8px;"></div><div class="skeleton sk-line" style="width:80%;height:11px;"></div></div>
+        </div>
+        <div class="skeleton-card" aria-hidden="true" style="border-radius:14px;padding:18px;display:flex;gap:14px;align-items:center;">
+          <div class="skeleton" style="width:52px;height:52px;border-radius:50%;flex-shrink:0;"></div>
+          <div style="flex:1;"><div class="skeleton sk-line" style="width:60%;height:14px;margin-bottom:8px;"></div><div class="skeleton sk-line" style="width:80%;height:11px;"></div></div>
+        </div>
+        <div class="skeleton-card" aria-hidden="true" style="border-radius:14px;padding:18px;display:flex;gap:14px;align-items:center;">
+          <div class="skeleton" style="width:52px;height:52px;border-radius:50%;flex-shrink:0;"></div>
+          <div style="flex:1;"><div class="skeleton sk-line" style="width:60%;height:14px;margin-bottom:8px;"></div><div class="skeleton sk-line" style="width:80%;height:11px;"></div></div>
         </div>
       </div>
-    </section>
-
-    <!-- GRID PENULIS -->
-    <section class="container" aria-label="Daftar penulis">
-      <div id="authors-grid" class="authors-grid" aria-live="polite">
-        <!-- Diisi oleh app.js -->
-        <div class="skeleton-card" aria-hidden="true"></div>
-        <div class="skeleton-card" aria-hidden="true"></div>
-        <div class="skeleton-card" aria-hidden="true"></div>
-      </div>
-    </section>
-
+    </div>
   </main>
 
-  <!-- FOOTER -->
-  <footer class="site-footer" role="contentinfo">
-    <div class="container footer-inner">
-      <div class="footer-brand">
-        <a href="/" aria-label="Revpeak">
-          <img src="/logo-revpeak.webp" alt="Revpeak" width="100" height="30" loading="lazy">
-        </a>
-        <p class="footer-desc">Berita dan artikel terpercaya seputar teknologi, bisnis, dan gaya hidup.</p>
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <div class="logo-icon"><img src="/logo-revpeak.webp" alt="Revpeak" style="width:100%;height:100%;object-fit:contain;"></div>
+            <span class="logo-text">Rev<span>peak</span></span>
+          </div>
+          <p class="footer-desc">Berita dan artikel terpercaya seputar teknologi, bisnis, dan gaya hidup.</p>
+        </div>
+        <div class="footer-col">
+          <h3>Navigasi</h3>
+          <a href="/">Beranda</a><a href="/berita.html">Berita</a><a href="/artikel.html">Artikel</a>
+          <a href="/kategori.html">Kategori</a><a href="/penulis.html">Penulis</a>
+          <a href="/tentang.html">Tentang</a><a href="/kontak.html">Kontak</a>
+        </div>
+        <div class="footer-col">
+          <h3>Jelajahi</h3>
+          <a href="/search.html">Cari Artikel</a><a href="/berita.html">Berita Terkini</a><a href="/artikel.html">Artikel Pilihan</a>
+        </div>
+        <div class="footer-col">
+          <h3>Legal</h3>
+          <a href="/kebijakan.html">Kebijakan Privasi</a><a href="/disclaimer.html">Disclaimer</a><a href="/sitemap.xml">Sitemap</a>
+        </div>
       </div>
-      <nav class="footer-nav" aria-label="Navigasi footer">
-        <a href="/tentang.html">Tentang</a>
-        <a href="/kontak.html">Kontak</a>
-        <a href="/kebijakan.html">Kebijakan Privasi</a>
-        <a href="/disclaimer.html">Disclaimer</a>
-      </nav>
-      <p class="footer-copy">&copy; <span id="footer-year"></span> Revpeak. Semua hak dilindungi.</p>
+      <div class="footer-bottom">
+        <p>© <span id="footer-year"></span> Revpeak. Semua hak dilindungi.</p>
+        <div class="social-links">
+          <a href="#" aria-label="Instagram">📸</a><a href="#" aria-label="YouTube">▶️</a><a href="#" aria-label="Telegram">✈️</a>
+        </div>
+      </div>
     </div>
   </footer>
 
+  <button class="scroll-top" id="scroll-top" aria-label="Kembali ke atas">↑</button>
+
   <script>
     document.getElementById("footer-year").textContent = new Date().getFullYear();
+    const si = document.getElementById("header-search-input");
+    const sc = document.getElementById("search-clear");
+    if (si && sc) {
+      sc.style.display = "none";
+      si.addEventListener("input", () => sc.style.display = si.value ? "" : "none");
+      sc.addEventListener("click", () => { si.value = ""; sc.style.display = "none"; si.focus(); });
+    }
   </script>
   <script src="/js/seo.js" defer></script>
   <script src="/js/app.js" defer></script>
