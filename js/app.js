@@ -556,6 +556,47 @@ async function loadSidebarTrending(type = null) {
 }
 
 // ============================================================
+// GLOBAL: DRAWER / HAMBURGER MENU
+// ============================================================
+
+function initDrawer() {
+  const hamburger = $("#hamburger");
+  const drawer    = $("#nav-drawer");
+  const overlay   = $("#drawer-overlay");
+  if (!hamburger || !drawer) return;
+
+  function openDrawer() {
+    drawer.classList.add("open");
+    document.body.classList.add("drawer-open");
+    hamburger.setAttribute("aria-expanded", "true");
+    hamburger.classList.add("active");
+  }
+
+  function closeDrawer() {
+    drawer.classList.remove("open");
+    document.body.classList.remove("drawer-open");
+    hamburger.setAttribute("aria-expanded", "false");
+    hamburger.classList.remove("active");
+  }
+
+  hamburger.addEventListener("click", () => {
+    const isOpen = drawer.classList.contains("open");
+    isOpen ? closeDrawer() : openDrawer();
+  });
+
+  if (overlay) overlay.addEventListener("click", closeDrawer);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && drawer.classList.contains("open")) closeDrawer();
+  });
+
+  // Tutup drawer saat link di dalam drawer diklik
+  $$(".drawer-link", drawer).forEach(link => {
+    link.addEventListener("click", closeDrawer);
+  });
+}
+
+// ============================================================
 // GLOBAL: SEARCH BAR (header)
 // ============================================================
 
@@ -591,6 +632,7 @@ function initNavActiveState() {
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  initDrawer();
   initHeaderSearch();
   initNavActiveState();
 
