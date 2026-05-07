@@ -352,7 +352,13 @@ async function loadRelatedArticles(article) {
 
 async function incrementView(slug) {
   try {
-    await fetch(`${API_BASE}/api/views/${encodeURIComponent(slug)}`, { method: "POST" });
+    const url = `${API_BASE}/api/views/${encodeURIComponent(slug)}`;
+    const sent = navigator.sendBeacon ? navigator.sendBeacon(url) : false;
+
+    if (!sent) {
+      // Fallback jika sendBeacon tidak tersedia atau gagal
+      await fetch(url, { method: "POST" });
+    }
 
     // Perbarui tampilan view count di DOM setelah increment berhasil
     const viewEl = document.querySelector(".article-views");
