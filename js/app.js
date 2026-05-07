@@ -560,37 +560,39 @@ async function loadSidebarTrending(type = null) {
 // ============================================================
 
 function initDrawer() {
-  const hamburger = $("#hamburger");
-  const drawer    = $("#nav-drawer");
-  const overlay   = $("#drawer-overlay");
+  const hamburger  = $("#hamburger");
+  const drawer     = $("#drawer");
+  const overlay    = $("#drawer-overlay");
+  const closeBtn   = $("#drawer-close");
   if (!hamburger || !drawer) return;
 
   function openDrawer() {
     drawer.classList.add("open");
-    document.body.classList.add("drawer-open");
+    if (overlay) overlay.classList.add("open");
+    document.body.style.overflow = "hidden";
     hamburger.setAttribute("aria-expanded", "true");
-    hamburger.classList.add("active");
+    hamburger.classList.add("open");
   }
 
   function closeDrawer() {
     drawer.classList.remove("open");
-    document.body.classList.remove("drawer-open");
+    if (overlay) overlay.classList.remove("open");
+    document.body.style.overflow = "";
     hamburger.setAttribute("aria-expanded", "false");
-    hamburger.classList.remove("active");
+    hamburger.classList.remove("open");
   }
 
   hamburger.addEventListener("click", () => {
-    const isOpen = drawer.classList.contains("open");
-    isOpen ? closeDrawer() : openDrawer();
+    drawer.classList.contains("open") ? closeDrawer() : openDrawer();
   });
 
-  if (overlay) overlay.addEventListener("click", closeDrawer);
+  if (closeBtn) closeBtn.addEventListener("click", closeDrawer);
+  if (overlay)  overlay.addEventListener("click", closeDrawer);
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && drawer.classList.contains("open")) closeDrawer();
   });
 
-  // Tutup drawer saat link di dalam drawer diklik
   $$(".drawer-link", drawer).forEach(link => {
     link.addEventListener("click", closeDrawer);
   });
