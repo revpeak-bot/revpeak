@@ -10,6 +10,27 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/pages.css">
+
+  <!-- ── Reading Time Badge ── -->
+  <style>
+    .reading-time-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      letter-spacing: 0.01em;
+    }
+    .reading-time-badge svg {
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+  </style>
 </head>
 <body>
 
@@ -258,6 +279,56 @@
       scrollBtn?.classList.toggle("show", window.scrollY > 400);
     });
     scrollBtn?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+
+    // ── Reading Time ──────────────────────────────────────────────
+    // Fungsi ini dipanggil otomatis setelah article.js menyuntikkan konten,
+    // ATAU bisa dipanggil manual dari article.js: window.injectReadingTime()
+    function injectReadingTime() {
+      const body = document.querySelector('.article-body');
+      if (!body) return;
+
+      const WPM   = 200; // rata-rata kecepatan baca Bahasa Indonesia
+      const words = body.innerText.trim().split(/\s+/).filter(Boolean).length;
+      const mins  = Math.max(1, Math.round(words / WPM));
+      const label = mins === 1 ? '1 menit baca' : `${mins} menit baca`;
+
+      const badge = document.createElement('span');
+      badge.className = 'reading-time-badge';
+      badge.setAttribute('aria-label', `Estimasi waktu baca: ${label}`);
+      badge.innerHTML = `
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+        </svg>
+        ${label}`;
+
+      // Coba sisipkan ke .article-meta (setelah tanggal/penulis)
+      const meta = document.querySelector('.article-meta');
+      if (meta) {
+        meta.appendChild(badge);
+        return;
+      }
+
+      // Fallback: sisipkan sebelum .article-body
+      body.insertAdjacentElement('beforebegin', badge);
+    }
+
+    // Expose ke article.js agar bisa dipanggil setelah render selesai
+    window.injectReadingTime = injectReadingTime;
+
+    // MutationObserver sebagai fallback otomatis
+    // (aktif jika article.js tidak memanggil window.injectReadingTime() secara eksplisit)
+    const wrapper = document.getElementById('article-wrapper');
+    if (wrapper) {
+      const rtObserver = new MutationObserver(() => {
+        if (document.querySelector('.article-body')) {
+          rtObserver.disconnect();
+          // Beri jeda kecil agar DOM selesai dirender sepenuhnya
+          setTimeout(injectReadingTime, 50);
+        }
+      });
+      rtObserver.observe(wrapper, { childList: true, subtree: true });
+    }
+    // ─────────────────────────────────────────────────────────────
   </script>
 
   <script src="/js/seo.js" defer></script>
