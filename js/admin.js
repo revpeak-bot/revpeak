@@ -20,6 +20,14 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// Hitung estimasi waktu baca dari konten HTML (strip tag, hitung kata)
+function calcReadingTime(content) {
+  if (!content) return 1;
+  const text  = content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const words = text.split(" ").filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200)); // ~200 kata/menit
+}
+
 function slugify(text) {
   return text.toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")
@@ -495,6 +503,7 @@ function getFormData() {
 
   return {
     title, slug, excerpt, content, post_type, status,
+    reading_time: calcReadingTime(content),
     category_id: category_id ? parseInt(category_id) : null,
     author_id:   author_id   ? parseInt(author_id)   : null,
     thumbnail_url, thumbnail_alt,
