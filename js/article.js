@@ -31,6 +31,14 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
+// Hitung estimasi waktu baca dari konten HTML (strip tag, hitung kata)
+function calcReadingTime(content) {
+  if (!content) return 1;
+  const text  = content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const words = text.split(" ").filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200)); // ~200 kata/menit (Bahasa Indonesia)
+}
+
 async function apiFetch(path) {
   const res = await fetch(`${API_BASE}${path}`);
   if (!res.ok) throw new Error(`API error ${res.status}`);
@@ -212,10 +220,13 @@ function renderBreadcrumb(article) {
 // ============================================================
 
 function renderArticle(article) {
-  const author  = article.authors    || {};
-  const cat     = article.categories || {};
-  const wrapper = $("#article-wrapper");
+  const author      = article.authors    || {};
+  const cat         = article.categories || {};
+  const wrapper     = $("#article-wrapper");
   if (!wrapper) return;
+
+  const readingMins = calcReadingTime(article.content);
+  const readingLabel = `${readingMins} menit baca`;
 
   const badge    = article.post_type === "news" ? "Berita" : "Artikel";
   const badgeCls = article.post_type === "news" ? "badge-news" : "badge-article";
@@ -270,6 +281,11 @@ function renderArticle(article) {
               <time class="article-date">${formatDate(article.published_at)}</time>
               <span class="meta-sep" aria-hidden="true">·</span>
               <span class="article-views">${article.view_count || 0} kali dibaca</span>
+              <span class="meta-sep" aria-hidden="true">·</span>
+              <span class="article-reading-time" aria-label="Estimasi waktu baca: ${readingLabel}">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-1px;opacity:.7"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                ${readingLabel}
+              </span>
             </div>
           </div>
         </div>

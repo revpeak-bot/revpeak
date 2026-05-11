@@ -72,6 +72,7 @@ function renderCard(article) {
         <div class="card-meta">
           ${author.name ? `<span class="card-author">${escapeHtml(author.name)}</span>` : ""}
           <span class="card-date">${formatDate(article.published_at)}</span>
+          ${article.reading_time ? `<span class="card-reading-time" aria-label="${article.reading_time} menit baca">⏱ ${article.reading_time}m</span>` : ""}
           <span class="card-views" aria-label="${article.view_count || 0} kali dibaca">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
