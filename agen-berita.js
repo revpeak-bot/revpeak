@@ -50,40 +50,10 @@ function generateFileName(slug) {
 
 function parseJSON(text) {
   if (!text) throw new Error("Respons AI kosong");
-
-  // Hapus markdown fence
-  let clean = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
-
-  // Hapus control character tidak valid (kecuali \n \r \t yang valid di luar string)
-  clean = clean.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
-
-  // Jika Llama output multiple array terpisah newline → gabungkan jadi satu array
-  // Contoh: [{...}]\n[{...}] → [{...},{...}]
-  const arrays = [];
-  const arrayRegex = /\[[\s\S]*?\]/g;
-  let m;
-  while ((m = arrayRegex.exec(clean)) !== null) {
-    try {
-      const parsed = JSON.parse(m[0]);
-      if (Array.isArray(parsed)) arrays.push(...parsed);
-    } catch { /* skip invalid */ }
-  }
-  if (arrays.length > 0) return arrays;
-
-  // Fallback: coba ambil satu blok JSON (object atau array) dan parse langsung
+  const clean = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
   const match = clean.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
   if (!match) throw new Error(`Tidak ada JSON valid:\n${clean.slice(0, 300)}`);
-
-  // Escape newline literal di dalam string values saja
-  const escaped = match[1].replace(/"((?:[^"\\]|\\.)*)"/gs, (_, inner) => {
-    return `"${inner.replace(/\n/g, "\\n").replace(/\r/g, "").replace(/\t/g, " ")}"`;
-  });
-
-  try {
-    return JSON.parse(escaped);
-  } catch (e) {
-    throw new Error(`Tidak ada JSON valid:\n${clean.slice(0, 300)}`);
-  }
+  return JSON.parse(match[1]);
 }
 
 // ─── Cloudflare Workers AI — teks ─────────────────────────────────────────────
@@ -306,7 +276,7 @@ async function selectTopicsFromRSS(rssItems) {
       `Dari daftar berita berikut, pilih ${JUMLAH_ARTIKEL} yang paling menarik dan beragam topiknya.\n\n` +
       `DAFTAR:\n${daftarBerita}\n\n` +
       `Kembalikan HANYA JSON array berikut tanpa penjelasan:\n` +
-      `[{"topik":"...","ringkasan":"...","gambar":"2-5 kata Inggris untuk gambar","kategori":"teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"}]`
+      `[{"topik":"...","ringkasan":"...","image_prompt":"2-5 kata Inggris untuk gambar","kategori":"teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"}]`
     },
   ], 800);
 
@@ -330,7 +300,7 @@ async function selectTopicsFallback() {
       `Hari ini ${hari}. Buat ${JUMLAH_ARTIKEL} topik berita yang kemungkinan sedang ` +
       `ramai diperbincangkan di Indonesia. Pilih topik yang beragam.\n\n` +
       `Kembalikan HANYA JSON array berikut tanpa penjelasan:\n` +
-      `[{"topik":"...","ringkasan":"konteks singkat topik ini","gambar":"2-5 kata Inggris untuk gambar","kategori":"teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"}]`
+      `[{"topik":"...","ringkasan":"konteks singkat topik ini","image_prompt":"2-5 kata Inggris untuk gambar","kategori":"teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"}]`
     },
   ], 800);
 
@@ -360,39 +330,23 @@ async function selectTopics(rssItems) {
 }
 
 // ─── Step 3: Generate artikel via Llama ───────────────────────────────────────
-async function generateArticle(topic, attempt = 1) {
-  log(`📝 Menulis artikel (percobaan ${attempt}): "${topic.topik}"`);
+async function generateArticle(topic) {
+  log(`📝 Menulis artikel: "${topic.topik}"`);
 
   const text = await callAI([
-    { role: "system", content: "Kamu adalah jurnalis profesional Indonesia. Balas HANYA dengan JSON, tanpa teks lain, tanpa markdown." },
+    { role: "system", content: "Kamu adalah jurnalis profesional Indonesia. Selalu balas dalam format JSON yang diminta tanpa markdown." },
     { role: "user", content:
-      `Tulis artikel berita Bahasa Indonesia tentang:\n"${topic.topik}"\nKonteks: ${topic.ringkasan}\n\n` +
-      `Ketentuan: gaya jurnalistik, minimal 400 kata, konten HTML sederhana (hanya tag p, h2, ul, li, strong).\n\n` +
-      `Balas HANYA dengan JSON ini, tidak ada teks lain:\n` +
-      `{"judul":"judul artikel","slug":"judul-slug","excerpt":"ringkasan 1 kalimat","konten":"<p>isi artikel</p>","tags":["tag1","tag2"],"meta_description":"deskripsi seo"}`
+      `Tulis artikel berita profesional Bahasa Indonesia tentang:\n"${topic.topik}"\n` +
+      `Konteks: ${topic.ringkasan}\n\n` +
+      `Ketentuan: gaya jurnalistik, minimal 500 kata, konten HTML (<p>,<h2>,<h3>,<ul>,<li>,<strong>).\n\n` +
+      `Kembalikan HANYA JSON:\n` +
+      `{"judul":"...","slug":"judul-format-slug","excerpt":"maks 160 karakter","konten":"<p>HTML...</p>","tags":["tag1","tag2","tag3"],"meta_description":"..."}`
     },
   ], 3000);
 
-  let article = parseJSON(text);
-
-  // Normalisasi field — Llama kadang pakai nama field berbeda
-  if (!article.judul && article.title)   article.judul   = article.title;
-  if (!article.konten && article.content) article.konten = article.content;
-  if (!article.excerpt && article.summary) article.excerpt = article.summary;
-  if (!article.slug && article.judul) {
-    article.slug = article.judul.toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  }
-
-  // Validasi — jika field wajib masih kosong, coba sekali lagi
-  const missing = ["judul", "slug", "excerpt", "konten"].filter(f => !article[f]);
-  if (missing.length > 0) {
-    if (attempt < 2) {
-      log(`⚠️  Field kosong (${missing.join(", ")}), mencoba ulang...`);
-      await sleep(3000);
-      return generateArticle(topic, attempt + 1);
-    }
-    throw new Error(`Field "${missing[0]}" kosong setelah 2 percobaan`);
+  const article = parseJSON(text);
+  for (const f of ["judul", "slug", "excerpt", "konten"]) {
+    if (!article[f]) throw new Error(`Field "${f}" kosong`);
   }
 
   // Sanitasi slug
@@ -507,7 +461,7 @@ async function main() {
       }
 
       // Generate & upload gambar ke R2
-      const imagePrompt = `${topic.gambar}, photorealistic, high quality, no text, no watermark`;
+      const imagePrompt = `${topic.image_prompt}, photorealistic, high quality, no text, no watermark`;
       const { url: coverImageUrl } = await generateAndUploadImage(imagePrompt, article.slug);
 
       // Simpan ke Supabase
