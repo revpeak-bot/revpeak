@@ -50,10 +50,38 @@ function generateFileName(slug) {
 
 function parseJSON(text) {
   if (!text) throw new Error("Respons AI kosong");
-  const clean = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+
+  // Hapus markdown fence
+  let clean = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+
+  // Ambil blok JSON pertama
   const match = clean.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
   if (!match) throw new Error(`Tidak ada JSON valid:\n${clean.slice(0, 300)}`);
-  return JSON.parse(match[1]);
+  clean = match[1];
+
+  // Bersihkan control character di dalam string JSON
+  // Strategi: replace newline/tab literal di dalam string values dengan escaped version
+  clean = clean
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "") // hapus control char tidak valid
+    .replace(/\n/g, "\\n")   // escape newline literal
+    .replace(/\r/g, "\\r")   // escape carriage return literal
+    .replace(/\t/g, "\\t");  // escape tab literal
+
+  // Coba parse langsung
+  try {
+    return JSON.parse(clean);
+  } catch {
+    // Fallback: coba parse lebih agresif — hapus semua whitespace di luar string
+    try {
+      // Cari semua string values dan kembalikan whitespace yang valid di dalamnya
+      const safer = clean.replace(/"((?:[^"\\]|\\.)*)"/g, (_, inner) => {
+        return `"${inner.replace(/\\n/g, " ").replace(/\\r/g, "").replace(/\\t/g, " ")}"`;
+      });
+      return JSON.parse(safer);
+    } catch (e2) {
+      throw new Error(`Tidak ada JSON valid:\n${clean.slice(0, 300)}`);
+    }
+  }
 }
 
 // ─── Cloudflare Workers AI — teks ─────────────────────────────────────────────
