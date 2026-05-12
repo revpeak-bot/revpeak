@@ -360,23 +360,39 @@ async function selectTopics(rssItems) {
 }
 
 // ─── Step 3: Generate artikel via Llama ───────────────────────────────────────
-async function generateArticle(topic) {
-  log(`📝 Menulis artikel: "${topic.topik}"`);
+async function generateArticle(topic, attempt = 1) {
+  log(`📝 Menulis artikel (percobaan ${attempt}): "${topic.topik}"`);
 
   const text = await callAI([
-    { role: "system", content: "Kamu adalah jurnalis profesional Indonesia. Selalu balas dalam format JSON yang diminta tanpa markdown." },
+    { role: "system", content: "Kamu adalah jurnalis profesional Indonesia. Balas HANYA dengan JSON, tanpa teks lain, tanpa markdown." },
     { role: "user", content:
-      `Tulis artikel berita profesional Bahasa Indonesia tentang:\n"${topic.topik}"\n` +
-      `Konteks: ${topic.ringkasan}\n\n` +
-      `Ketentuan: gaya jurnalistik, minimal 500 kata, konten HTML (<p>,<h2>,<h3>,<ul>,<li>,<strong>).\n\n` +
-      `Kembalikan HANYA JSON:\n` +
-      `{"judul":"...","slug":"judul-format-slug","excerpt":"maks 160 karakter","konten":"<p>HTML...</p>","tags":["tag1","tag2","tag3"],"meta_description":"..."}`
+      `Tulis artikel berita Bahasa Indonesia tentang:\n"${topic.topik}"\nKonteks: ${topic.ringkasan}\n\n` +
+      `Ketentuan: gaya jurnalistik, minimal 400 kata, konten HTML sederhana (hanya tag p, h2, ul, li, strong).\n\n` +
+      `Balas HANYA dengan JSON ini, tidak ada teks lain:\n` +
+      `{"judul":"judul artikel","slug":"judul-slug","excerpt":"ringkasan 1 kalimat","konten":"<p>isi artikel</p>","tags":["tag1","tag2"],"meta_description":"deskripsi seo"}`
     },
   ], 3000);
 
-  const article = parseJSON(text);
-  for (const f of ["judul", "slug", "excerpt", "konten"]) {
-    if (!article[f]) throw new Error(`Field "${f}" kosong`);
+  let article = parseJSON(text);
+
+  // Normalisasi field — Llama kadang pakai nama field berbeda
+  if (!article.judul && article.title)   article.judul   = article.title;
+  if (!article.konten && article.content) article.konten = article.content;
+  if (!article.excerpt && article.summary) article.excerpt = article.summary;
+  if (!article.slug && article.judul) {
+    article.slug = article.judul.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  // Validasi — jika field wajib masih kosong, coba sekali lagi
+  const missing = ["judul", "slug", "excerpt", "konten"].filter(f => !article[f]);
+  if (missing.length > 0) {
+    if (attempt < 2) {
+      log(`⚠️  Field kosong (${missing.join(", ")}), mencoba ulang...`);
+      await sleep(3000);
+      return generateArticle(topic, attempt + 1);
+    }
+    throw new Error(`Field "${missing[0]}" kosong setelah 2 percobaan`);
   }
 
   // Sanitasi slug
