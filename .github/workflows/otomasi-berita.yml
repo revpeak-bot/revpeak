@@ -2,11 +2,9 @@ name: Revpeak AI News Agent
 
 on:
   schedule:
-    # Berjalan setiap 4 jam, digeser 2 jam dari agen-konten.yml
     # UTC: 02, 06, 10, 14, 18, 22 → WIB: 09, 13, 17, 21, 01, 05
     - cron: '0 2,6,10,14,18,22 * * *'
   workflow_dispatch:
-    # Bisa dijalankan manual dari tab Actions di GitHub
 
 jobs:
   generate-news:
@@ -24,7 +22,9 @@ jobs:
           node-version: '20'
 
       - name: 📦 Install dependencies
-        run: npm install sharp
+        run: |
+          echo '{"type":"module"}' > package.json
+          npm install sharp
 
       - name: 🚀 Jalankan Agen Berita
         env:
