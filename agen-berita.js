@@ -261,7 +261,7 @@ async function main() {
   console.log('═══════════════════════════════════════════════════\n');
 
   // Validasi environment variables
-  const envCheck = { GEMINI_API_KEY, CF_ACCOUNT_ID, CF_API_TOKEN: process.env.CF_AI_TOKEN, WORKER_URL, WORKER_SECRET, SUPABASE_URL, SUPABASE_KEY };
+  const envCheck = { GEMINI_API_KEY, CF_ACCOUNT_ID, CF_AI_TOKEN: process.env.CF_AI_TOKEN, WORKER_URL, WORKER_SECRET, SUPABASE_URL, SUPABASE_KEY };
   const missing = Object.entries(envCheck).filter(([, v]) => !v).map(([k]) => k);
   if (missing.length > 0) {
     console.error(`❌ Environment variable belum diset: ${missing.join(', ')}`);
