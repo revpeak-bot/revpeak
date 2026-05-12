@@ -25,7 +25,7 @@ const SUPABASE_KEY            = process.env.SUPABASE_SERVICE_KEY;
 const CF_AI_BASE     = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run`;
 const TEXT_MODEL     = "@cf/meta/llama-3.1-8b-instruct";
 const IMAGE_MODEL    = "@cf/stabilityai/stable-diffusion-xl-base-1.0";
-const JUMLAH_ARTIKEL = 3;
+const JUMLAH_ARTIKEL = 1;
 const DELAY_MS       = 5000;
 
 // RSS feed media Indonesia
@@ -50,10 +50,40 @@ function generateFileName(slug) {
 
 function parseJSON(text) {
   if (!text) throw new Error("Respons AI kosong");
-  const clean = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+
+  // Hapus markdown fence
+  let clean = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+
+  // Hapus control character tidak valid (kecuali \n \r \t yang valid di luar string)
+  clean = clean.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+
+  // Jika Llama output multiple array terpisah newline → gabungkan jadi satu array
+  // Contoh: [{...}]\n[{...}] → [{...},{...}]
+  const arrays = [];
+  const arrayRegex = /\[[\s\S]*?\]/g;
+  let m;
+  while ((m = arrayRegex.exec(clean)) !== null) {
+    try {
+      const parsed = JSON.parse(m[0]);
+      if (Array.isArray(parsed)) arrays.push(...parsed);
+    } catch { /* skip invalid */ }
+  }
+  if (arrays.length > 0) return arrays;
+
+  // Fallback: coba ambil satu blok JSON (object atau array) dan parse langsung
   const match = clean.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
   if (!match) throw new Error(`Tidak ada JSON valid:\n${clean.slice(0, 300)}`);
-  return JSON.parse(match[1]);
+
+  // Escape newline literal di dalam string values saja
+  const escaped = match[1].replace(/"((?:[^"\\]|\\.)*)"/gs, (_, inner) => {
+    return `"${inner.replace(/\n/g, "\\n").replace(/\r/g, "").replace(/\t/g, " ")}"`;
+  });
+
+  try {
+    return JSON.parse(escaped);
+  } catch (e) {
+    throw new Error(`Tidak ada JSON valid:\n${clean.slice(0, 300)}`);
+  }
 }
 
 // ─── Cloudflare Workers AI — teks ─────────────────────────────────────────────
@@ -262,50 +292,70 @@ async function getAllRSSItems() {
   return all;
 }
 
+// ─── Step 2: Parse topik dari format label teks ──────────────────────────────
+function parseTopics(text) {
+  const topics = [];
+  const blocks = text.split(/---+|\n(?=TOPIK:)/i).filter(b => b.trim().length > 10);
+  for (const block of blocks) {
+    const get = (label) => {
+      const regex = new RegExp(label + '\\s*:\\s*(.+)', 'i');
+      return block.match(regex)?.[1]?.trim() ?? '';
+    };
+    const topik     = get('TOPIK');
+    const ringkasan = get('RINGKASAN');
+    const gambar    = get('GAMBAR');
+    const kategori  = get('KATEGORI');
+    if (topik && topik.length > 5) {
+      topics.push({ topik, ringkasan: ringkasan || topik, gambar: gambar || topik, kategori: kategori || 'nasional' });
+    }
+  }
+  return topics.slice(0, JUMLAH_ARTIKEL);
+}
+
 // ─── Step 2a: Pilih topik dari RSS ────────────────────────────────────────────
 async function selectTopicsFromRSS(rssItems) {
   log("🤖 Llama memilih topik dari RSS...");
-
   const daftarBerita = rssItems.slice(0, 40)
     .map((item, i) => `${i + 1}. [${item.sumber}] ${item.judul}`)
     .join("\n");
-
   const text = await callAI([
-    { role: "system", content: "Kamu adalah editor berita Indonesia. Selalu balas dalam format JSON yang diminta." },
+    { role: "system", content: "Kamu adalah editor berita Indonesia." },
     { role: "user", content:
-      `Dari daftar berita berikut, pilih ${JUMLAH_ARTIKEL} yang paling menarik dan beragam topiknya.\n\n` +
+      `Dari daftar berita berikut, pilih ${JUMLAH_ARTIKEL} yang paling menarik dan beragam.\n\n` +
       `DAFTAR:\n${daftarBerita}\n\n` +
-      `Kembalikan HANYA JSON array berikut tanpa penjelasan:\n` +
-      `[{"topik":"...","ringkasan":"...","image_prompt":"2-5 kata Inggris untuk gambar","kategori":"teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"}]`
+      `Untuk setiap topik, tulis format PERSIS ini:\n` +
+      `TOPIK: judul topik\n` +
+      `RINGKASAN: ringkasan 1 kalimat\n` +
+      `GAMBAR: 3 kata Inggris untuk ilustrasi\n` +
+      `KATEGORI: teknologi/hiburan/olahraga/nasional/bisnis/gaya-hidup/kesehatan/sains\n` +
+      `---\nUlangi untuk setiap topik. Tidak ada teks lain.`
     },
-  ], 800);
-
-  const topics = parseJSON(text);
-  if (!Array.isArray(topics) || topics.length === 0) throw new Error("Tidak ada topik dari RSS");
+  ], 600);
+  const topics = parseTopics(text);
+  if (topics.length === 0) throw new Error("Tidak ada topik dari RSS");
   return topics;
 }
 
 // ─── Step 2b: Fallback — Llama generate topik sendiri ─────────────────────────
 async function selectTopicsFallback() {
   log("🤖 RSS tidak tersedia, Llama generate topik sendiri...");
-
   const hari = new Date().toLocaleDateString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    weekday: "long", day: "numeric", month: "long", year: "numeric",
+    timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
-
   const text = await callAI([
-    { role: "system", content: "Kamu adalah editor berita Indonesia. Selalu balas dalam format JSON yang diminta." },
+    { role: "system", content: "Kamu adalah editor berita Indonesia." },
     { role: "user", content:
-      `Hari ini ${hari}. Buat ${JUMLAH_ARTIKEL} topik berita yang kemungkinan sedang ` +
-      `ramai diperbincangkan di Indonesia. Pilih topik yang beragam.\n\n` +
-      `Kembalikan HANYA JSON array berikut tanpa penjelasan:\n` +
-      `[{"topik":"...","ringkasan":"konteks singkat topik ini","image_prompt":"2-5 kata Inggris untuk gambar","kategori":"teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"}]`
+      `Hari ini ${hari}. Buat ${JUMLAH_ARTIKEL} topik berita yang sedang ramai di Indonesia, pilih yang beragam.\n\n` +
+      `Untuk setiap topik, tulis format PERSIS ini:\n` +
+      `TOPIK: judul topik\n` +
+      `RINGKASAN: ringkasan 1 kalimat\n` +
+      `GAMBAR: 3 kata Inggris untuk ilustrasi\n` +
+      `KATEGORI: teknologi/hiburan/olahraga/nasional/bisnis/gaya-hidup/kesehatan/sains\n` +
+      `---\nUlangi untuk setiap topik. Tidak ada teks lain.`
     },
-  ], 800);
-
-  const topics = parseJSON(text);
-  if (!Array.isArray(topics) || topics.length === 0) throw new Error("Llama tidak mengembalikan topik");
+  ], 600);
+  const topics = parseTopics(text);
+  if (topics.length === 0) throw new Error("Llama tidak mengembalikan topik");
   return topics;
 }
 
@@ -321,46 +371,98 @@ async function selectTopics(rssItems) {
       log(`⚠️  Seleksi RSS gagal: ${err.message}, beralih ke fallback...`);
     }
   }
-
-  // Fallback: Llama generate topik sendiri
   const topics = await selectTopicsFallback();
   log(`✅ ${topics.length} topik di-generate Llama (fallback):`);
   topics.forEach((t, i) => log(`   ${i + 1}. [${t.kategori}] ${t.topik}`));
   return topics;
 }
 
-// ─── Step 3: Generate artikel via Llama ───────────────────────────────────────
+// ─── Step 3: Generate artikel via Llama (2 langkah) ──────────────────────────
 async function generateArticle(topic) {
   log(`📝 Menulis artikel: "${topic.topik}"`);
 
-  const text = await callAI([
-    { role: "system", content: "Kamu adalah jurnalis profesional Indonesia. Selalu balas dalam format JSON yang diminta tanpa markdown." },
+  // ── Langkah 3a: Generate metadata (plain text label) ──
+  log(`   📋 Langkah 1: Generate metadata...`);
+  const metaText = await callAI([
+    { role: "system", content: "Kamu adalah editor berita Indonesia." },
     { role: "user", content:
-      `Tulis artikel berita profesional Bahasa Indonesia tentang:\n"${topic.topik}"\n` +
+      `Buat metadata artikel berita Bahasa Indonesia tentang: "${topic.topik}"\n\n` +
+      `Tulis dalam format PERSIS ini, tidak ada teks lain:\n` +
+      `JUDUL: judul artikel menarik dan SEO-friendly\n` +
+      `SLUG: judul-dalam-format-slug-huruf-kecil\n` +
+      `EXCERPT: ringkasan 1 kalimat maksimal 150 karakter\n` +
+      `TAGS: tag1, tag2, tag3\n` +
+      `META: deskripsi SEO maksimal 150 karakter`
+    },
+  ], 400);
+
+  // Parse plain text label
+  const getLabel = (label) => {
+    const m = metaText.match(new RegExp(label + '\\s*:\\s*(.+)', 'i'));
+    return m?.[1]?.trim() ?? '';
+  };
+
+  let judul   = getLabel('JUDUL');
+  let slug    = getLabel('SLUG');
+  let excerpt = getLabel('EXCERPT');
+  const tagsRaw = getLabel('TAGS');
+  const metaDesc = getLabel('META');
+
+  if (!judul) judul = topic.topik;
+  if (!excerpt) excerpt = topic.ringkasan?.slice(0, 150) || judul;
+
+  // Generate/sanitasi slug
+  if (!slug) slug = judul;
+  slug = slug.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-")
+    .replace(/-+/g, "-").replace(/^-|-$/g, "").replace(/^\d+/, "");
+
+  const tags = tagsRaw ? tagsRaw.split(/,\s*/).map(t => t.trim()).filter(Boolean) : [];
+
+  const meta = { judul, slug, excerpt, tags };
+
+  log(`   ✅ Judul : ${meta.judul}`);
+  log(`   ✅ Slug  : ${meta.slug}`);
+
+  await sleep(2000);
+
+  // ── Langkah 3b: Generate konten HTML (plain text, bukan JSON) ──
+  log(`   📄 Langkah 2: Generate konten artikel...`);
+  const kontenText = await callAI([
+    { role: "system", content: "Kamu adalah jurnalis Indonesia. Tulis artikel berita langsung tanpa penjelasan tambahan." },
+    { role: "user", content:
+      `Tulis artikel berita Bahasa Indonesia tentang: "${topic.topik}"\n` +
       `Konteks: ${topic.ringkasan}\n\n` +
-      `Ketentuan: gaya jurnalistik, minimal 500 kata, konten HTML (<p>,<h2>,<h3>,<ul>,<li>,<strong>).\n\n` +
-      `Kembalikan HANYA JSON:\n` +
-      `{"judul":"...","slug":"judul-format-slug","excerpt":"maks 160 karakter","konten":"<p>HTML...</p>","tags":["tag1","tag2","tag3"],"meta_description":"..."}`
+      `Ketentuan:\n` +
+      `- Minimal 400 kata\n` +
+      `- Format HTML menggunakan tag: <p>, <h2>, <ul>, <li>, <strong>\n` +
+      `- Mulai langsung dengan <p> atau <h2>, tanpa judul di awal\n` +
+      `- Jangan tambahkan penjelasan, langsung isi artikel saja`
     },
   ], 3000);
 
-  const article = parseJSON(text);
-  for (const f of ["judul", "slug", "excerpt", "konten"]) {
-    if (!article[f]) throw new Error(`Field "${f}" kosong`);
+  // Bersihkan konten dari markdown atau teks non-HTML
+  let konten = kontenText.trim();
+  konten = konten.replace(/^```(?:html)?\s*/m, "").replace(/\s*```$/m, "").trim();
+
+  // Jika tidak ada tag HTML sama sekali, bungkus dalam <p>
+  if (!konten.includes("<p>") && !konten.includes("<h2>")) {
+    konten = konten.split("\n\n")
+      .filter(p => p.trim().length > 0)
+      .map(p => `<p>${p.trim()}</p>`)
+      .join("\n");
   }
 
-  // Sanitasi slug
-  article.slug = article.slug
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .replace(/^\d+/, "");
+  if (!konten || konten.length < 100) throw new Error("Konten artikel terlalu pendek");
+  log(`   ✅ Konten: ${konten.length} karakter`);
 
-  log(`✅ Judul : ${article.judul}`);
-  log(`✅ Slug  : ${article.slug}`);
-  return article;
+  return {
+    judul            : meta.judul,
+    slug             : meta.slug,
+    excerpt          : meta.excerpt,
+    konten           : konten,
+    tags             : meta.tags ?? [],
+  };
 }
 
 // ─── Step 4: Cek duplikat slug ────────────────────────────────────────────────
@@ -461,7 +563,7 @@ async function main() {
       }
 
       // Generate & upload gambar ke R2
-      const imagePrompt = `${topic.image_prompt}, photorealistic, high quality, no text, no watermark`;
+      const imagePrompt = `${topic.gambar}, photorealistic, high quality, no text, no watermark`;
       const { url: coverImageUrl } = await generateAndUploadImage(imagePrompt, article.slug);
 
       // Simpan ke Supabase
@@ -472,7 +574,6 @@ async function main() {
         content:          article.konten,
         cover_image:      coverImageUrl,
         tags:             article.tags ?? [],
-        meta_description: article.meta_description ?? article.excerpt,
         category:         topic.kategori,
         post_type:        "news",
         status:           "published",
