@@ -12,7 +12,7 @@ jobs:
   generate-news:
     name: Generate & Publish Berita
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: 📥 Checkout repository
@@ -23,14 +23,21 @@ jobs:
         with:
           node-version: '20'
 
+      - name: 📦 Install dependencies
+        run: npm install sharp
+
       - name: 🚀 Jalankan Agen Berita
         env:
-          CF_ACCOUNT_ID:        ${{ secrets.CF_ACCOUNT_ID }}
-          CF_AI_TOKEN:          ${{ secrets.CF_AI_TOKEN }}
-          WORKER_URL:           ${{ secrets.WORKER_URL }}
-          WORKER_SECRET:        ${{ secrets.WORKER_SECRET }}
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          CF_ACCOUNT_ID:            ${{ secrets.CF_ACCOUNT_ID }}
+          CF_AI_TOKEN:              ${{ secrets.CF_AI_TOKEN }}
+          CF_R2_PUBLIC_URL:         ${{ secrets.CF_R2_PUBLIC_URL }}
+          CF_R2_BUCKET:             ${{ secrets.CF_R2_BUCKET }}
+          CF_R2_ACCESS_KEY_ID:      ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+          CF_R2_SECRET_ACCESS_KEY:  ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+          WORKER_URL:               ${{ secrets.WORKER_URL }}
+          WORKER_SECRET:            ${{ secrets.WORKER_SECRET }}
+          SUPABASE_URL:             ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:     ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node agen-berita.js
 
       - name: 📋 Log selesai
