@@ -1,138 +1,202 @@
 /**
  * agen-berita.js — Revpeak AI News Agent
- * Gemini 2.0 Flash (Google Search grounding) + Cloudflare Workers AI (image)
- * Dijalankan otomatis via GitHub Actions setiap 4 jam
+ * Sumber topik : RSS feed media Indonesia (Antara, CNN, Detik, Kompas)
+ * AI penulis   : Cloudflare Workers AI (Llama 3.1)
+ * AI gambar    : Cloudflare Workers AI (Stable Diffusion XL)
+ * Dijalankan   : GitHub Actions setiap 4 jam
  */
 
 // ─── Environment Variables (dari GitHub Secrets) ──────────────────────────────
-const GEMINI_API_KEY  = process.env.GEMINI_API_KEY;
-const CF_ACCOUNT_ID   = process.env.CF_ACCOUNT_ID;
-const CF_API_TOKEN    = process.env.CF_AI_TOKEN;
-const WORKER_URL      = process.env.WORKER_URL;       // https://revpeak.workers.dev
-const WORKER_SECRET   = process.env.WORKER_SECRET;
-const SUPABASE_URL    = process.env.SUPABASE_URL;
-const SUPABASE_KEY    = process.env.SUPABASE_SERVICE_KEY;
+const CF_ACCOUNT_ID  = process.env.CF_ACCOUNT_ID;
+const CF_AI_TOKEN    = process.env.CF_AI_TOKEN;
+const WORKER_URL     = process.env.WORKER_URL;
+const WORKER_SECRET  = process.env.WORKER_SECRET;
+const SUPABASE_URL   = process.env.SUPABASE_URL;
+const SUPABASE_KEY   = process.env.SUPABASE_SERVICE_KEY;
 
 // ─── Konstanta ─────────────────────────────────────────────────────────────────
-const GEMINI_BASE  = 'https://generativelanguage.googleapis.com/v1beta';
-const GEMINI_MODEL = 'gemini-2.0-flash';
-const CF_AI_BASE   = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run`;
-const IMAGE_MODEL  = '@cf/stabilityai/stable-diffusion-xl-base-1.0';
-const JUMLAH_TOPIK = 3;   // artikel per run
-const DELAY_MS     = 6000; // jeda antar artikel (hindari rate limit)
+const CF_AI_BASE    = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run`;
+const TEXT_MODEL    = '@cf/meta/llama-3.1-8b-instruct';
+const IMAGE_MODEL   = '@cf/stabilityai/stable-diffusion-xl-base-1.0';
+const JUMLAH_ARTIKEL = 3;
+const DELAY_MS       = 5000;
+
+// RSS feed media Indonesia — ambil berita terkini
+const RSS_FEEDS = [
+  { url: 'https://www.antaranews.com/rss/terkini.xml',          nama: 'Antara News' },
+  { url: 'https://www.cnnindonesia.com/nasional/rss',           nama: 'CNN Indonesia' },
+  { url: 'https://www.cnnindonesia.com/teknologi/rss',          nama: 'CNN Teknologi' },
+  { url: 'https://rss.detik.com/index.php/detikcom',            nama: 'Detik.com' },
+  { url: 'https://tekno.kompas.com/rss/index.xml',              nama: 'Kompas Tekno' },
+  { url: 'https://health.kompas.com/rss/index.xml',             nama: 'Kompas Health' },
+];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function getGeminiText(data) {
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-}
-
 function parseGeminiJSON(text) {
-  if (!text) throw new Error('Respons Gemini kosong');
+  if (!text) throw new Error('Respons AI kosong');
   const clean = text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```$/m, '').trim();
   const match = clean.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
-  if (!match) throw new Error(`Tidak ada JSON valid dalam respons:\n${clean.slice(0, 300)}`);
+  if (!match) throw new Error(`Tidak ada JSON valid:\n${clean.slice(0, 300)}`);
   return JSON.parse(match[1]);
 }
 
-// ─── Step 1: Cari topik viral via Gemini + Google Search grounding ─────────────
-async function getViralTopics() {
-  console.log('🔍 Mencari topik viral di Indonesia hari ini...');
+// ─── Step 1: Fetch & parse RSS feed ───────────────────────────────────────────
+async function fetchRSSItems(feed) {
+  try {
+    const res = await fetch(feed.url, {
+      headers: { 'User-Agent': 'Revpeak-Bot/1.0' },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!res.ok) return [];
 
-  const res = await fetch(
-    `${GEMINI_BASE}/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text:
-              `Gunakan Google Search untuk mencari ${JUMLAH_TOPIK} topik berita yang ` +
-              `sedang paling viral dan banyak diperbincangkan di Indonesia HARI INI.\n\n` +
-              `Pilih topik yang beragam. Kembalikan HANYA JSON array berikut, ` +
-              `tanpa penjelasan dan tanpa markdown:\n` +
-              `[\n` +
-              `  {\n` +
-              `    "topik": "deskripsi singkat topik dalam Bahasa Indonesia",\n` +
-              `    "keywords_en": "2-5 kata kunci Bahasa Inggris untuk generate gambar",\n` +
-              `    "kategori": "salah satu: teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"\n` +
-              `  }\n` +
-              `]`
-          }]
-        }],
-        tools: [{ googleSearch: {} }],
-        generationConfig: { temperature: 0.5, maxOutputTokens: 800 }
-      })
+    const xml = await res.text();
+
+    // Parse judul + deskripsi dari tag <item>
+    const items = [];
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    let match;
+
+    while ((match = itemRegex.exec(xml)) !== null && items.length < 8) {
+      const block = match[1];
+      const title = (block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ||
+                     block.match(/<title>(.*?)<\/title>/))?.[1]?.trim();
+      const desc  = (block.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/) ||
+                     block.match(/<description>(.*?)<\/description>/))?.[1]
+                       ?.replace(/<[^>]+>/g, '')
+                       ?.trim()
+                       ?.slice(0, 200);
+
+      if (title && title.length > 10) {
+        items.push({ judul: title, ringkasan: desc || '', sumber: feed.nama });
+      }
     }
-  );
+
+    return items;
+  } catch {
+    console.log(`   ⚠️  RSS ${feed.nama} gagal diakses, dilewati.`);
+    return [];
+  }
+}
+
+async function getAllRSSItems() {
+  console.log('📡 Mengambil berita terkini dari RSS feed...');
+  const results = await Promise.all(RSS_FEEDS.map(fetchRSSItems));
+  const all = results.flat();
+  console.log(`   ✅ Total ${all.length} berita terkumpul dari ${RSS_FEEDS.length} sumber`);
+  return all;
+}
+
+// ─── Step 2: Llama pilih topik paling menarik dari daftar RSS ─────────────────
+async function selectTopics(rssItems) {
+  console.log('\n🤖 Llama memilih topik paling viral...');
+
+  const daftarBerita = rssItems
+    .slice(0, 40)
+    .map((item, i) => `${i + 1}. [${item.sumber}] ${item.judul}`)
+    .join('\n');
+
+  const prompt =
+    `Kamu adalah editor berita Indonesia. Dari daftar berita di bawah, pilih ` +
+    `${JUMLAH_ARTIKEL} berita yang paling menarik, viral, dan beragam topiknya.\n\n` +
+    `DAFTAR BERITA:\n${daftarBerita}\n\n` +
+    `Kembalikan HANYA JSON array berikut tanpa penjelasan dan tanpa markdown:\n` +
+    `[\n` +
+    `  {\n` +
+    `    "nomor": 1,\n` +
+    `    "topik": "judul/topik berita yang dipilih",\n` +
+    `    "ringkasan": "ringkasan singkat konteks berita ini",\n` +
+    `    "keywords_en": "2-4 kata kunci Bahasa Inggris untuk generate gambar",\n` +
+    `    "kategori": "salah satu: teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"\n` +
+    `  }\n` +
+    `]`;
+
+  const res = await fetch(`${CF_AI_BASE}/${TEXT_MODEL}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${CF_AI_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      messages: [
+        { role: 'system', content: 'Kamu adalah editor berita profesional Indonesia. Selalu balas dalam format JSON yang diminta.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 1000,
+      temperature: 0.5
+    })
+  });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Gemini getViralTopics gagal (${res.status}): ${err}`);
+    throw new Error(`CF AI selectTopics gagal (${res.status}): ${err}`);
   }
 
   const data = await res.json();
-  const topics = parseGeminiJSON(getGeminiText(data));
+  const text = data?.result?.response ?? '';
+  const topics = parseGeminiJSON(text);
 
   if (!Array.isArray(topics) || topics.length === 0) {
-    throw new Error('Tidak ada topik yang dikembalikan Gemini');
+    throw new Error('Tidak ada topik yang dipilih Llama');
   }
 
-  console.log(`✅ ${topics.length} topik ditemukan:`);
+  console.log(`   ✅ ${topics.length} topik dipilih:`);
   topics.forEach((t, i) => console.log(`   ${i + 1}. [${t.kategori}] ${t.topik}`));
   return topics;
 }
 
-// ─── Step 2: Generate artikel lengkap untuk satu topik ─────────────────────────
+// ─── Step 3: Generate artikel lengkap via Llama ────────────────────────────────
 async function generateArticle(topic) {
   console.log(`\n📝 Menulis artikel: "${topic.topik}"`);
 
-  const res = await fetch(
-    `${GEMINI_BASE}/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text:
-              `Gunakan Google Search untuk riset terbaru, lalu tulis artikel berita ` +
-              `profesional Bahasa Indonesia tentang:\n"${topic.topik}"\n\n` +
-              `Ketentuan:\n` +
-              `- Gaya jurnalistik, informatif, orisinal (bukan plagiat)\n` +
-              `- Minimal 600 kata\n` +
-              `- Format konten dalam HTML: gunakan <p>, <h2>, <h3>, <ul>, <li>, <strong>\n` +
-              `- Slug: huruf kecil, tanda hubung, tanpa karakter khusus\n\n` +
-              `Kembalikan HANYA JSON berikut, tanpa penjelasan, tanpa markdown:\n` +
-              `{\n` +
-              `  "judul": "Judul artikel menarik dan SEO-friendly",\n` +
-              `  "slug": "judul-format-slug",\n` +
-              `  "excerpt": "Ringkasan 1-2 kalimat, maks 160 karakter",\n` +
-              `  "konten": "<p>Isi artikel lengkap dalam HTML...</p>",\n` +
-              `  "tags": ["tag1", "tag2", "tag3", "tag4"],\n` +
-              `  "meta_description": "Meta description SEO maks 160 karakter"\n` +
-              `}`
-          }]
-        }],
-        tools: [{ googleSearch: {} }],
-        generationConfig: { temperature: 0.75, maxOutputTokens: 4096 }
-      })
-    }
-  );
+  const prompt =
+    `Tulis artikel berita profesional dalam Bahasa Indonesia tentang:\n` +
+    `"${topic.topik}"\n\n` +
+    `Konteks: ${topic.ringkasan}\n\n` +
+    `Ketentuan:\n` +
+    `- Gaya jurnalistik, informatif, orisinal\n` +
+    `- Minimal 500 kata\n` +
+    `- Format konten HTML: gunakan tag <p>, <h2>, <h3>, <ul>, <li>, <strong>\n` +
+    `- Slug: huruf kecil, tanda hubung, tanpa karakter khusus, tanpa angka di awal\n\n` +
+    `Kembalikan HANYA JSON berikut tanpa penjelasan dan tanpa markdown:\n` +
+    `{\n` +
+    `  "judul": "Judul artikel menarik dan SEO-friendly dalam Bahasa Indonesia",\n` +
+    `  "slug": "judul-format-slug",\n` +
+    `  "excerpt": "Ringkasan 1-2 kalimat maksimal 160 karakter",\n` +
+    `  "konten": "<p>Isi artikel dalam HTML...</p>",\n` +
+    `  "tags": ["tag1", "tag2", "tag3", "tag4"],\n` +
+    `  "meta_description": "Meta description SEO maksimal 160 karakter"\n` +
+    `}`;
+
+  const res = await fetch(`${CF_AI_BASE}/${TEXT_MODEL}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${CF_AI_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      messages: [
+        { role: 'system', content: 'Kamu adalah jurnalis profesional Indonesia. Tulis artikel berita berkualitas tinggi. Selalu balas dalam format JSON yang diminta.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 3000,
+      temperature: 0.7
+    })
+  });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Gemini generateArticle gagal (${res.status}): ${err}`);
+    throw new Error(`CF AI generateArticle gagal (${res.status}): ${err}`);
   }
 
   const data = await res.json();
-  const article = parseGeminiJSON(getGeminiText(data));
+  const text = data?.result?.response ?? '';
+  const article = parseGeminiJSON(text);
 
   // Validasi field wajib
   for (const field of ['judul', 'slug', 'excerpt', 'konten']) {
-    if (!article[field]) throw new Error(`Field "${field}" kosong di respons Gemini`);
+    if (!article[field]) throw new Error(`Field "${field}" kosong di respons Llama`);
   }
 
   // Sanitasi slug
@@ -141,42 +205,47 @@ async function generateArticle(topic) {
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replace(/^-|-$/g, '')
+    .replace(/^\d+/, '');
 
   console.log(`   ✅ Judul : ${article.judul}`);
   console.log(`   ✅ Slug  : ${article.slug}`);
   return article;
 }
 
-// ─── Step 3: Cek duplikat slug di Supabase ─────────────────────────────────────
+// ─── Step 4: Cek duplikat slug di Supabase ─────────────────────────────────────
 async function isSlugExists(slug) {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/posts?slug=eq.${encodeURIComponent(slug)}&select=id&limit=1`,
-    {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/articles?slug=eq.${encodeURIComponent(slug)}&select=id&limit=1`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
       }
-    }
-  );
-  if (!res.ok) return false;
-  const data = await res.json();
-  return Array.isArray(data) && data.length > 0;
+    );
+    if (!res.ok) return false;
+    const data = await res.json();
+    return Array.isArray(data) && data.length > 0;
+  } catch {
+    return false;
+  }
 }
 
-// ─── Step 4: Generate cover image via Cloudflare Workers AI ───────────────────
+// ─── Step 5: Generate cover image via Cloudflare Workers AI ───────────────────
 async function generateImage(keywordsEn, kategori) {
   console.log(`🖼️  Generate gambar: "${keywordsEn}"`);
 
   const styleMap = {
     teknologi    : 'futuristic technology, digital art, blue tones, modern',
-    hiburan      : 'entertainment, colorful, vibrant, celebrity, stage lights',
+    hiburan      : 'entertainment, colorful, vibrant, stage lights',
     olahraga     : 'sports action shot, dynamic, energetic, stadium',
-    nasional     : 'Indonesia landmark, news photography, realistic',
+    nasional     : 'Indonesia, news photography, realistic, professional',
     bisnis       : 'business meeting, professional, corporate, finance',
-    'gaya-hidup' : 'lifestyle photography, modern living, bright and airy',
-    kesehatan    : 'healthcare, medical, clean white background, doctor',
-    sains        : 'science laboratory, research, discovery, microscope'
+    'gaya-hidup' : 'lifestyle photography, modern living, bright',
+    kesehatan    : 'healthcare, medical, clean, doctor, hospital',
+    sains        : 'science laboratory, research, discovery'
   };
 
   const style = styleMap[kategori] || 'news photography, professional journalism';
@@ -185,7 +254,7 @@ async function generateImage(keywordsEn, kategori) {
   const res = await fetch(`${CF_AI_BASE}/${IMAGE_MODEL}`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${CF_API_TOKEN}`,
+      'Authorization': `Bearer ${CF_AI_TOKEN}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ prompt, num_steps: 20, guidance: 7.5 })
@@ -193,7 +262,7 @@ async function generateImage(keywordsEn, kategori) {
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Cloudflare AI image gagal (${res.status}): ${err}`);
+    throw new Error(`CF AI image gagal (${res.status}): ${err}`);
   }
 
   const buffer = await res.arrayBuffer();
@@ -201,10 +270,10 @@ async function generateImage(keywordsEn, kategori) {
   return Buffer.from(buffer);
 }
 
-// ─── Step 5: Upload gambar ke Supabase Storage ─────────────────────────────────
+// ─── Step 6: Upload gambar ke Supabase Storage ─────────────────────────────────
 async function uploadImage(imageBuffer, slug) {
   const filename = `news/${slug}-${Date.now()}.png`;
-  console.log(`☁️  Upload ke Supabase Storage: ${filename}`);
+  console.log(`☁️  Upload ke Supabase Storage...`);
 
   const res = await fetch(
     `${SUPABASE_URL}/storage/v1/object/images/${filename}`,
@@ -229,7 +298,7 @@ async function uploadImage(imageBuffer, slug) {
   return publicUrl;
 }
 
-// ─── Step 6: Simpan artikel ke Supabase via Cloudflare Worker ─────────────────
+// ─── Step 7: Simpan artikel ke Supabase via Cloudflare Worker ─────────────────
 async function saveArticle(payload) {
   console.log(`💾 Menyimpan artikel via Worker...`);
 
@@ -261,7 +330,7 @@ async function main() {
   console.log('═══════════════════════════════════════════════════\n');
 
   // Validasi environment variables
-  const envCheck = { GEMINI_API_KEY, CF_ACCOUNT_ID, CF_AI_TOKEN: process.env.CF_AI_TOKEN, WORKER_URL, WORKER_SECRET, SUPABASE_URL, SUPABASE_KEY };
+  const envCheck = { CF_ACCOUNT_ID, CF_AI_TOKEN, WORKER_URL, WORKER_SECRET, SUPABASE_URL, SUPABASE_KEY };
   const missing = Object.entries(envCheck).filter(([, v]) => !v).map(([k]) => k);
   if (missing.length > 0) {
     console.error(`❌ Environment variable belum diset: ${missing.join(', ')}`);
@@ -269,15 +338,24 @@ async function main() {
   }
 
   let successCount = 0;
-  let topics = [];
 
-  try {
-    topics = await getViralTopics();
-  } catch (err) {
-    console.error(`❌ Gagal mendapatkan topik viral: ${err.message}`);
+  // Step 1: Ambil RSS
+  const rssItems = await getAllRSSItems();
+  if (rssItems.length < 3) {
+    console.error('❌ Tidak cukup berita dari RSS feed');
     process.exit(1);
   }
 
+  // Step 2: Pilih topik
+  let topics = [];
+  try {
+    topics = await selectTopics(rssItems);
+  } catch (err) {
+    console.error(`❌ Gagal memilih topik: ${err.message}`);
+    process.exit(1);
+  }
+
+  // Step 3–7: Proses tiap topik
   for (let i = 0; i < topics.length; i++) {
     const topic = topics[i];
     console.log(`\n${'─'.repeat(55)}`);
@@ -285,23 +363,23 @@ async function main() {
     console.log('─'.repeat(55));
 
     try {
-      // 1. Generate artikel
+      // Generate artikel
       const article = await generateArticle(topic);
       await sleep(2000);
 
-      // 2. Cek duplikat slug
+      // Cek duplikat slug
       const exists = await isSlugExists(article.slug);
       if (exists) {
-        console.log(`   ⚠️  Slug "${article.slug}" sudah ada di database, dilewati.`);
+        console.log(`   ⚠️  Slug "${article.slug}" sudah ada, dilewati.`);
         continue;
       }
 
-      // 3. Generate & upload gambar
+      // Generate & upload gambar
       const imgBuffer = await generateImage(topic.keywords_en, topic.kategori);
       const coverImageUrl = await uploadImage(imgBuffer, article.slug);
       await sleep(1000);
 
-      // 4. Simpan ke Supabase
+      // Simpan ke Supabase
       await saveArticle({
         title            : article.judul,
         slug             : article.slug,
@@ -324,7 +402,6 @@ async function main() {
       console.error(`\n❌ Error artikel "${topic.topik}": ${err.message}`);
     }
 
-    // Jeda sebelum iterasi berikutnya
     if (i < topics.length - 1) {
       console.log(`\n⏳ Jeda ${DELAY_MS / 1000} detik...`);
       await sleep(DELAY_MS);
@@ -335,9 +412,7 @@ async function main() {
   console.log(`  SELESAI: ${successCount}/${topics.length} artikel berhasil dipublikasi`);
   console.log('═══════════════════════════════════════════════════');
 
-  if (successCount === 0 && topics.length > 0) {
-    process.exit(1); // Tandai sebagai gagal di GitHub Actions
-  }
+  if (successCount === 0 && topics.length > 0) process.exit(1);
 }
 
 main().catch((err) => {
