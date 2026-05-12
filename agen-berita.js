@@ -54,33 +54,35 @@ function parseJSON(text) {
   // Hapus markdown fence
   let clean = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
 
-  // Ambil blok JSON pertama
+  // Hapus control character tidak valid (kecuali \n \r \t yang valid di luar string)
+  clean = clean.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+
+  // Jika Llama output multiple array terpisah newline → gabungkan jadi satu array
+  // Contoh: [{...}]\n[{...}] → [{...},{...}]
+  const arrays = [];
+  const arrayRegex = /\[[\s\S]*?\]/g;
+  let m;
+  while ((m = arrayRegex.exec(clean)) !== null) {
+    try {
+      const parsed = JSON.parse(m[0]);
+      if (Array.isArray(parsed)) arrays.push(...parsed);
+    } catch { /* skip invalid */ }
+  }
+  if (arrays.length > 0) return arrays;
+
+  // Fallback: coba ambil satu blok JSON (object atau array) dan parse langsung
   const match = clean.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
   if (!match) throw new Error(`Tidak ada JSON valid:\n${clean.slice(0, 300)}`);
-  clean = match[1];
 
-  // Bersihkan control character di dalam string JSON
-  // Strategi: replace newline/tab literal di dalam string values dengan escaped version
-  clean = clean
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "") // hapus control char tidak valid
-    .replace(/\n/g, "\\n")   // escape newline literal
-    .replace(/\r/g, "\\r")   // escape carriage return literal
-    .replace(/\t/g, "\\t");  // escape tab literal
+  // Escape newline literal di dalam string values saja
+  const escaped = match[1].replace(/"((?:[^"\\]|\\.)*)"/gs, (_, inner) => {
+    return `"${inner.replace(/\n/g, "\\n").replace(/\r/g, "").replace(/\t/g, " ")}"`;
+  });
 
-  // Coba parse langsung
   try {
-    return JSON.parse(clean);
-  } catch {
-    // Fallback: coba parse lebih agresif — hapus semua whitespace di luar string
-    try {
-      // Cari semua string values dan kembalikan whitespace yang valid di dalamnya
-      const safer = clean.replace(/"((?:[^"\\]|\\.)*)"/g, (_, inner) => {
-        return `"${inner.replace(/\\n/g, " ").replace(/\\r/g, "").replace(/\\t/g, " ")}"`;
-      });
-      return JSON.parse(safer);
-    } catch (e2) {
-      throw new Error(`Tidak ada JSON valid:\n${clean.slice(0, 300)}`);
-    }
+    return JSON.parse(escaped);
+  } catch (e) {
+    throw new Error(`Tidak ada JSON valid:\n${clean.slice(0, 300)}`);
   }
 }
 
@@ -304,7 +306,7 @@ async function selectTopicsFromRSS(rssItems) {
       `Dari daftar berita berikut, pilih ${JUMLAH_ARTIKEL} yang paling menarik dan beragam topiknya.\n\n` +
       `DAFTAR:\n${daftarBerita}\n\n` +
       `Kembalikan HANYA JSON array berikut tanpa penjelasan:\n` +
-      `[{"topik":"...","ringkasan":"...","image_prompt":"2-5 kata Inggris untuk gambar","kategori":"teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"}]`
+      `[{"topik":"...","ringkasan":"...","gambar":"2-5 kata Inggris untuk gambar","kategori":"teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"}]`
     },
   ], 800);
 
@@ -328,7 +330,7 @@ async function selectTopicsFallback() {
       `Hari ini ${hari}. Buat ${JUMLAH_ARTIKEL} topik berita yang kemungkinan sedang ` +
       `ramai diperbincangkan di Indonesia. Pilih topik yang beragam.\n\n` +
       `Kembalikan HANYA JSON array berikut tanpa penjelasan:\n` +
-      `[{"topik":"...","ringkasan":"konteks singkat topik ini","image_prompt":"2-5 kata Inggris untuk gambar","kategori":"teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"}]`
+      `[{"topik":"...","ringkasan":"konteks singkat topik ini","gambar":"2-5 kata Inggris untuk gambar","kategori":"teknologi|hiburan|olahraga|nasional|bisnis|gaya-hidup|kesehatan|sains"}]`
     },
   ], 800);
 
@@ -489,7 +491,7 @@ async function main() {
       }
 
       // Generate & upload gambar ke R2
-      const imagePrompt = `${topic.image_prompt}, photorealistic, high quality, no text, no watermark`;
+      const imagePrompt = `${topic.gambar}, photorealistic, high quality, no text, no watermark`;
       const { url: coverImageUrl } = await generateAndUploadImage(imagePrompt, article.slug);
 
       // Simpan ke Supabase
