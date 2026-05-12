@@ -1,0 +1,38 @@
+name: Revpeak AI News Agent
+
+on:
+  schedule:
+    # Berjalan setiap 4 jam (WIB: 03.00, 07.00, 11.00, 15.00, 19.00, 23.00)
+    - cron: '0 20,0,4,8,12,16 * * *'
+  workflow_dispatch:
+    # Bisa dijalankan manual dari tab Actions di GitHub
+
+jobs:
+  generate-news:
+    name: Generate & Publish Berita
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 🚀 Jalankan Agen Berita
+        env:
+          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
+          CF_ACCOUNT_ID:        ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN:         ${{ secrets.CF_API_TOKEN }}
+          WORKER_URL:           ${{ secrets.WORKER_URL }}
+          WORKER_SECRET:        ${{ secrets.WORKER_SECRET }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node agen-berita.js
+
+      - name: 📋 Log selesai
+        if: always()
+        run: echo "Agen berita selesai pada $(date +'%Y-%m-%d %H:%M:%S UTC')"
