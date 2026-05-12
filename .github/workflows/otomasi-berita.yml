@@ -24,7 +24,6 @@ jobs:
 
       - name: 🚀 Jalankan Agen Berita
         env:
-          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
           CF_ACCOUNT_ID:        ${{ secrets.CF_ACCOUNT_ID }}
           CF_AI_TOKEN:          ${{ secrets.CF_AI_TOKEN }}
           WORKER_URL:           ${{ secrets.WORKER_URL }}
