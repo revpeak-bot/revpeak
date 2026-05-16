@@ -1,0 +1,28 @@
+# Revpeak
+
+> Platform berita dan artikel terpercaya berbahasa Indonesia seputar teknologi, bisnis, sains, dan gaya hidup.
+
+Revpeak adalah situs konten berbahasa Indonesia yang menerbitkan berita terkini dan artikel mendalam setiap hari. Konten dikurasi dan dipublikasikan oleh tim editor Revpeak. Situs ini tidak berafiliasi dengan entitas komersial tertentu dan bersifat independen.
+
+## Halaman Utama
+
+- [Beranda](https://revpeak.web.id/)
+- [Berita Terkini](https://revpeak.web.id/berita.html)
+- [Artikel Pilihan](https://revpeak.web.id/artikel.html)
+- [Kategori](https://revpeak.web.id/kategori.html)
+- [Tentang Kami](https://revpeak.web.id/tentang.html)
+- [Kontak](https://revpeak.web.id/kontak.html)
+
+## Topik yang Dibahas
+
+- Teknologi dan inovasi digital
+- Bisnis dan ekonomi
+- Sains dan lingkungan
+- Gaya hidup dan kesehatan
+
+## Informasi Teknis
+
+- Bahasa: Bahasa Indonesia (id)
+- Format artikel: HTML dengan structured data JSON-LD
+- Sitemap: https://revpeak.web.id/sitemap.xml
+- Robots: https://revpeak.web.id/robots.txt
