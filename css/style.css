@@ -128,7 +128,7 @@ input, textarea, select { font-family: inherit; }
 .drawer-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
 .drawer-link { display: flex; align-items: center; gap: 14px; padding: 13px 22px; font-size: 15px; font-weight: 500; color: var(--text); transition: background var(--transition), color var(--transition); } /* diperbaiki: text-muted → text (kontras ≥ 14:1) */
 .drawer-link:hover { background: var(--surface2); color: var(--text); }
-.drawer-link.active { color: var(--accent); font-weight: 600; }
+.drawer-link.active { color: var(--accent-dark); font-weight: 600; } /* diperbaiki: accent → accent-dark (#BB320A = 5.9:1 di atas putih) */
 .drawer-link-icon { width: 36px; height: 36px; background: var(--surface2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
 .drawer-footer { padding: 18px 22px; border-top: 1px solid var(--border); }
 .drawer-theme-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
