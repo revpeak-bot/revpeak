@@ -292,7 +292,8 @@ function initSEO() {
 // Contoh: pingSearchEngines();
 // ============================================================
 
-export async function pingSearchEngines() {
+// Dipasang ke window agar bisa dipanggil dari admin.js tanpa ES Module
+window.pingSearchEngines = async function pingSearchEngines() {
   const sitemapUrl = encodeURIComponent(`${SITE_URL}/sitemap.xml`);
   const engines = [
     `https://www.google.com/ping?sitemap=${sitemapUrl}`,
