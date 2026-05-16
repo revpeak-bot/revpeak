@@ -161,7 +161,7 @@
       letter-spacing: -0.3px;
     }
     [data-theme="dark"] #rp-notif-logo span { color: #f0f0f0; }
-    #rp-notif-logo span em { font-style: normal; color: #888; }
+    #rp-notif-logo span em { font-style: normal; color: #666; } /* diperbaiki: #888 → #666 */
     #rp-notif-badge {
       margin-left: auto;
       font-size: 0.68rem;
@@ -225,7 +225,7 @@
       font-family: 'DM Sans', sans-serif;
       font-size: 0.82rem;
       font-weight: 600;
-      color: #888;
+      color: #666; /* diperbaiki: #888 → #666 (kontras 5.74:1) */
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
     }
@@ -254,7 +254,7 @@
     .seo-h1 {
       font-size: 0.8rem;
       font-weight: 600;
-      color: #999;
+      color: #6B6560; /* diperbaiki: #999 → #6B6560 (kontras 5.15:1) */
       letter-spacing: 0.04em;
       text-transform: uppercase;
       margin: 0 0 12px;
@@ -421,13 +421,13 @@
       <!-- Section header -->
       <div class="section-header">
         <h2 class="section-title hero-title" id="section-title">⭐ Rekomendasi</h2>
-        <p class="hero-badge" id="hero-tab-label" style="font-size:0.72rem;font-weight:700;color:#888;letter-spacing:0.07em;text-transform:uppercase;margin:0;line-height:1.4;">
+        <p class="hero-badge" id="hero-tab-label" style="font-size:0.72rem;font-weight:700;color:#6B6560;letter-spacing:0.07em;text-transform:uppercase;margin:0;line-height:1.4;">
           Pilihan Editor
         </p>
       </div>
 
       <!-- Content grid -->
-      <div id="articles-grid" class="content-grid" role="list" aria-label="Daftar berita dan artikel" aria-live="polite">
+      <div id="articles-grid" class="content-grid" role="feed" aria-label="Daftar berita dan artikel" aria-busy="true" aria-live="polite">
         <!-- Skeleton awal -->
         <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
         <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line" style="width:35%;height:11px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:90%;height:16px;margin-bottom:8px"></div><div class="skeleton sk-line"></div></div></div>
@@ -435,7 +435,7 @@
       </div>
 
       <!-- Pagination -->
-      <div id="pagination" class="pagination-wrap" aria-label="Navigasi halaman"></div>
+      <nav id="pagination" class="pagination-wrap" aria-label="Navigasi halaman"></nav>
 
     </div>
   </main>
