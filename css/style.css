@@ -126,7 +126,7 @@ input, textarea, select { font-family: inherit; }
 .drawer-close { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: background var(--transition), color var(--transition); }
 .drawer-close:hover { background: var(--surface2); color: var(--text); }
 .drawer-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
-.drawer-link { display: flex; align-items: center; gap: 14px; padding: 13px 22px; font-size: 15px; font-weight: 500; color: var(--text-muted); transition: background var(--transition), color var(--transition); }
+.drawer-link { display: flex; align-items: center; gap: 14px; padding: 13px 22px; font-size: 15px; font-weight: 500; color: var(--text); transition: background var(--transition), color var(--transition); } /* diperbaiki: text-muted → text (kontras ≥ 14:1) */
 .drawer-link:hover { background: var(--surface2); color: var(--text); }
 .drawer-link.active { color: var(--accent); font-weight: 600; }
 .drawer-link-icon { width: 36px; height: 36px; background: var(--surface2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
@@ -226,7 +226,7 @@ input, textarea, select { font-family: inherit; }
 }
 
 .card-body { padding: 15px 16px 16px; flex: 1; display: flex; flex-direction: column; }
-.card-category { font-size: 10px; font-weight: 700; color: var(--accent-dark); text-transform: uppercase; letter-spacing: 1.1px; margin-bottom: 6px; display: block; } /* diperbaiki: accent → accent-dark (kontras 5.84:1) */
+.card-category { font-size: 10px; font-weight: 700; color: var(--accent-dark); text-transform: uppercase; letter-spacing: 1.1px; margin-bottom: 6px; display: block; } /* diperbaiki: accent → accent-dark */
 .card-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; line-height: 1.4; color: var(--text); margin-bottom: 7px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-title a { color: inherit; }
 .card-title a:hover { color: var(--accent); }
