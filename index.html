@@ -5,16 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- ===== SEO: Title & Meta Description ===== -->
-  <!-- DIPERBAIKI: dari 36 → 54 karakter (target 50–60) -->
   <title>Revpeak – Berita dan Artikel Terkini Seputar Teknologi</title>
-  <!-- DIPERBAIKI: dari 91 → 152 karakter (target 120–160) -->
   <meta name="description" content="Baca berita terkini dan artikel mendalam di Revpeak. Kami menyajikan informasi terpercaya seputar teknologi, bisnis, sains, dan gaya hidup setiap hari.">
 
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://revpeak.web.id">
 
   <!-- ===== Open Graph (Facebook / WhatsApp) ===== -->
-  <!-- DIPERBAIKI: ditambah og:image, og:site_name, og:locale -->
   <meta property="og:type"        content="website">
   <meta property="og:url"         content="https://revpeak.web.id">
   <meta property="og:site_name"   content="Revpeak">
@@ -25,14 +22,12 @@
   <meta property="og:image:alt"   content="Revpeak – Platform Berita dan Artikel Terpercaya">
 
   <!-- ===== Twitter / X Cards ===== -->
-  <!-- BARU: ditambahkan untuk memperbaiki nilai GEO & social -->
   <meta name="twitter:card"        content="summary_large_image">
   <meta name="twitter:title"       content="Revpeak – Berita dan Artikel Terkini Seputar Teknologi">
   <meta name="twitter:description" content="Baca berita terkini dan artikel mendalam di Revpeak. Kami menyajikan informasi terpercaya seputar teknologi, bisnis, sains, dan gaya hidup setiap hari.">
   <meta name="twitter:image"       content="https://revpeak.web.id/logo-revpeak.webp">
 
   <!-- ===== Schema.org JSON-LD ===== -->
-  <!-- BARU: WebSite + Organization schema untuk memperbaiki nilai GEO & On-Page SEO -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -161,7 +156,7 @@
       letter-spacing: -0.3px;
     }
     [data-theme="dark"] #rp-notif-logo span { color: #f0f0f0; }
-    #rp-notif-logo span em { font-style: normal; color: #666; } /* diperbaiki: #888 → #666 */
+    #rp-notif-logo span em { font-style: normal; color: #666; }
     #rp-notif-badge {
       margin-left: auto;
       font-size: 0.68rem;
@@ -209,55 +204,75 @@
       color: #333;
       background: #f5f5f5;
       border-radius: 20px;
-      padding: 4px 11px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      padding: 4px 12px;
     }
-    [data-theme="dark"] .rp-pill { color: #ccc; background: #252525; }
-    #rp-notif-actions { display: flex; gap: 9px; }
+    [data-theme="dark"] .rp-pill { color: #ccc; background: #2a2a2a; }
+    #rp-notif-actions {
+      display: flex;
+      gap: 10px;
+    }
     #rp-notif-dismiss {
       flex: 1;
       padding: 10px;
       border-radius: 10px;
-      border: 1.5px solid #e5e5e5;
+      border: 1.5px solid #e0e0e0;
       background: transparent;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.82rem;
+      font-size: 0.83rem;
       font-weight: 600;
-      color: #666; /* diperbaiki: #888 → #666 (kontras 5.74:1) */
+      color: #555;
       cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
     }
-    #rp-notif-dismiss:hover { border-color: #bbb; color: #555; }
-    [data-theme="dark"] #rp-notif-dismiss { border-color: #333; color: #666; }
-    [data-theme="dark"] #rp-notif-dismiss:hover { border-color: #555; color: #aaa; }
+    #rp-notif-dismiss:hover { background: #f5f5f5; }
+    [data-theme="dark"] #rp-notif-dismiss { border-color: #333; color: #aaa; }
+    [data-theme="dark"] #rp-notif-dismiss:hover { background: #222; }
     #rp-notif-ok {
       flex: 2;
       padding: 10px;
       border-radius: 10px;
       border: none;
       background: #111;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.82rem;
-      font-weight: 700;
       color: #fff;
+      font-size: 0.83rem;
+      font-weight: 700;
       cursor: pointer;
-      letter-spacing: 0.01em;
-      transition: opacity 0.2s, transform 0.15s;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
     }
-    #rp-notif-ok:hover { opacity: 0.85; transform: translateY(-1px); }
-    [data-theme="dark"] #rp-notif-ok { background: #f0f0f0; color: #111; }
+    #rp-notif-ok:hover { background: #333; }
+    [data-theme="dark"] #rp-notif-ok { background: #fff; color: #111; }
+    [data-theme="dark"] #rp-notif-ok:hover { background: #ddd; }
 
-    /* ===== SEO H1 ===== */
-    /* DIPERBAIKI: dipindah dari inline style ke sini */
+    /* ===== SEO H1 hidden ===== */
     .seo-h1 {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #6B6560; /* diperbaiki: #999 → #6B6560 (kontras 5.15:1) */
-      letter-spacing: 0.04em;
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ===== Tabs sticky offset ===== */
+    .tabs-bar { top: 97px; }
+
+    @media (max-width: 600px) {
+      .tabs-bar { top: 88px; }
+      .section-header { padding-top: 16px; }
+      #rp-notif-actions { flex-direction: column; }
+      #rp-notif-ok, #rp-notif-dismiss { flex: unset; width: 100%; }
+    }
+
+    /* ===== Hero badge inline style moved here ===== */
+    .hero-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.07em;
       text-transform: uppercase;
-      margin: 0 0 12px;
+      margin: 0;
       line-height: 1.4;
     }
   </style>
@@ -361,7 +376,9 @@
     <div class="header-top">
       <div class="header-top-inner container">
         <button class="hamburger" id="hamburger" aria-label="Buka menu" aria-expanded="false">
-          <span></span><span></span><span></span>
+          <span></span>
+          <span></span>
+          <span></span>
         </button>
         <a href="/" class="header-logo">
           <div class="logo-icon" id="header-logo-icon">
@@ -415,15 +432,12 @@
     <div class="container">
 
       <!-- SEO H1 -->
-      <!-- DIPERBAIKI: inline style dipindah ke class .seo-h1 di <style> block -->
       <h1 class="seo-h1">Berita &amp; Artikel Terkini — Revpeak</h1>
 
       <!-- Section header -->
       <div class="section-header">
         <h2 class="section-title hero-title" id="section-title">⭐ Rekomendasi</h2>
-        <p class="hero-badge" id="hero-tab-label" style="font-size:0.72rem;font-weight:700;color:#6B6560;letter-spacing:0.07em;text-transform:uppercase;margin:0;line-height:1.4;">
-          Pilihan Editor
-        </p>
+        <p class="hero-badge" id="hero-tab-label">Pilihan Editor</p>
       </div>
 
       <!-- Content grid -->
@@ -494,7 +508,7 @@
   <script>
     document.getElementById("footer-year").textContent = new Date().getFullYear();
 
-    // Welcome notification
+    // ── Welcome notification ──────────────────────────────────
     (function () {
       const KEY      = 'rp_welcome_v3';
       const notif    = document.getElementById('rp-notif');
@@ -518,7 +532,7 @@
       backdrop.addEventListener('click', function () { close(false); });
     })();
 
-    // Search clear button
+    // ── Search clear button ───────────────────────────────────
     const searchInput = document.getElementById('header-search-input');
     const searchClear = document.getElementById('search-clear');
     if (searchInput && searchClear) {
@@ -533,55 +547,72 @@
       });
     }
 
-    // Hamburger & drawer
-    const hamburger     = document.getElementById('hamburger');
-    const drawer        = document.getElementById('drawer');
-    const drawerOverlay = document.getElementById('drawer-overlay');
-    const drawerClose   = document.getElementById('drawer-close');
+    // ── Hamburger & Drawer ────────────────────────────────────
+    // FIX: handler dipindahkan sepenuhnya ke sini dan dihapus dari app.js (initDrawer).
+    // Sebelumnya ada dua listener pada elemen yang sama: satu di sini (hanya openDrawer)
+    // dan satu di initDrawer() app.js (toggle open/close), menyebabkan drawer tidak
+    // bisa ditutup via tombol hamburger karena langsung dibuka kembali oleh listener kedua.
+    (function () {
+      const hamburger     = document.getElementById('hamburger');
+      const drawer        = document.getElementById('drawer');
+      const drawerOverlay = document.getElementById('drawer-overlay');
+      const drawerClose   = document.getElementById('drawer-close');
+      if (!hamburger || !drawer) return;
 
-    function openDrawer() {
-      drawer.classList.add('open');
-      drawerOverlay.classList.add('open');
-      hamburger.classList.add('open');
-      hamburger.setAttribute('aria-expanded', 'true');
-      document.body.style.overflow = 'hidden';
-    }
-    function closeDrawer() {
-      drawer.classList.remove('open');
-      drawerOverlay.classList.remove('open');
-      hamburger.classList.remove('open');
-      hamburger.setAttribute('aria-expanded', 'false');
-      document.body.style.overflow = '';
-    }
+      function openDrawer() {
+        drawer.classList.add('open');
+        drawerOverlay.classList.add('open');
+        hamburger.classList.add('open');
+        hamburger.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+      }
 
-    hamburger?.addEventListener('click', openDrawer);
-    drawerClose?.addEventListener('click', closeDrawer);
-    drawerOverlay?.addEventListener('click', closeDrawer);
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') closeDrawer();
-    });
+      function closeDrawer() {
+        drawer.classList.remove('open');
+        drawerOverlay.classList.remove('open');
+        hamburger.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+      }
 
-    // Theme toggle
-    const themeBtn = document.getElementById('theme-toggle');
-    const savedTheme = localStorage.getItem('rp_theme');
+      hamburger.addEventListener('click', function () {
+        drawer.classList.contains('open') ? closeDrawer() : openDrawer();
+      });
+
+      if (drawerClose)   drawerClose.addEventListener('click', closeDrawer);
+      if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+      });
+
+      // Tutup drawer saat link di dalam drawer diklik
+      drawer.querySelectorAll('.drawer-link').forEach(function (link) {
+        link.addEventListener('click', closeDrawer);
+      });
+    })();
+
+    // ── Theme toggle ──────────────────────────────────────────
+    const themeBtn    = document.getElementById('theme-toggle');
+    const savedTheme  = localStorage.getItem('rp_theme');
     if (savedTheme) {
       document.documentElement.setAttribute('data-theme', savedTheme);
       if (themeBtn) themeBtn.setAttribute('aria-checked', savedTheme === 'dark' ? 'true' : 'false');
     }
     themeBtn?.addEventListener('click', function () {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      const next = isDark ? 'light' : 'dark';
+      const next   = isDark ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('rp_theme', next);
       this.setAttribute('aria-checked', isDark ? 'false' : 'true');
     });
 
-    // Scroll top
+    // ── Scroll to top ─────────────────────────────────────────
     const scrollBtn = document.getElementById('scroll-top');
-    window.addEventListener('scroll', function() {
+    window.addEventListener('scroll', function () {
       scrollBtn?.classList.toggle('show', window.scrollY > 400);
     });
-    scrollBtn?.addEventListener('click', function() {
+    scrollBtn?.addEventListener('click', function () {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   </script>
