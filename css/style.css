@@ -126,9 +126,9 @@ input, textarea, select { font-family: inherit; }
 .drawer-close { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: background var(--transition), color var(--transition); }
 .drawer-close:hover { background: var(--surface2); color: var(--text); }
 .drawer-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
-.drawer-link { display: flex; align-items: center; gap: 14px; padding: 13px 22px; font-size: 15px; font-weight: 500; color: var(--text); transition: background var(--transition), color var(--transition); } /* diperbaiki: text-muted → text (kontras ≥ 14:1) */
+.drawer-link { display: flex; align-items: center; gap: 14px; padding: 13px 22px; font-size: 15px; font-weight: 500; color: var(--text); transition: background var(--transition), color var(--transition); }
 .drawer-link:hover { background: var(--surface2); color: var(--text); }
-.drawer-link.active { color: var(--accent-dark); font-weight: 600; } /* diperbaiki: accent → accent-dark (#BB320A = 5.9:1 di atas putih) */
+.drawer-link.active { color: var(--accent-dark); font-weight: 600; }
 .drawer-link-icon { width: 36px; height: 36px; background: var(--surface2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
 .drawer-footer { padding: 18px 22px; border-top: 1px solid var(--border); }
 .drawer-theme-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -145,12 +145,17 @@ input, textarea, select { font-family: inherit; }
 .header { position: sticky; top: 0; z-index: 200; background: var(--surface); border-bottom: 1px solid var(--border); }
 .header-top { padding: 0; }
 .header-top-inner { display: flex; align-items: center; gap: 14px; padding-top: 14px; padding-bottom: 10px; }
-.hamburger { display: flex; flex-direction: column; justify-content: center; gap: 5px; width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; transition: background var(--transition); order: 3; margin-left: auto; }
+
+/* FIX: ditambah align-items: center agar garis hamburger rata tengah secara horizontal */
+.hamburger { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; transition: background var(--transition); order: 3; margin-left: auto; }
 .hamburger:hover { background: var(--surface2); }
-.hamburger span { display: block; width: 20px; height: 2px; background: var(--text); border-radius: 2px; margin: 0 auto; transition: all 0.28s; }
-.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger span { display: block; width: 20px; height: 2px; background: var(--text); border-radius: 2px; transition: all 0.28s; }
+
+/* FIX: translateY dikoreksi dari 7px → 3.5px agar animasi ✕ presisi (gap 5px + tinggi 2px = 3.5px ke pusat) */
+.hamburger.open span:nth-child(1) { transform: translateY(3.5px) rotate(45deg); }
 .hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
-.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.hamburger.open span:nth-child(3) { transform: translateY(-3.5px) rotate(-45deg); }
+
 .header-logo { display: flex; align-items: center; gap: 12px; order: 1; }
 .header-logo-text { display: flex; flex-direction: column; line-height: 1.2; }
 .logo-tagline { font-size: 11px; color: var(--text-muted); font-weight: 400; }
@@ -226,7 +231,7 @@ input, textarea, select { font-family: inherit; }
 }
 
 .card-body { padding: 15px 16px 16px; flex: 1; display: flex; flex-direction: column; }
-.card-category { font-size: 10px; font-weight: 700; color: var(--accent-dark); text-transform: uppercase; letter-spacing: 1.1px; margin-bottom: 6px; display: block; } /* diperbaiki: accent → accent-dark */
+.card-category { font-size: 10px; font-weight: 700; color: var(--accent-dark); text-transform: uppercase; letter-spacing: 1.1px; margin-bottom: 6px; display: block; }
 .card-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; line-height: 1.4; color: var(--text); margin-bottom: 7px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-title a { color: inherit; }
 .card-title a:hover { color: var(--accent); }
@@ -240,7 +245,7 @@ input, textarea, select { font-family: inherit; }
    BADGES
 =========================== */
 .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; font-family: 'Syne', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 12px; border-radius: 50px; }
-.badge-news    { background: #15803D; color: #fff; } /* diperbaiki: #0D9348 → #15803D (kontras 5.07:1) */
+.badge-news    { background: #15803D; color: #fff; }
 .badge-article { background: #B45309; color: #fff; }
 .badge-cat     { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
 
