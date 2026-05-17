@@ -342,3 +342,10 @@ input, textarea, select { font-family: inherit; }
   .content-grid { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr; }
 }
+
+/* ===========================
+   INLINE STYLES → CSS CLASSES
+=========================== */
+.logo-img { width: 100%; height: 100%; object-fit: contain; }
+.sk-tag { width: 35%; height: 11px; margin-bottom: 8px; }
+.sk-title { width: 90%; height: 16px; margin-bottom: 8px; }
