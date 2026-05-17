@@ -547,52 +547,9 @@
       });
     }
 
-    // ── Hamburger & Drawer ────────────────────────────────────
-    // FIX: handler dipindahkan sepenuhnya ke sini dan dihapus dari app.js (initDrawer).
-    // Sebelumnya ada dua listener pada elemen yang sama: satu di sini (hanya openDrawer)
-    // dan satu di initDrawer() app.js (toggle open/close), menyebabkan drawer tidak
-    // bisa ditutup via tombol hamburger karena langsung dibuka kembali oleh listener kedua.
-    (function () {
-      const hamburger     = document.getElementById('hamburger');
-      const drawer        = document.getElementById('drawer');
-      const drawerOverlay = document.getElementById('drawer-overlay');
-      const drawerClose   = document.getElementById('drawer-close');
-      if (!hamburger || !drawer) return;
-
-      function openDrawer() {
-        drawer.classList.add('open');
-        drawerOverlay.classList.add('open');
-        hamburger.classList.add('open');
-        hamburger.setAttribute('aria-expanded', 'true');
-        document.body.style.overflow = 'hidden';
-      }
-
-      function closeDrawer() {
-        drawer.classList.remove('open');
-        drawerOverlay.classList.remove('open');
-        hamburger.classList.remove('open');
-        hamburger.setAttribute('aria-expanded', 'false');
-        document.body.style.overflow = '';
-      }
-
-      hamburger.addEventListener('click', function () {
-        drawer.classList.contains('open') ? closeDrawer() : openDrawer();
-      });
-
-      if (drawerClose)   drawerClose.addEventListener('click', closeDrawer);
-      if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
-
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
-      });
-
-      // Tutup drawer saat link di dalam drawer diklik
-      drawer.querySelectorAll('.drawer-link').forEach(function (link) {
-        link.addEventListener('click', closeDrawer);
-      });
-    })();
-
     // ── Theme toggle ──────────────────────────────────────────
+    // CATATAN: Hamburger & Drawer sepenuhnya ditangani oleh initDrawer() di app.js.
+    // Tidak ada handler hamburger di sini untuk menghindari konflik double listener.
     const themeBtn    = document.getElementById('theme-toggle');
     const savedTheme  = localStorage.getItem('rp_theme');
     if (savedTheme) {
