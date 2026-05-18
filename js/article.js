@@ -148,7 +148,7 @@ function injectSchema(article) {
     "author": {
       "@type": "Person",
       "name":  author.name || "Revpeak",
-      "url":   author.slug ? `${siteUrl}/penulis-detail.html?slug=${author.slug}` : siteUrl,
+      "url":   author.slug ? `${siteUrl}/penulis/${author.slug}` : siteUrl,
     },
     "publisher": {
       "@type": "Organization",
@@ -156,7 +156,7 @@ function injectSchema(article) {
       "url":   siteUrl,
       "logo": {
         "@type": "ImageObject",
-        "url":   `${siteUrl}/assets/img/logo.png`,
+        "url":   `${siteUrl}/logo-revpeak.webp`,
       }
     },
     "mainEntityOfPage": {
@@ -197,7 +197,7 @@ function renderBreadcrumb(article) {
   const cat = article.categories;
   const items = [
     { label: "Beranda", href: "/" },
-    cat ? { label: cat.name, href: `/kategori-detail.html?slug=${cat.slug}` } : null,
+    cat ? { label: cat.name, href: `/kategori/${cat.slug}` } : null,
     { label: article.title, href: null },
   ].filter(Boolean);
 
@@ -232,7 +232,7 @@ function renderArticle(article) {
   const badgeCls = article.post_type === "news" ? "badge-news" : "badge-article";
 
   const catLink = cat.slug
-    ? `<a href="/kategori-detail.html?slug=${escapeHtml(cat.slug)}" class="article-category-link">${escapeHtml(cat.name)}</a>`
+    ? `<a href="/kategori/${escapeHtml(cat.slug)}" class="article-category-link">${escapeHtml(cat.name)}</a>`
     : "";
 
   const thumbnail = article.thumbnail_url
@@ -273,7 +273,7 @@ function renderArticle(article) {
         <div class="article-author-info">
           ${avatarHtml}
           <div class="article-author-text">
-            <a href="/penulis-detail.html?slug=${encodeURIComponent(author.slug || "")}"
+            <a href="/penulis/${encodeURIComponent(author.slug || "")}"
                class="article-author-name-link">
               <span class="article-author-name">${escapeHtml(author.name || "Revpeak")}</span>
             </a>
