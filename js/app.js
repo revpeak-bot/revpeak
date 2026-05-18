@@ -1,8 +1,8 @@
 // ============================================================
 // REVPEAK — app.js
 // Menangani: index.html, berita.html, artikel.html,
-//            kategori.html, kategori-detail.html,
-//            penulis.html, penulis-detail.html, search.html
+//            kategori.html, /kategori/:slug,
+//            penulis.html, /penulis/:slug, search.html
 // ============================================================
 
 const API_BASE = "https://revpeak-api.revpeak2.workers.dev"; // ganti dengan URL Worker Anda
@@ -16,6 +16,13 @@ function $$(sel, ctx = document) { return [...ctx.querySelectorAll(sel)]; }
 
 function getParam(key) {
   return new URLSearchParams(window.location.search).get(key) || "";
+}
+
+// Baca slug dari path clean URL (mis. /kategori/teknologi → "teknologi")
+// atau fallback ke query param ?slug= untuk backward compatibility
+function getSlugFromPath(segmentIndex = 2) {
+  const parts = window.location.pathname.split("/").filter(Boolean);
+  return parts[segmentIndex - 1] || getParam("slug");
 }
 
 function formatDate(iso) {
@@ -48,9 +55,9 @@ async function apiFetch(path) {
 // ============================================================
 
 function renderCard(article) {
-  const cat = article.categories || {};
-  const author = article.authors || {};
-  const badge = article.post_type === "news" ? "Berita" : "Artikel";
+  const cat    = article.categories || {};
+  const author = article.authors    || {};
+  const badge      = article.post_type === "news" ? "Berita" : "Artikel";
   const badgeClass = article.post_type === "news" ? "badge-news" : "badge-article";
 
   return `
@@ -64,7 +71,9 @@ function renderCard(article) {
         </div>
       </a>
       <div class="card-body">
-        ${cat.slug ? `<a href="/kategori-detail.html?slug=${escapeHtml(cat.slug)}" class="card-category">${escapeHtml(cat.name)}</a>` : ""}
+        ${cat.slug
+          ? `<a href="/kategori/${escapeHtml(cat.slug)}" class="card-category">${escapeHtml(cat.name)}</a>`
+          : ""}
         <h2 class="card-title">
           <a href="/${escapeHtml(article.slug)}">${escapeHtml(article.title)}</a>
         </h2>
@@ -72,7 +81,9 @@ function renderCard(article) {
         <div class="card-meta">
           ${author.name ? `<span class="card-author">${escapeHtml(author.name)}</span>` : ""}
           <span class="card-date">${formatDate(article.published_at)}</span>
-          ${article.reading_time ? `<span class="card-reading-time" aria-label="${article.reading_time} menit baca">⏱ ${article.reading_time}m</span>` : ""}
+          ${article.reading_time
+            ? `<span class="card-reading-time" aria-label="${article.reading_time} menit baca">⏱ ${article.reading_time}m</span>`
+            : ""}
           <span class="card-views" aria-label="${article.view_count || 0} kali dibaca">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -153,10 +164,10 @@ function renderPagination(container, { page, limit, total, onPageChange }) {
 // ============================================================
 
 async function initHomepage() {
-  const grid        = $("#articles-grid");
-  const heroTitle   = $(".hero-title");
-  const heroBadge   = $(".hero-badge");
-  const tabs        = $$("[data-tab]");
+  const grid         = $("#articles-grid");
+  const heroTitle    = $(".hero-title");
+  const heroBadge    = $(".hero-badge");
+  const tabs         = $$("[data-tab]");
   const paginationEl = $("#pagination");
   if (!grid) return;
 
@@ -165,9 +176,9 @@ async function initHomepage() {
   const limit     = 9;
 
   const tabConfig = {
-    rekomendasi: { sort: "popular",  type: null,    label: "Rekomendasi",  badge: "Pilihan Editor" },
-    trending:    { sort: "popular",  type: null,    label: "Trending",     badge: "Sedang Viral" },
-    terbaru:     { sort: "latest",   type: null,    label: "Terbaru",      badge: "Baru Diterbitkan" },
+    rekomendasi: { sort: "popular", type: null, label: "Rekomendasi", badge: "Pilihan Editor" },
+    trending:    { sort: "popular", type: null, label: "Trending",    badge: "Sedang Viral" },
+    terbaru:     { sort: "latest",  type: null, label: "Terbaru",     badge: "Baru Diterbitkan" },
   };
 
   async function loadTab(tab, page = 1) {
@@ -178,11 +189,9 @@ async function initHomepage() {
     grid.innerHTML = renderCardSkeleton(limit);
     if (paginationEl) paginationEl.innerHTML = "";
 
-    // Update hero
     if (heroTitle) heroTitle.textContent = cfg.label;
-    if (heroBadge) heroBadge.textContent = cfg.badge;
+    if (heroBadge) heroBadge.textContent  = cfg.badge;
 
-    // Update active tab
     tabs.forEach(t => {
       t.classList.toggle("active", t.dataset.tab === tab);
       t.setAttribute("aria-selected", t.dataset.tab === tab);
@@ -191,29 +200,21 @@ async function initHomepage() {
     try {
       let url = `/api/articles?sort=${cfg.sort}&page=${page}&limit=${limit}`;
       if (cfg.type) url += `&type=${cfg.type}`;
-      const res = await apiFetch(url);
+      const res      = await apiFetch(url);
       const articles = res.data || [];
 
-      if (!articles.length) {
-        grid.innerHTML = renderEmpty("Belum ada konten.");
-        return;
-      }
+      if (!articles.length) { grid.innerHTML = renderEmpty("Belum ada konten."); return; }
 
       grid.innerHTML = articles.map(renderCard).join("");
-
       renderPagination(paginationEl, {
         page, limit, total: res.total,
-        onPageChange: (p) => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          loadTab(currentTab, p);
-        }
+        onPageChange: (p) => { window.scrollTo({ top: 0, behavior: "smooth" }); loadTab(currentTab, p); }
       });
-    } catch (e) {
+    } catch {
       grid.innerHTML = renderError();
     }
   }
 
-  // Tab click
   tabs.forEach(tab => {
     tab.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -221,10 +222,7 @@ async function initHomepage() {
     });
   });
 
-  // Sidebar trending
   await loadSidebarTrending();
-
-  // Initial load
   loadTab(currentTab, 1);
 }
 
@@ -233,9 +231,9 @@ async function initHomepage() {
 // ============================================================
 
 async function initBeritaPage() {
-  const grid        = $("#articles-grid");
+  const grid         = $("#articles-grid");
   const paginationEl = $("#pagination");
-  const pageTitle   = $(".page-title");
+  const pageTitle    = $(".page-title");
   if (!grid) return;
 
   if (pageTitle) pageTitle.textContent = "Berita Terkini";
@@ -249,7 +247,7 @@ async function initBeritaPage() {
     if (paginationEl) paginationEl.innerHTML = "";
 
     try {
-      const res = await apiFetch(`/api/articles?type=news&sort=latest&page=${page}&limit=${limit}`);
+      const res      = await apiFetch(`/api/articles?type=news&sort=latest&page=${page}&limit=${limit}`);
       const articles = res.data || [];
 
       grid.innerHTML = articles.length
@@ -258,10 +256,7 @@ async function initBeritaPage() {
 
       renderPagination(paginationEl, {
         page, limit, total: res.total,
-        onPageChange: (p) => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          loadBerita(p);
-        }
+        onPageChange: (p) => { window.scrollTo({ top: 0, behavior: "smooth" }); loadBerita(p); }
       });
     } catch {
       grid.innerHTML = renderError();
@@ -277,9 +272,9 @@ async function initBeritaPage() {
 // ============================================================
 
 async function initArtikelPage() {
-  const grid        = $("#articles-grid");
+  const grid         = $("#articles-grid");
   const paginationEl = $("#pagination");
-  const pageTitle   = $(".page-title");
+  const pageTitle    = $(".page-title");
   if (!grid) return;
 
   if (pageTitle) pageTitle.textContent = "Semua Artikel";
@@ -293,7 +288,7 @@ async function initArtikelPage() {
     if (paginationEl) paginationEl.innerHTML = "";
 
     try {
-      const res = await apiFetch(`/api/articles?type=article&sort=latest&page=${page}&limit=${limit}`);
+      const res      = await apiFetch(`/api/articles?type=article&sort=latest&page=${page}&limit=${limit}`);
       const articles = res.data || [];
 
       grid.innerHTML = articles.length
@@ -302,10 +297,7 @@ async function initArtikelPage() {
 
       renderPagination(paginationEl, {
         page, limit, total: res.total,
-        onPageChange: (p) => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          loadArtikel(p);
-        }
+        onPageChange: (p) => { window.scrollTo({ top: 0, behavior: "smooth" }); loadArtikel(p); }
       });
     } catch {
       grid.innerHTML = renderError();
@@ -334,8 +326,9 @@ async function initKategoriPage() {
       return;
     }
 
+    // Tautan sudah pakai clean URL /kategori/:slug
     grid.innerHTML = categories.map(cat => `
-      <a href="/kategori-detail.html?slug=${escapeHtml(cat.slug)}" class="category-card">
+      <a href="/kategori/${escapeHtml(cat.slug)}" class="category-card">
         <h2 class="category-card-name">${escapeHtml(cat.name)}</h2>
         ${cat.description ? `<p class="category-card-desc">${escapeHtml(cat.description)}</p>` : ""}
       </a>`).join("");
@@ -345,33 +338,44 @@ async function initKategoriPage() {
 }
 
 // ============================================================
-// PAGE: KATEGORI DETAIL
+// PAGE: KATEGORI DETAIL  (/kategori/:slug)
 // ============================================================
 
 async function initKategoriDetailPage() {
-  const slug        = getParam("slug");
-  const grid        = $("#articles-grid");
+  // Baca slug dari path baru (/kategori/teknologi) atau query param lama (?slug=teknologi)
+  const slug         = getSlugFromPath(2);
+  const grid         = $("#articles-grid");
   const paginationEl = $("#pagination");
-  const titleEl     = $(".page-title");
-  const descEl      = $(".page-description");
+  const titleEl      = $(".page-title");
+  const descEl       = $(".page-description");
+  const breadcrumb   = $("#breadcrumb-current");
   if (!grid || !slug) return;
 
   let currentPage = parseInt(getParam("page")) || 1;
   const limit = 12;
+
+  // Ambil type dari query param (untuk filter chip)
+  function getActiveType() {
+    return new URLSearchParams(window.location.search).get("type") || "";
+  }
 
   async function loadKategori(page = 1) {
     currentPage = page;
     grid.innerHTML = renderCardSkeleton(limit);
     if (paginationEl) paginationEl.innerHTML = "";
 
+    const type = getActiveType();
+    let apiUrl = `/api/categories/${encodeURIComponent(slug)}?page=${page}&limit=${limit}`;
+    if (type) apiUrl += `&type=${type}`;
+
     try {
-      const res = await apiFetch(`/api/categories/${encodeURIComponent(slug)}?page=${page}&limit=${limit}`);
+      const res = await apiFetch(apiUrl);
 
       if (titleEl) titleEl.textContent = res.category?.name || slug;
       if (descEl && res.category?.description) descEl.textContent = res.category.description;
+      if (breadcrumb) breadcrumb.textContent = res.category?.name || slug;
 
-      // Update page title & meta
-      document.title = `${res.category?.name || slug} — Revpeak`;
+      document.title = `${res.category?.name || slug} — Kategori — Revpeak`;
 
       const articles = res.data || [];
       grid.innerHTML = articles.length
@@ -380,15 +384,15 @@ async function initKategoriDetailPage() {
 
       renderPagination(paginationEl, {
         page, limit, total: res.total,
-        onPageChange: (p) => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          loadKategori(p);
-        }
+        onPageChange: (p) => { window.scrollTo({ top: 0, behavior: "smooth" }); loadKategori(p); }
       });
     } catch {
       grid.innerHTML = renderError();
     }
   }
+
+  // Re-load saat filter chip berubah
+  window.addEventListener("filterchange", () => loadKategori(1));
 
   loadKategori(currentPage);
 }
@@ -411,8 +415,9 @@ async function initPenulisPage() {
       return;
     }
 
+    // Tautan sudah pakai clean URL /penulis/:slug
     grid.innerHTML = authors.map(author => `
-      <a href="/penulis-detail.html?slug=${escapeHtml(author.slug)}" class="author-card">
+      <a href="/penulis/${escapeHtml(author.slug)}" class="author-card">
         <div class="author-card-avatar">
           ${author.avatar_url
             ? `<img src="${escapeHtml(author.avatar_url)}" alt="${escapeHtml(author.name)}" loading="lazy">`
@@ -429,16 +434,18 @@ async function initPenulisPage() {
 }
 
 // ============================================================
-// PAGE: PENULIS DETAIL
+// PAGE: PENULIS DETAIL  (/penulis/:slug)
 // ============================================================
 
 async function initPenulisDetailPage() {
-  const slug        = getParam("slug");
-  const grid        = $("#articles-grid");
+  // Baca slug dari path baru (/penulis/john) atau query param lama (?slug=john)
+  const slug         = getSlugFromPath(2);
+  const grid         = $("#articles-grid");
   const paginationEl = $("#pagination");
-  const nameEl      = $(".author-name");
-  const bioEl       = $(".author-bio");
-  const avatarEl    = $(".author-avatar");
+  const nameEl       = $(".author-name");
+  const bioEl        = $(".author-bio");
+  const avatarEl     = $(".author-avatar");
+  const breadcrumb   = $("#breadcrumb-name");
   if (!grid || !slug) return;
 
   let currentPage = 1;
@@ -452,14 +459,18 @@ async function initPenulisDetailPage() {
     try {
       const res = await apiFetch(`/api/authors/${encodeURIComponent(slug)}?page=${page}&limit=${limit}`);
 
-      if (nameEl) nameEl.textContent = res.author?.name || slug;
+      if (nameEl)      nameEl.textContent   = res.author?.name || slug;
       if (bioEl && res.author?.bio) bioEl.textContent = res.author.bio;
+      if (breadcrumb)  breadcrumb.textContent = res.author?.name || slug;
       if (avatarEl && res.author?.avatar_url) {
         avatarEl.src = res.author.avatar_url;
         avatarEl.alt = res.author.name;
+        avatarEl.style.display = "";
+        const fallback = document.getElementById("author-avatar-fallback");
+        if (fallback) fallback.style.display = "none";
       }
 
-      document.title = `${res.author?.name || slug} — Revpeak`;
+      document.title = `${res.author?.name || slug} — Penulis — Revpeak`;
 
       const articles = res.data || [];
       grid.innerHTML = articles.length
@@ -468,10 +479,7 @@ async function initPenulisDetailPage() {
 
       renderPagination(paginationEl, {
         page, limit, total: res.total,
-        onPageChange: (p) => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          loadPenulis(p);
-        }
+        onPageChange: (p) => { window.scrollTo({ top: 0, behavior: "smooth" }); loadPenulis(p); }
       });
     } catch {
       grid.innerHTML = renderError();
@@ -486,16 +494,15 @@ async function initPenulisDetailPage() {
 // ============================================================
 
 async function initSearchPage() {
-  const grid     = $("#articles-grid");
-  const input    = $("#search-input");
-  const form     = $("#search-form");
-  const queryEl  = $(".search-query-label");
+  const grid    = $("#articles-grid");
+  const input   = $("#search-input");
+  const form    = $("#search-form");
+  const queryEl = $(".search-query-label");
   if (!grid) return;
 
   const q = getParam("q");
-
-  if (input) input.value = q;
-  if (queryEl && q) queryEl.textContent = `Hasil pencarian: "${q}"`;
+  if (input)           input.value   = q;
+  if (queryEl && q)    queryEl.textContent = `Hasil pencarian: "${q}"`;
 
   if (!q.trim()) {
     grid.innerHTML = renderEmpty("Masukkan kata kunci untuk mencari.");
@@ -505,7 +512,7 @@ async function initSearchPage() {
   grid.innerHTML = renderCardSkeleton(6);
 
   try {
-    const res = await apiFetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const res      = await apiFetch(`/api/search?q=${encodeURIComponent(q)}`);
     const articles = res.data || [];
 
     if (queryEl) queryEl.textContent = `Ditemukan ${articles.length} hasil untuk "${q}"`;
@@ -517,7 +524,6 @@ async function initSearchPage() {
     grid.innerHTML = renderError();
   }
 
-  // Search form submit
   if (form) {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -561,10 +567,10 @@ async function loadSidebarTrending(type = null) {
 // ============================================================
 
 function initDrawer() {
-  const hamburger  = $("#hamburger");
-  const drawer     = $("#drawer");
-  const overlay    = $("#drawer-overlay");
-  const closeBtn   = $("#drawer-close");
+  const hamburger = $("#hamburger");
+  const drawer    = $("#drawer");
+  const overlay   = $("#drawer-overlay");
+  const closeBtn  = $("#drawer-close");
   if (!hamburger || !drawer) return;
 
   function openDrawer() {
@@ -640,14 +646,21 @@ document.addEventListener("DOMContentLoaded", () => {
   initNavActiveState();
 
   const path = window.location.pathname;
-  const page = path.split("/").pop() || "index.html";
 
-  if (page === "" || page === "index.html")              initHomepage();
-  else if (page === "berita.html")                       initBeritaPage();
-  else if (page === "artikel.html")                      initArtikelPage();
-  else if (page === "kategori.html")                     initKategoriPage();
-  else if (page === "kategori-detail.html")              initKategoriDetailPage();
-  else if (page === "penulis.html")                      initPenulisPage();
-  else if (page === "penulis-detail.html")               initPenulisDetailPage();
-  else if (page === "search.html")                       initSearchPage();
+  // Halaman statis — deteksi berdasarkan nama file atau path persis
+  if (path === "/" || path === "/index.html")    return initHomepage();
+  if (path === "/berita.html")                   return initBeritaPage();
+  if (path === "/artikel.html")                  return initArtikelPage();
+  if (path === "/kategori.html")                 return initKategoriPage();
+  if (path === "/penulis.html")                  return initPenulisPage();
+  if (path === "/search.html")                   return initSearchPage();
+
+  // Clean URL — deteksi berdasarkan prefix path
+  if (path.startsWith("/kategori/"))             return initKategoriDetailPage();
+  if (path.startsWith("/penulis/"))              return initPenulisDetailPage();
+
+  // Backward compatibility — URL lama dengan query param
+  // (Worker sudah redirect 301, tapi ini fallback kalau JS jalan duluan)
+  if (path === "/kategori-detail.html")          return initKategoriDetailPage();
+  if (path === "/penulis-detail.html")           return initPenulisDetailPage();
 });
