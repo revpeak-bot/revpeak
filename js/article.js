@@ -314,6 +314,9 @@ function renderArticle(article) {
       if (!img.alt) img.alt = article.title;
     });
   }
+
+  // Hapus ssr-pending — konten lengkap sudah siap, tidak perlu disembunyikan lagi
+  wrapper.classList.remove("ssr-pending");
 }
 // ============================================================
 // ARTIKEL TERKAIT
