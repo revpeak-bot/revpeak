@@ -68,6 +68,19 @@
   border-radius: var(--radius-lg);
   padding: 32px 36px 44px;
 }
+
+/* Sembunyikan konten SSR sementara sampai article.js selesai hydrate.
+   Class ini diinjek oleh Worker, lalu dihapus oleh article.js.
+   Skeleton loader tetap terlihat, FOUC tidak terjadi. */
+#article-wrapper.ssr-pending > * {
+  visibility: hidden;
+}
+#article-wrapper.ssr-pending::before {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: 0;
+}
 .article-sidebar { position: sticky; top: 110px; display: flex; flex-direction: column; gap: 16px; }
 
 /* Breadcrumb */
