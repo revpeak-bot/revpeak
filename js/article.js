@@ -86,7 +86,7 @@ function updateMetaTags(article) {
   setMeta("og:description",          desc);
   setMeta("og:url",                  pageUrl);
   setMeta("og:image",                image);
-  setMeta("og:type",                 article.post_type === "news" ? "article" : "article");
+  setMeta("og:type",                 "article");
   setMeta("og:site_name",            "Revpeak");
   setMeta("og:locale",               "id_ID");
 
