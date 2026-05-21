@@ -332,6 +332,61 @@ input, textarea, select { font-family: inherit; }
 .social-links a:hover { background: var(--accent); }
 
 /* ===========================
+   LOAD MORE
+=========================== */
+.load-more-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0 8px;
+}
+.load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 32px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: 50px;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition),
+              color var(--transition), transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--shadow-sm);
+}
+.load-more-btn:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(224,62,11,0.28);
+}
+.load-more-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+.load-more-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.load-more-spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: lm-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes lm-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===========================
    RESPONSIVE
 =========================== */
 @media (max-width: 900px) {
