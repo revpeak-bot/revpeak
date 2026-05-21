@@ -173,6 +173,8 @@ async function initHomepage() {
 
   let currentTab  = "terbaru";
   let currentPage = 1;
+  let isLoading   = false;
+  let hasMore     = false;
   const limit     = 9;
 
   const tabConfig = {
@@ -181,9 +183,28 @@ async function initHomepage() {
     terbaru:     { sort: "latest",  type: null, label: "Terbaru",     badge: "Baru Diterbitkan" },
   };
 
-  async function loadTab(tab, page = 1) {
+  function renderLoadMoreBtn(loading = false) {
+    if (!paginationEl) return;
+    if (!hasMore) { paginationEl.innerHTML = ""; return; }
+    paginationEl.innerHTML = `
+      <div class="load-more-wrap">
+        <button class="load-more-btn" id="load-more-btn" ${loading ? "disabled" : ""}>
+          ${loading
+            ? `<span class="load-more-spinner" aria-hidden="true"></span> Memuat…`
+            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Muat Lebih Banyak`}
+        </button>
+      </div>`;
+    if (!loading) {
+      document.getElementById("load-more-btn")?.addEventListener("click", () => loadMore());
+    }
+  }
+
+  async function loadTab(tab) {
+    if (isLoading) return;
     currentTab  = tab;
-    currentPage = page;
+    currentPage = 1;
+    hasMore     = false;
+    isLoading   = true;
     const cfg   = tabConfig[tab];
 
     grid.innerHTML = renderCardSkeleton(limit);
@@ -198,32 +219,63 @@ async function initHomepage() {
     });
 
     try {
-      let url = `/api/articles?sort=${cfg.sort}&page=${page}&limit=${limit}`;
+      let url = `/api/articles?sort=${cfg.sort}&page=1&limit=${limit}`;
       if (cfg.type) url += `&type=${cfg.type}`;
       const res      = await apiFetch(url);
       const articles = res.data || [];
 
-      if (!articles.length) { grid.innerHTML = renderEmpty("Belum ada konten."); return; }
+      if (!articles.length) { grid.innerHTML = renderEmpty("Belum ada konten."); isLoading = false; return; }
 
       grid.innerHTML = articles.map(renderCard).join("");
-      renderPagination(paginationEl, {
-        page, limit, total: res.total,
-        onPageChange: (p) => { window.scrollTo({ top: 0, behavior: "smooth" }); loadTab(currentTab, p); }
-      });
+      hasMore = (res.total > limit);
+      renderLoadMoreBtn();
     } catch {
       grid.innerHTML = renderError();
     }
+    isLoading = false;
+  }
+
+  async function loadMore() {
+    if (isLoading || !hasMore) return;
+    isLoading = true;
+    currentPage++;
+    renderLoadMoreBtn(true);
+
+    const cfg = tabConfig[currentTab];
+    try {
+      let url = `/api/articles?sort=${cfg.sort}&page=${currentPage}&limit=${limit}`;
+      if (cfg.type) url += `&type=${cfg.type}`;
+      const res      = await apiFetch(url);
+      const articles = res.data || [];
+
+      // Append ke grid
+      const fragment = document.createDocumentFragment();
+      articles.forEach(a => {
+        const div = document.createElement("div");
+        div.innerHTML = renderCard(a);
+        fragment.appendChild(div.firstElementChild);
+      });
+      grid.appendChild(fragment);
+
+      const loaded = currentPage * limit;
+      hasMore = loaded < res.total;
+      renderLoadMoreBtn();
+    } catch {
+      currentPage--;
+      renderLoadMoreBtn();
+    }
+    isLoading = false;
   }
 
   tabs.forEach(tab => {
     tab.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
-      loadTab(tab.dataset.tab, 1);
+      loadTab(tab.dataset.tab);
     });
   });
 
   await loadSidebarTrending();
-  loadTab(currentTab, 1);
+  loadTab(currentTab);
 }
 
 // ============================================================
