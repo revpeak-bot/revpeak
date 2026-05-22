@@ -648,6 +648,7 @@ async function main() {
       created_at:    publishedAt,
       updated_at:    publishedAt,
       thumbnail_url: thumb.url,   // selalu disertakan agar tidak hilang saat fallback
+      thumbnail_alt: meta.imagePrompt ?? meta.title,
     };
 
     const payloadOptional = {
