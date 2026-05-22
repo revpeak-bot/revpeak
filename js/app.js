@@ -173,8 +173,8 @@ async function initHomepage() {
 
   let currentTab  = "terbaru";
   let currentPage = 1;
+  let totalCount  = 0;
   let isLoading   = false;
-  let hasMore     = false;
   const limit     = 9;
 
   const tabConfig = {
@@ -183,93 +183,134 @@ async function initHomepage() {
     terbaru:     { sort: "latest",  type: null, label: "Terbaru",     badge: "Baru Diterbitkan" },
   };
 
-  function renderLoadMoreBtn(loading = false) {
-    if (!paginationEl) return;
-    if (!hasMore) { paginationEl.innerHTML = ""; return; }
-    paginationEl.innerHTML = `
-      <div class="load-more-wrap">
-        <button class="load-more-btn" id="load-more-btn" ${loading ? "disabled" : ""}>
-          ${loading
-            ? `<span class="load-more-spinner" aria-hidden="true"></span> Memuat…`
-            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Muat Lebih Banyak`}
-        </button>
-      </div>`;
-    if (!loading) {
-      document.getElementById("load-more-btn")?.addEventListener("click", () => loadMore());
+  // ── Rekomendasi: ambil artikel populer, acak per sesi ────
+  async function getRekomendasiArticles(page) {
+    const cacheKey = "rp_rek_pool";
+    let pool = null;
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      if (raw) pool = JSON.parse(raw);
+    } catch {}
+    if (!pool) {
+      const res = await apiFetch(`/api/articles?sort=popular&page=1&limit=27`);
+      pool = res.data || [];
+      // Fisher-Yates shuffle — urutan berbeda tiap kunjungan
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      try { sessionStorage.setItem(cacheKey, JSON.stringify(pool)); } catch {}
     }
+    const start = (page - 1) * limit;
+    return { data: pool.slice(start, start + limit), total: pool.length };
   }
 
-  async function loadTab(tab) {
-    if (isLoading) return;
-    currentTab  = tab;
-    currentPage = 1;
-    hasMore     = false;
-    isLoading   = true;
-    const cfg   = tabConfig[tab];
+  // ── Trending: popular + boost konten lama dibaca ─────────
+  async function getTrendingArticles(page) {
+    const res = await apiFetch(`/api/articles?sort=popular&page=${page}&limit=${limit}`);
+    try {
+      const timeData = JSON.parse(localStorage.getItem("rp_time_spent") || "{}");
+      if (Object.keys(timeData).length > 0) {
+        const articles = res.data || [];
+        const maxTime  = Math.max(...Object.values(timeData), 1);
+        articles.sort((a, b) => {
+          const sa = (a.view_count || 0) + ((timeData[a.slug] || 0) / maxTime) * 50;
+          const sb = (b.view_count || 0) + ((timeData[b.slug] || 0) / maxTime) * 50;
+          return sb - sa;
+        });
+        return { data: articles, total: res.total };
+      }
+    } catch {}
+    return res;
+  }
 
+  // ── Tombol navigasi < > ───────────────────────────────────
+  function renderNavButtons() {
+    if (!paginationEl) return;
+    const totalPages = Math.ceil(totalCount / limit);
+    if (totalPages <= 1) { paginationEl.innerHTML = ""; return; }
+    paginationEl.innerHTML = `
+      <div class="content-nav-wrap">
+        <button class="content-nav-btn" id="hp-prev-btn"
+          ${currentPage <= 1 ? "disabled" : ""}
+          aria-label="Halaman sebelumnya">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+          Sebelumnya
+        </button>
+        <span class="content-nav-info" aria-label="Halaman ${currentPage} dari ${totalPages}">${currentPage} / ${totalPages}</span>
+        <button class="content-nav-btn" id="hp-next-btn"
+          ${currentPage >= totalPages ? "disabled" : ""}
+          aria-label="Halaman berikutnya">
+          Berikutnya
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>`;
+    document.getElementById("hp-prev-btn")?.addEventListener("click", () => {
+      if (currentPage > 1 && !isLoading) {
+        currentPage--;
+        loadContent();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
+    document.getElementById("hp-next-btn")?.addEventListener("click", () => {
+      if (currentPage < Math.ceil(totalCount / limit) && !isLoading) {
+        currentPage++;
+        loadContent();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
+  }
+
+  // ── Muat konten sesuai tab & halaman aktif ────────────────
+  async function loadContent() {
+    if (isLoading) return;
+    isLoading = true;
+    const cfg = tabConfig[currentTab];
     grid.innerHTML = renderCardSkeleton(limit);
     if (paginationEl) paginationEl.innerHTML = "";
-
     if (heroTitle) heroTitle.textContent = cfg.label;
     if (heroBadge) heroBadge.textContent  = cfg.badge;
-
-    tabs.forEach(t => {
-      t.classList.toggle("active", t.dataset.tab === tab);
-      t.setAttribute("aria-selected", t.dataset.tab === tab);
-    });
-
     try {
-      let url = `/api/articles?sort=${cfg.sort}&page=1&limit=${limit}`;
-      if (cfg.type) url += `&type=${cfg.type}`;
-      const res      = await apiFetch(url);
+      let res;
+      if (currentTab === "rekomendasi") {
+        res = await getRekomendasiArticles(currentPage);
+      } else if (currentTab === "trending") {
+        res = await getTrendingArticles(currentPage);
+      } else {
+        let url = `/api/articles?sort=${cfg.sort}&page=${currentPage}&limit=${limit}`;
+        if (cfg.type) url += `&type=${cfg.type}`;
+        res = await apiFetch(url);
+      }
       const articles = res.data || [];
-
+      totalCount = res.total || 0;
       if (!articles.length) { grid.innerHTML = renderEmpty("Belum ada konten."); isLoading = false; return; }
-
       grid.innerHTML = articles.map(renderCard).join("");
-      hasMore = (res.total > limit);
-      renderLoadMoreBtn();
+      renderNavButtons();
     } catch {
       grid.innerHTML = renderError();
     }
     isLoading = false;
   }
 
-  async function loadMore() {
-    if (isLoading || !hasMore) return;
-    isLoading = true;
-    currentPage++;
-    renderLoadMoreBtn(true);
-
-    const cfg = tabConfig[currentTab];
-    try {
-      let url = `/api/articles?sort=${cfg.sort}&page=${currentPage}&limit=${limit}`;
-      if (cfg.type) url += `&type=${cfg.type}`;
-      const res      = await apiFetch(url);
-      const articles = res.data || [];
-
-      // Append ke grid
-      const fragment = document.createDocumentFragment();
-      articles.forEach(a => {
-        const div = document.createElement("div");
-        div.innerHTML = renderCard(a);
-        fragment.appendChild(div.firstElementChild);
-      });
-      grid.appendChild(fragment);
-
-      const loaded = currentPage * limit;
-      hasMore = loaded < res.total;
-      renderLoadMoreBtn();
-    } catch {
-      currentPage--;
-      renderLoadMoreBtn();
-    }
-    isLoading = false;
+  // ── Ganti tab ─────────────────────────────────────────────
+  async function loadTab(tab) {
+    if (isLoading) return;
+    currentTab  = tab;
+    currentPage = 1;
+    tabs.forEach(t => {
+      t.classList.toggle("active", t.dataset.tab === tab);
+      t.setAttribute("aria-selected", t.dataset.tab === tab);
+    });
+    await loadContent();
   }
 
   tabs.forEach(tab => {
     tab.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
+      // Acak ulang rekomendasi tiap kali tab diklik
+      if (tab.dataset.tab === "rekomendasi") {
+        try { sessionStorage.removeItem("rp_rek_pool"); } catch {}
+      }
       loadTab(tab.dataset.tab);
     });
   });
@@ -689,10 +730,54 @@ function initNavActiveState() {
 }
 
 // ============================================================
+// GLOBAL: TIME-ON-PAGE TRACKING (untuk sinyal Trending)
+// ============================================================
+
+function initTimeTracking() {
+  const path = window.location.pathname;
+  // Hanya lacak halaman artikel/review (bukan homepage, .html, kategori, penulis)
+  if (
+    path === "/" ||
+    path === "/index.html" ||
+    path.endsWith(".html") ||
+    path.startsWith("/kategori/") ||
+    path.startsWith("/penulis/") ||
+    path === ""
+  ) return;
+
+  const slug = path.replace(/^\//, "").split("/")[0];
+  if (!slug) return;
+
+  const startTime = Date.now();
+  let recorded    = false;
+
+  function recordTime() {
+    if (recorded) return;
+    const elapsed = Math.floor((Date.now() - startTime) / 1000); // detik
+    if (elapsed < 10) return; // abaikan kunjungan < 10 detik
+    recorded = true;
+    try {
+      const key  = "rp_time_spent";
+      const data = JSON.parse(localStorage.getItem(key) || "{}");
+      data[slug] = (data[slug] || 0) + elapsed;
+      // Simpan maks 200 entri teratas berdasarkan total waktu
+      const entries = Object.entries(data).sort((a, b) => b[1] - a[1]).slice(0, 200);
+      localStorage.setItem(key, JSON.stringify(Object.fromEntries(entries)));
+    } catch {}
+  }
+
+  window.addEventListener("beforeunload", recordTime);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) recordTime();
+  });
+}
+
+// ============================================================
 // ROUTER — deteksi halaman dan jalankan init yang sesuai
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  initTimeTracking();
   initDrawer();
   initHeaderSearch();
   initNavActiveState();
