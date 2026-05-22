@@ -171,7 +171,8 @@ async function initHomepage() {
   const paginationEl = $("#pagination");
   if (!grid) return;
 
-  let currentTab  = "terbaru";
+  const TAB_KEY   = "rp_active_tab";
+  let currentTab  = sessionStorage.getItem(TAB_KEY) || "rekomendasi";
   let currentPage = 1;
   let totalCount  = 0;
   let isLoading   = false;
@@ -307,6 +308,8 @@ async function initHomepage() {
   tabs.forEach(tab => {
     tab.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
+      // Simpan tab aktif agar tetap saat refresh
+      try { sessionStorage.setItem(TAB_KEY, tab.dataset.tab); } catch {}
       // Acak ulang rekomendasi tiap kali tab diklik
       if (tab.dataset.tab === "rekomendasi") {
         try { sessionStorage.removeItem("rp_rek_pool"); } catch {}
