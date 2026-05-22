@@ -579,6 +579,7 @@ async function main() {
         status:           "published",
         source:           "ai-agent",
         published_at:     new Date().toISOString(),
+        thumbnail_alt:    topic.gambar ?? article.judul,
       });
 
       successCount++;
