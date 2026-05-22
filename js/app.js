@@ -193,7 +193,8 @@ async function initHomepage() {
       if (raw) pool = JSON.parse(raw);
     } catch {}
     if (!pool) {
-      const res = await apiFetch(`/api/articles?sort=popular&page=1&limit=27`);
+      // Ambil 99 artikel populer agar tersedia banyak halaman
+      const res = await apiFetch(`/api/articles?sort=popular&page=1&limit=99`);
       pool = res.data || [];
       // Fisher-Yates shuffle — urutan berbeda tiap kunjungan
       for (let i = pool.length - 1; i > 0; i--) {
@@ -206,23 +207,33 @@ async function initHomepage() {
     return { data: pool.slice(start, start + limit), total: pool.length };
   }
 
-  // ── Trending: popular + boost konten lama dibaca ─────────
+  // ── Trending: pool besar + boost konten lama dibaca ──────
   async function getTrendingArticles(page) {
-    const res = await apiFetch(`/api/articles?sort=popular&page=${page}&limit=${limit}`);
+    const cacheKey = "rp_trend_pool";
+    let pool = null;
     try {
-      const timeData = JSON.parse(localStorage.getItem("rp_time_spent") || "{}");
-      if (Object.keys(timeData).length > 0) {
-        const articles = res.data || [];
-        const maxTime  = Math.max(...Object.values(timeData), 1);
-        articles.sort((a, b) => {
-          const sa = (a.view_count || 0) + ((timeData[a.slug] || 0) / maxTime) * 50;
-          const sb = (b.view_count || 0) + ((timeData[b.slug] || 0) / maxTime) * 50;
-          return sb - sa;
-        });
-        return { data: articles, total: res.total };
-      }
+      const raw = sessionStorage.getItem(cacheKey);
+      if (raw) pool = JSON.parse(raw);
     } catch {}
-    return res;
+    if (!pool) {
+      // Ambil 99 artikel populer lalu urutkan ulang dengan sinyal waktu baca
+      const res = await apiFetch(`/api/articles?sort=popular&page=1&limit=99`);
+      pool = res.data || [];
+      try {
+        const timeData = JSON.parse(localStorage.getItem("rp_time_spent") || "{}");
+        if (Object.keys(timeData).length > 0) {
+          const maxTime = Math.max(...Object.values(timeData), 1);
+          pool.sort((a, b) => {
+            const sa = (a.view_count || 0) + ((timeData[a.slug] || 0) / maxTime) * 50;
+            const sb = (b.view_count || 0) + ((timeData[b.slug] || 0) / maxTime) * 50;
+            return sb - sa;
+          });
+        }
+      } catch {}
+      try { sessionStorage.setItem(cacheKey, JSON.stringify(pool)); } catch {}
+    }
+    const start = (page - 1) * limit;
+    return { data: pool.slice(start, start + limit), total: pool.length };
   }
 
   // ── Tombol navigasi < > ───────────────────────────────────
@@ -283,7 +294,12 @@ async function initHomepage() {
         res = await apiFetch(url);
       }
       const articles = res.data || [];
-      totalCount = res.total || 0;
+      // Fallback: jika total dari server tidak akurat (= jumlah per halaman),
+      // dan halaman penuh terisi, asumsikan masih ada halaman berikutnya
+      const serverTotal = res.total || 0;
+      totalCount = (serverTotal <= limit && articles.length === limit)
+        ? currentPage * limit + limit  // paksa muncul tombol "Berikutnya"
+        : serverTotal;
       if (!articles.length) { grid.innerHTML = renderEmpty("Belum ada konten."); isLoading = false; return; }
       grid.innerHTML = articles.map(renderCard).join("");
       renderNavButtons();
@@ -313,6 +329,10 @@ async function initHomepage() {
       // Acak ulang rekomendasi tiap kali tab diklik
       if (tab.dataset.tab === "rekomendasi") {
         try { sessionStorage.removeItem("rp_rek_pool"); } catch {}
+      }
+      // Refresh pool trending agar sinyal waktu baca terbaru dipakai
+      if (tab.dataset.tab === "trending") {
+        try { sessionStorage.removeItem("rp_trend_pool"); } catch {}
       }
       loadTab(tab.dataset.tab);
     });
