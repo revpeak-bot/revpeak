@@ -15,9 +15,11 @@
   --text:         #1A1916;
   --text-muted:   #6B6560;
   --text-light:   #706B67;
-  --accent:       #E03E0B;
-  --accent-dark:  #BB320A;
-  --accent-bg:    rgba(224,62,11,0.08);
+  --accent:            #E03E0B;
+  --accent-dark:       #BB320A;
+  --accent-bg:         rgba(224,62,11,0.08);
+  /* WCAG AA: #E03E0B di atas putih hanya 4.09:1, pakai #BB320A (5.53:1) untuk teks tab aktif */
+  --tab-active-color:  #BB320A;
   --gold:         #D4900A;
   --green:        #059669;
   --green-bg:     rgba(16,185,129,0.08);
@@ -38,9 +40,11 @@
   --text:         #F0EDE8;
   --text-muted:   #938D86;
   --text-light:   #979189;
-  --accent:       #FF5722;
-  --accent-dark:  #E04011;
-  --accent-bg:    rgba(255,87,34,0.1);
+  --accent:            #FF5722;
+  --accent-dark:       #E04011;
+  --accent-bg:         rgba(255,87,34,0.1);
+  /* WCAG AA: #FF5722 di atas #1B1B19 = 5.17:1, aman untuk teks tab aktif */
+  --tab-active-color:  #FF5722;
   --gold:         #E6A817;
   --green:        #10B981;
   --green-bg:     rgba(16,185,129,0.12);
@@ -177,7 +181,7 @@ input, textarea, select { font-family: inherit; }
 .tabs-inner::-webkit-scrollbar { display: none; }
 .tab-btn { display: flex; align-items: center; gap: 7px; padding: 14px 22px; font-size: 14px; font-weight: 600; font-family: 'Syne', sans-serif; color: var(--text-muted); border-bottom: 2.5px solid transparent; white-space: nowrap; transition: color var(--transition), border-color var(--transition); }
 .tab-btn:hover { color: var(--text); }
-.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-btn.active { color: var(--tab-active-color); border-bottom-color: var(--accent); }
 .tab-icon { font-size: 15px; }
 
 /* ===========================
