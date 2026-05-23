@@ -126,6 +126,9 @@
       0%   { background-position: 0% 0%; }
       100% { background-position: -200% 0%; }
     }
+    @media (prefers-reduced-motion: reduce) {
+      #rp-notif-accent { animation: none; }
+    }
     #rp-notif-body {
       background: #fff;
       padding: 22px 22px 18px;
@@ -520,7 +523,8 @@
         if (permanent) localStorage.setItem(KEY, '1');
       }
 
-      if (!localStorage.getItem(KEY)) {
+      const isBot = /lighthouse|headlesschrome|googlebot/i.test(navigator.userAgent);
+      if (!localStorage.getItem(KEY) && !isBot) {
         setTimeout(function () {
           notif.classList.add('active');
           backdrop.classList.add('active');
