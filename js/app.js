@@ -300,11 +300,13 @@ async function initHomepage() {
       totalCount = (serverTotal <= limit && articles.length === limit)
         ? currentPage * limit + limit  // paksa muncul tombol "Berikutnya"
         : serverTotal;
-      if (!articles.length) { grid.innerHTML = renderEmpty("Belum ada konten."); isLoading = false; return; }
+      if (!articles.length) { grid.innerHTML = renderEmpty("Belum ada konten."); grid.setAttribute("aria-busy", "false"); isLoading = false; return; }
       grid.innerHTML = articles.map(renderCard).join("");
+      grid.setAttribute("aria-busy", "false");
       renderNavButtons();
     } catch {
       grid.innerHTML = renderError();
+      grid.setAttribute("aria-busy", "false");
     }
     isLoading = false;
   }
