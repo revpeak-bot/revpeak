@@ -1,0 +1,607 @@
+/* ===========================================
+   REVPEAK — perpustakaan.css
+   Dipakai oleh: perpustakaan.html
+   Semua CSS variable diwarisi dari style.css
+=========================================== */
+
+/* ===========================
+   LIB HERO
+=========================== */
+.lib-hero {
+  padding-bottom: 24px;
+}
+
+.lib-stats {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 22px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  width: fit-content;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.lib-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 20px;
+}
+
+.lib-stat:first-child { padding-left: 0; }
+.lib-stat:last-child  { padding-right: 0; }
+
+.lib-stat-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.lib-stat-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.lib-stat-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ===========================
+   TOOLBAR
+=========================== */
+.lib-toolbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 97px;
+  z-index: 180;
+  padding: 10px 0 0;
+}
+
+.lib-toolbar-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+}
+
+/* Search dalam toolbar buku */
+.lib-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+  max-width: 340px;
+}
+
+.lib-search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-light);
+  pointer-events: none;
+}
+
+.lib-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  border: 1.5px solid var(--border);
+  border-radius: 50px;
+  background: var(--surface2);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.lib-search-input::placeholder { color: var(--text-light); }
+.lib-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* Selects wrapper */
+.lib-selects {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* View toggle */
+.lib-view-toggle {
+  display: flex;
+  gap: 2px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+
+.lib-view-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: background var(--transition), color var(--transition);
+}
+
+.lib-view-btn:hover  { color: var(--text); }
+.lib-view-btn.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
+
+/* Result count */
+.lib-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ===========================
+   GENRE BAR (filter chips)
+=========================== */
+.lib-genre-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 10px;
+  flex-wrap: nowrap;
+}
+
+.lib-genre-bar::-webkit-scrollbar { display: none; }
+
+.lib-genre-chip {
+  padding: 5px 14px;
+  border-radius: 50px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+
+.lib-genre-chip:hover { border-color: var(--text-muted); color: var(--text); }
+.lib-genre-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ===========================
+   MAIN SECTION
+=========================== */
+.lib-main {
+  padding: 28px 0 56px;
+}
+
+/* ===========================
+   BOOK GRID
+=========================== */
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 24px 14px;
+}
+
+/* ===========================
+   BOOK CARD (grid view)
+=========================== */
+.book-card {
+  display: flex;
+  flex-direction: column;
+  animation: bookFadeUp 0.35s ease both;
+}
+
+@keyframes bookFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Animasi stagger */
+.book-card:nth-child(1)  { animation-delay: 0.04s; }
+.book-card:nth-child(2)  { animation-delay: 0.08s; }
+.book-card:nth-child(3)  { animation-delay: 0.12s; }
+.book-card:nth-child(4)  { animation-delay: 0.16s; }
+.book-card:nth-child(5)  { animation-delay: 0.20s; }
+.book-card:nth-child(6)  { animation-delay: 0.24s; }
+.book-card:nth-child(n+7){ animation-delay: 0.28s; }
+
+/* Cover wrapper — rasio 9:16 (portrait seperti sampul buku asli) */
+.book-cover-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface2);
+  box-shadow: var(--shadow-sm);
+  display: block;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.book-card:hover .book-cover-wrap {
+  transform: translateY(-4px) rotate(0.4deg);
+  box-shadow: var(--shadow-md);
+}
+
+.book-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.book-card:hover .book-cover-img {
+  transform: scale(1.04);
+}
+
+/* Badge genre — pojok kiri atas cover */
+.book-genre-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 50px;
+  background: var(--accent);
+  color: #fff;
+  z-index: 2;
+  pointer-events: none;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Badge format file — pojok kiri bawah cover */
+.book-format-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  z-index: 2;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+/* Tombol bookmark — pojok kanan atas cover */
+.book-bookmark-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity var(--transition), background var(--transition);
+  backdrop-filter: blur(4px);
+}
+
+.book-bookmark-btn svg { width: 13px; height: 13px; pointer-events: none; }
+.book-card:hover .book-bookmark-btn     { opacity: 1; }
+.book-bookmark-btn:hover                 { background: rgba(0, 0, 0, 0.7); }
+.book-bookmark-btn.saved                 { opacity: 1; color: #FFD700; }
+
+/* Hover overlay — muncul saat hover cover */
+.book-cover-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.88) 0%,
+    rgba(0, 0, 0, 0.4)  50%,
+    transparent         80%
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 12px 10px;
+  gap: 5px;
+  opacity: 0;
+  transition: opacity var(--transition);
+  z-index: 1;
+}
+
+.book-card:hover .book-cover-overlay { opacity: 1; }
+
+.book-overlay-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #fff;
+  transition: opacity var(--transition), transform 0.15s ease;
+  text-align: center;
+}
+
+.book-overlay-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+.book-overlay-btn:hover { transform: scale(0.97); }
+
+.book-overlay-read {
+  background: var(--accent);
+  box-shadow: 0 3px 10px rgba(224, 62, 11, 0.45);
+}
+
+.book-overlay-read:hover { background: var(--accent-dark); }
+
+.book-overlay-download {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.book-overlay-download:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* Info di bawah cover */
+.book-info {
+  padding: 10px 2px 0;
+}
+
+.book-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  margin-bottom: 3px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.book-title a { color: inherit; }
+.book-title a:hover { color: var(--accent); }
+
+.book-author {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.book-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.book-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.book-meta-item svg { width: 11px; height: 11px; flex-shrink: 0; }
+.book-meta-dot { color: var(--border); font-size: 0.65rem; }
+
+/* ===========================
+   LIST VIEW
+=========================== */
+.book-grid.list-view {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.book-grid.list-view .book-card {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition), box-shadow var(--transition);
+  animation: bookFadeUp 0.3s ease both;
+}
+
+.book-grid.list-view .book-card:hover {
+  transform: translateX(3px);
+  box-shadow: var(--shadow-md);
+}
+
+.book-grid.list-view .book-cover-wrap {
+  width: 62px;
+  flex-shrink: 0;
+  aspect-ratio: 9 / 16;
+  border-radius: 6px;
+}
+
+/* Override hover effect untuk list view */
+.book-grid.list-view .book-card:hover .book-cover-wrap {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.book-grid.list-view .book-info {
+  padding: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.book-grid.list-view .book-title {
+  font-size: 0.92rem;
+  -webkit-line-clamp: 1;
+  margin-bottom: 4px;
+}
+
+.book-grid.list-view .book-author {
+  font-size: 0.82rem;
+  margin-bottom: 5px;
+}
+
+.book-grid.list-view .book-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Desc hanya tampil di list view */
+.book-grid:not(.list-view) .book-desc { display: none; }
+
+/* Tombol unduh di list view */
+.book-list-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.book-list-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 50px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition),
+              border-color var(--transition), transform 0.15s ease;
+}
+
+.book-list-btn svg { width: 12px; height: 12px; }
+
+.book-list-btn-read {
+  background: var(--accent);
+  color: #fff;
+  border: 1.5px solid var(--accent);
+}
+.book-list-btn-read:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+
+.book-list-btn-dl {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1.5px solid var(--border);
+}
+.book-list-btn-dl:hover { border-color: var(--text-muted); color: var(--text); }
+
+/* Sembunyikan overlay di list view */
+.book-grid.list-view .book-cover-overlay { display: none; }
+.book-grid.list-view .book-bookmark-btn  { display: none; }
+
+/* Tampilkan actions di list view, sembunyikan di grid view */
+.book-grid:not(.list-view) .book-list-actions { display: none; }
+
+/* ===========================
+   SKELETON BUKU
+=========================== */
+.book-skeleton {
+  display: flex;
+  flex-direction: column;
+}
+
+.bsk-cover {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+}
+
+.bsk-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 2px;
+}
+
+.bsk-line {
+  height: 11px;
+  border-radius: 4px;
+}
+
+.bsk-t1 { width: 90%; }
+.bsk-t2 { width: 65%; }
+.bsk-t3 { width: 45%; }
+
+/* ===========================
+   EMPTY / ERROR
+=========================== */
+.book-grid .empty-state,
+.book-grid .error-state {
+  grid-column: 1 / -1;
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+@media (max-width: 900px) {
+  .lib-toolbar { top: 88px; }
+  .lib-stats   { flex-wrap: wrap; }
+}
+
+@media (max-width: 640px) {
+  .book-grid {
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+    gap: 18px 10px;
+  }
+  .lib-toolbar-top { gap: 8px; }
+  .lib-selects     { gap: 6px; }
+  .lib-count       { display: none; }
+  .lib-stats       { width: 100%; justify-content: flex-start; }
+}
+
+@media (max-width: 380px) {
+  .book-grid { grid-template-columns: repeat(2, 1fr); }
+}
