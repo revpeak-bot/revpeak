@@ -1005,3 +1005,702 @@ function initApp() {
 document.addEventListener("DOMContentLoaded", () => {
   initLogin();
 });
+
+// ============================================================
+// ██████╗  ██████╗  ██╗  ██╗ ██╗   ██╗
+// ██╔══██╗██╔═══██╗ ██║ ██╔╝ ██║   ██║
+// ██████╔╝██║   ██║ █████╔╝  ██║   ██║
+// ██╔══██╗██║   ██║ ██╔═██╗  ██║   ██║
+// ██████╔╝╚██████╔╝ ██║  ██╗ ╚██████╔╝
+// ╚═════╝  ╚═════╝  ╚═╝  ╚═╝  ╚═════╝
+// MANAJEMEN PERPUSTAKAAN — BUKU & GENRE
+// ============================================================
+
+// ── Config R2 Upload ────────────────────────────────────────
+// Worker harus punya endpoint POST /api/r2/upload
+// Header: X-Worker-Secret, body: FormData { file, folder }
+// Folder: "covers" untuk sampul, "books" untuk file buku
+const R2_UPLOAD_PATH  = "/api/r2/upload";
+const R2_MAX_IMG      = 5   * 1024 * 1024;  // 5 MB
+const R2_MAX_FILE     = 100 * 1024 * 1024;  // 100 MB
+
+// ── Cache genre buku ─────────────────────────────────────────
+let cachedBookGenres = [];
+
+async function loadBookGenreCache() {
+  try {
+    cachedBookGenres = await dbFetch("/book_genres?select=id,name,slug&order=name.asc") || [];
+  } catch { cachedBookGenres = []; }
+}
+
+function populateBookGenreSelect(selectedId = "") {
+  const sel = $("#bf-genre");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">— Pilih Genre —</option>`
+    + cachedBookGenres.map(g =>
+        `<option value="${g.id}" ${selectedId == g.id ? "selected" : ""}>${escapeHtml(g.name)}</option>`
+      ).join("");
+}
+
+// ============================================================
+// HALAMAN: DAFTAR BUKU
+// ============================================================
+
+let bookListPage  = 1;
+const bookLimit   = 20;
+let bookFilter    = { status: "", format: "", search: "" };
+
+async function loadBookList(page = 1) {
+  bookListPage = page;
+  const tbody = $("#book-table-body");
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="6" class="tbl-loading">Memuat data...</td></tr>`;
+
+  try {
+    let path = `/books?select=id,title,slug,author,genre,file_type,status,view_count,cover_url`
+      + `&order=created_at.desc&limit=${bookLimit}&offset=${(page - 1) * bookLimit}`;
+
+    if (bookFilter.status) path += `&status=eq.${bookFilter.status}`;
+    if (bookFilter.format) path += `&file_type=eq.${bookFilter.format}`;
+    if (bookFilter.search) path += `&or=(title.ilike.*${encodeURIComponent(bookFilter.search)}*,author.ilike.*${encodeURIComponent(bookFilter.search)}*)`;
+
+    const books = await dbFetch(path);
+
+    if (!books || !books.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="tbl-empty">Belum ada buku.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = books.map(b => `
+      <tr>
+        <td class="td-title">
+          <div class="book-table-cell">
+            ${b.cover_url
+              ? `<img src="${escapeHtml(b.cover_url)}" class="book-thumb" alt="${escapeHtml(b.title)}" loading="lazy">`
+              : `<div class="book-thumb-placeholder">📚</div>`}
+            <div>
+              <a href="/buku/${escapeHtml(b.slug)}" target="_blank" rel="noopener" class="article-link">${escapeHtml(b.title)}</a>
+              <div class="book-author-small">${escapeHtml(b.author || "")}</div>
+            </div>
+          </div>
+        </td>
+        <td>${b.genre ? `<span class="badge bt-genre">${escapeHtml(b.genre)}</span>` : "-"}</td>
+        <td>${b.file_type ? `<span class="badge bt-format">${b.file_type.toUpperCase()}</span>` : "-"}</td>
+        <td>
+          <span class="status-badge status-${b.status}">
+            ${b.status === "published" ? "✅ Terbit" : b.status === "archived" ? "📦 Arsip" : "📋 Draft"}
+          </span>
+        </td>
+        <td>${(b.view_count || 0).toLocaleString("id-ID")}</td>
+        <td class="td-actions">
+          <button class="btn-icon btn-edit-book" data-id="${b.id}" aria-label="Edit ${escapeHtml(b.title)}">✏️</button>
+          <button class="btn-icon btn-delete-book" data-id="${b.id}" data-title="${escapeHtml(b.title)}" aria-label="Hapus ${escapeHtml(b.title)}">🗑️</button>
+        </td>
+      </tr>`).join("");
+
+    tbody.querySelectorAll(".btn-edit-book").forEach(btn => {
+      btn.addEventListener("click", () => openEditBookForm(btn.dataset.id));
+    });
+    tbody.querySelectorAll(".btn-delete-book").forEach(btn => {
+      btn.addEventListener("click", () => deleteBook(btn.dataset.id, btn.dataset.title));
+    });
+
+    renderBookListPagination(books.length);
+
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="6" class="tbl-error" role="alert">Gagal memuat: ${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+function renderBookListPagination(count) {
+  const el = $("#book-list-pagination");
+  if (!el) return;
+  const prevDis = bookListPage <= 1;
+  const nextDis = count < bookLimit;
+  el.innerHTML = `
+    <button class="btn-secondary" id="btn-book-prev" ${prevDis ? "disabled" : ""}>← Sebelumnya</button>
+    <span class="pagination-info">Halaman ${bookListPage}</span>
+    <button class="btn-secondary" id="btn-book-next" ${nextDis ? "disabled" : ""}>Berikutnya →</button>`;
+  if (!prevDis) $("#btn-book-prev")?.addEventListener("click", () => loadBookList(bookListPage - 1));
+  if (!nextDis) $("#btn-book-next")?.addEventListener("click", () => loadBookList(bookListPage + 1));
+}
+
+// ============================================================
+// FORM BUKU: BUKA / RESET
+// ============================================================
+
+async function openNewBookForm() {
+  try {
+    showToast("Memuat form...", "info");
+    await loadBookGenreCache();
+    resetBookForm();
+    populateBookGenreSelect();
+    showView("book-form");
+    const titleEl = document.getElementById("topbar-title");
+    if (titleEl) titleEl.textContent = "Tambah Buku";
+    $("#bf-title")?.focus();
+  } catch (e) {
+    showToast("Gagal membuka form: " + e.message, "error");
+  }
+}
+
+async function openEditBookForm(id) {
+  try {
+    showToast("Memuat data buku...", "info");
+    await loadBookGenreCache();
+    resetBookForm();
+
+    const books = await dbFetch(`/books?id=eq.${id}&select=*&limit=1`);
+    if (!books || !books.length) { showToast("Buku tidak ditemukan.", "error"); return; }
+    const book = books[0];
+
+    fillBookForm(book);
+    populateBookGenreSelect(book.genre_id);
+
+    showView("book-form");
+    const titleEl = document.getElementById("topbar-title");
+    if (titleEl) titleEl.textContent = "Edit Buku";
+    $("#bf-title")?.focus();
+  } catch (e) {
+    showToast("Gagal memuat buku: " + e.message, "error");
+  }
+}
+
+function fillBookForm(book) {
+  const set = (id, val) => { const el = $(id); if (el) el.value = val ?? ""; };
+  set("#bf-id",          book.id);
+  set("#bf-title",       book.title);
+  set("#bf-slug",        book.slug);
+  set("#bf-author",      book.author);
+  set("#bf-description", book.description);
+  set("#bf-isbn",        book.isbn);
+  set("#bf-publisher",   book.publisher);
+  set("#bf-year",        book.year);
+  set("#bf-pages",       book.pages);
+  set("#bf-language",    book.language || "id");
+  set("#bf-status",      book.status   || "draft");
+  set("#bf-tags",        (book.tags || []).join(", "));
+  set("#bf-cover-url",   book.cover_url);
+  set("#bf-cover-alt",   book.cover_alt);
+  set("#bf-file-url",    book.file_url);
+  set("#bf-file-type",   book.file_type);
+  set("#bf-file-size",   book.file_size);
+
+  // Tandai slug sebagai manual agar tidak di-overwrite
+  const slugEl = $("#bf-slug");
+  if (slugEl) slugEl.dataset.manual = "1";
+
+  // Tampilkan preview cover jika ada
+  if (book.cover_url) showCoverPreview(book.cover_url);
+
+  // Tampilkan info file jika ada
+  if (book.file_url) {
+    const name = book.file_url.split("/").pop();
+    showFileInfo(name, book.file_size);
+  }
+}
+
+function resetBookForm() {
+  const form = $("#book-form");
+  if (form) { form.reset(); form.dataset.editingId = ""; }
+  const idEl = $("#bf-id");
+  if (idEl) idEl.value = "";
+  const slugEl = $("#bf-slug");
+  if (slugEl) { slugEl.value = ""; delete slugEl.dataset.manual; }
+  hideCoverPreview();
+  hideFileInfo();
+}
+
+// ============================================================
+// SUBMIT & DELETE BUKU
+// ============================================================
+
+async function submitBookForm(e) {
+  e.preventDefault();
+  const id          = $("#bf-id")?.value?.trim();
+  const title       = $("#bf-title")?.value?.trim();
+  const slug        = $("#bf-slug")?.value?.trim() || slugify(title);
+  const author      = $("#bf-author")?.value?.trim();
+  const genreId     = $("#bf-genre")?.value || null;
+  const genreName   = genreId
+    ? (cachedBookGenres.find(g => String(g.id) === String(genreId))?.name || null)
+    : null;
+
+  if (!title)  { showToast("Judul buku wajib diisi.", "error"); return; }
+  if (!author) { showToast("Nama penulis wajib diisi.", "error"); return; }
+
+  const tagsRaw  = $("#bf-tags")?.value?.trim();
+  const tags     = tagsRaw ? tagsRaw.split(",").map(t => t.trim()).filter(Boolean) : [];
+  const fileSize = parseInt($("#bf-file-size")?.value) || null;
+  const year     = parseInt($("#bf-year")?.value) || null;
+  const pages    = parseInt($("#bf-pages")?.value) || null;
+
+  const payload = {
+    title,
+    slug,
+    author,
+    description: $("#bf-description")?.value?.trim() || null,
+    isbn:        $("#bf-isbn")?.value?.trim()        || null,
+    publisher:   $("#bf-publisher")?.value?.trim()   || null,
+    year,
+    pages,
+    language:   $("#bf-language")?.value  || "id",
+    status:     $("#bf-status")?.value    || "draft",
+    tags,
+    cover_url:  $("#bf-cover-url")?.value?.trim() || null,
+    cover_alt:  $("#bf-cover-alt")?.value?.trim() || null,
+    file_url:   $("#bf-file-url")?.value?.trim()  || null,
+    file_type:  $("#bf-file-type")?.value         || null,
+    file_size:  fileSize,
+    ...(genreId ? { genre_id: Number(genreId), genre: genreName } : {}),
+    updated_at: new Date().toISOString(),
+  };
+
+  const submitBtn = $("#btn-submit-book");
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Menyimpan..."; }
+
+  try {
+    if (id) {
+      await dbFetch(`/books?id=eq.${id}`, {
+        method: "PATCH", prefer: "return=minimal",
+        body: JSON.stringify(payload),
+      });
+      showToast("Buku berhasil diperbarui.");
+    } else {
+      payload.created_at = new Date().toISOString();
+      payload.view_count = 0;
+      payload.download_count = 0;
+      await dbFetch("/books", { method: "POST", body: JSON.stringify(payload) });
+      showToast("Buku berhasil ditambahkan.");
+    }
+    showView("books");
+    loadBookList(1);
+    const titleEl = document.getElementById("topbar-title");
+    if (titleEl) titleEl.textContent = "Buku";
+  } catch (err) {
+    showToast("Gagal menyimpan: " + err.message, "error");
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "💾 Simpan Buku"; }
+  }
+}
+
+async function deleteBook(id, title) {
+  if (!confirmDialog(`Hapus buku "${title}"?\nTindakan ini tidak bisa dibatalkan.`)) return;
+  try {
+    await dbFetch(`/books?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+    showToast("Buku berhasil dihapus.");
+    loadBookList(bookListPage);
+  } catch (e) {
+    showToast("Gagal menghapus: " + e.message, "error");
+  }
+}
+
+// ============================================================
+// GENRE BUKU
+// ============================================================
+
+async function loadBookGenreList() {
+  const tbody = $("#book-genre-table-body");
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="4" class="tbl-loading">Memuat...</td></tr>`;
+  try {
+    const genres = await dbFetch("/book_genres?select=id,name,slug,description&order=name.asc");
+    if (!genres || !genres.length) {
+      tbody.innerHTML = `<tr><td colspan="4" class="tbl-empty">Belum ada genre.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = genres.map(g => `
+      <tr>
+        <td><strong>${escapeHtml(g.name)}</strong></td>
+        <td><code>${escapeHtml(g.slug)}</code></td>
+        <td>${escapeHtml(g.description || "-")}</td>
+        <td class="td-actions">
+          <button class="btn-icon btn-edit-bg"
+            data-id="${g.id}" data-name="${escapeHtml(g.name)}"
+            data-slug="${escapeHtml(g.slug)}" data-desc="${escapeHtml(g.description || "")}"
+            aria-label="Edit ${escapeHtml(g.name)}">✏️</button>
+          <button class="btn-icon btn-delete-bg"
+            data-id="${g.id}" data-name="${escapeHtml(g.name)}"
+            aria-label="Hapus ${escapeHtml(g.name)}">🗑️</button>
+        </td>
+      </tr>`).join("");
+
+    tbody.querySelectorAll(".btn-edit-bg").forEach(btn => {
+      btn.addEventListener("click", () => openBookGenreForm(btn.dataset));
+    });
+    tbody.querySelectorAll(".btn-delete-bg").forEach(btn => {
+      btn.addEventListener("click", () => deleteBookGenre(btn.dataset.id, btn.dataset.name));
+    });
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="4" class="tbl-error" role="alert">Gagal: ${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+function openBookGenreForm(data = {}) {
+  const sec = $("#book-genre-form-section");
+  if (sec) sec.style.display = "block";
+  if ($("#bg-form-id"))   $("#bg-form-id").value   = data.id   || "";
+  if ($("#bg-form-name")) $("#bg-form-name").value = data.name || "";
+  if ($("#bg-form-slug")) $("#bg-form-slug").value = data.slug || "";
+  if ($("#bg-form-desc")) $("#bg-form-desc").value = data.desc || "";
+  $("#bg-form-name")?.focus();
+}
+
+function resetBookGenreForm() {
+  const sec = $("#book-genre-form-section");
+  if (sec) sec.style.display = "none";
+  ["#bg-form-id","#bg-form-name","#bg-form-slug","#bg-form-desc"].forEach(sel => {
+    const el = $(sel); if (el) el.value = "";
+  });
+}
+
+async function submitBookGenreForm(e) {
+  e.preventDefault();
+  const id   = $("#bg-form-id")?.value;
+  const name = $("#bg-form-name")?.value?.trim();
+  const slug = $("#bg-form-slug")?.value?.trim() || slugify(name);
+  const desc = $("#bg-form-desc")?.value?.trim();
+  if (!name) { showToast("Nama genre wajib diisi.", "error"); return; }
+  try {
+    if (id) {
+      await dbFetch(`/book_genres?id=eq.${id}`, {
+        method: "PATCH", prefer: "return=minimal",
+        body: JSON.stringify({ name, slug, description: desc || null }),
+      });
+      showToast("Genre diperbarui.");
+    } else {
+      await dbFetch("/book_genres", {
+        method: "POST",
+        body: JSON.stringify({ name, slug, description: desc || null }),
+      });
+      showToast("Genre ditambahkan.");
+    }
+    resetBookGenreForm();
+    loadBookGenreList();
+  } catch (e) {
+    showToast("Gagal: " + e.message, "error");
+  }
+}
+
+async function deleteBookGenre(id, name) {
+  if (!confirmDialog(`Hapus genre "${name}"?`)) return;
+  try {
+    await dbFetch(`/book_genres?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+    showToast("Genre dihapus.");
+    loadBookGenreList();
+  } catch (e) {
+    showToast("Gagal: " + e.message, "error");
+  }
+}
+
+// ============================================================
+// UPLOAD KE R2 via Worker
+// ============================================================
+
+async function uploadToR2(file, folder) {
+  const token = await getValidToken();
+  if (!token) throw new Error("Sesi tidak valid.");
+
+  const formData = new FormData();
+  formData.append("file",   file);
+  formData.append("folder", folder);
+
+  const res = await fetch(API_BASE + R2_UPLOAD_PATH, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "apikey": SUPABASE_KEY,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => "Unknown error");
+    throw new Error(`Upload gagal (${res.status}): ${err}`);
+  }
+  return res.json(); // { url, key, size }
+}
+
+// ── Cover upload ─────────────────────────────────────────────
+function initCoverUpload() {
+  const input   = document.getElementById("cover-file-input");
+  const area    = document.getElementById("cover-upload-area");
+
+  area?.addEventListener("click", () => input?.click());
+  area?.addEventListener("dragover",  e => { e.preventDefault(); area.classList.add("drag-over"); });
+  area?.addEventListener("dragleave", () => area.classList.remove("drag-over"));
+  area?.addEventListener("drop", e => {
+    e.preventDefault();
+    area.classList.remove("drag-over");
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleCoverFile(file);
+  });
+
+  input?.addEventListener("change", () => {
+    const file = input.files?.[0];
+    if (file) handleCoverFile(file);
+    input.value = "";
+  });
+}
+
+async function handleCoverFile(file) {
+  if (!file.type.startsWith("image/")) {
+    showToast("File harus berupa gambar (JPG, PNG, WebP).", "error"); return;
+  }
+  if (file.size > R2_MAX_IMG) {
+    showToast("Ukuran gambar maksimal 5 MB.", "error"); return;
+  }
+
+  setUploadProgress("cover", 0, true);
+  try {
+    const result = await uploadToR2(file, "covers");
+    const urlEl  = document.getElementById("bf-cover-url");
+    if (urlEl) urlEl.value = result.url;
+    showCoverPreview(result.url);
+    setUploadProgress("cover", 100, false);
+    showToast("Sampul berhasil diupload ke R2.");
+  } catch (e) {
+    setUploadProgress("cover", 0, false);
+    showToast("Upload sampul gagal: " + e.message, "error");
+  }
+}
+
+// ── File buku upload ─────────────────────────────────────────
+function initBookFileUpload() {
+  const input = document.getElementById("book-file-input");
+  const area  = document.getElementById("file-upload-area");
+
+  area?.addEventListener("click", () => input?.click());
+  area?.addEventListener("dragover",  e => { e.preventDefault(); area.classList.add("drag-over"); });
+  area?.addEventListener("dragleave", () => area.classList.remove("drag-over"));
+  area?.addEventListener("drop", e => {
+    e.preventDefault();
+    area.classList.remove("drag-over");
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleBookFile(file);
+  });
+
+  input?.addEventListener("change", () => {
+    const file = input.files?.[0];
+    if (file) handleBookFile(file);
+    input.value = "";
+  });
+}
+
+async function handleBookFile(file) {
+  if (file.size > R2_MAX_FILE) {
+    showToast("Ukuran file maksimal 100 MB.", "error"); return;
+  }
+
+  setUploadProgress("file", 0, true);
+  try {
+    const result = await uploadToR2(file, "books");
+    const urlEl  = document.getElementById("bf-file-url");
+    const sizeEl = document.getElementById("bf-file-size");
+    const typeEl = document.getElementById("bf-file-type");
+
+    if (urlEl)  urlEl.value  = result.url;
+    if (sizeEl) sizeEl.value = result.size || file.size;
+
+    // Auto-detect format dari ekstensi
+    const ext = file.name.split(".").pop().toLowerCase();
+    const validExt = ["pdf","epub","mobi","docx","doc","txt"];
+    if (typeEl && validExt.includes(ext)) typeEl.value = ext;
+
+    showFileInfo(file.name, result.size || file.size);
+    setUploadProgress("file", 100, false);
+    showToast("File berhasil diupload ke R2.");
+  } catch (e) {
+    setUploadProgress("file", 0, false);
+    showToast("Upload file gagal: " + e.message, "error");
+  }
+}
+
+// ── UI helpers upload ────────────────────────────────────────
+function setUploadProgress(type, pct, show) {
+  const progressWrap = document.getElementById(`${type}-upload-progress`);
+  const fill         = document.getElementById(`${type}-upload-fill`);
+  const pctEl        = document.getElementById(`${type}-upload-pct`);
+  if (progressWrap) progressWrap.style.display = show ? "flex" : "none";
+  if (fill) fill.style.width = pct + "%";
+  if (pctEl) pctEl.textContent = pct + "%";
+}
+
+function showCoverPreview(url) {
+  const wrap = document.getElementById("cover-preview-wrap");
+  const img  = document.getElementById("cover-preview-img");
+  if (wrap) wrap.style.display = "flex";
+  if (img)  img.src = url;
+}
+
+function hideCoverPreview() {
+  const wrap = document.getElementById("cover-preview-wrap");
+  const img  = document.getElementById("cover-preview-img");
+  if (wrap) wrap.style.display = "none";
+  if (img)  img.src = "";
+  const urlEl = document.getElementById("bf-cover-url");
+  if (urlEl) urlEl.value = "";
+}
+
+function showFileInfo(name, size) {
+  const info    = document.getElementById("book-file-info");
+  const nameEl  = document.getElementById("file-info-name");
+  const sizeEl  = document.getElementById("file-info-size");
+  if (info)   info.style.display = "flex";
+  if (nameEl) nameEl.textContent = name;
+  if (sizeEl) sizeEl.textContent = size ? formatFileSize(size) : "";
+}
+
+function hideFileInfo() {
+  const info = document.getElementById("book-file-info");
+  if (info) info.style.display = "none";
+  const urlEl  = document.getElementById("bf-file-url");
+  const sizeEl = document.getElementById("bf-file-size");
+  if (urlEl)  urlEl.value  = "";
+  if (sizeEl) sizeEl.value = "";
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return "";
+  if (bytes >= 1_048_576) return (bytes / 1_048_576).toFixed(1) + " MB";
+  if (bytes >= 1_024)     return Math.round(bytes / 1_024) + " KB";
+  return bytes + " B";
+}
+
+// ── Auto-slug dari judul buku ────────────────────────────────
+function initBookFormBindings() {
+  const titleInput = $("#bf-title");
+  const slugInput  = $("#bf-slug");
+
+  titleInput?.addEventListener("input", () => {
+    if (slugInput && !slugInput.dataset.manual) {
+      slugInput.value = slugify(titleInput.value);
+    }
+  });
+
+  slugInput?.addEventListener("input", () => {
+    if (slugInput) slugInput.dataset.manual = "1";
+  });
+
+  // Auto-slug genre buku
+  $("#bg-form-name")?.addEventListener("input", function () {
+    if (!$("#bg-form-id")?.value) {
+      const sl = $("#bg-form-slug");
+      if (sl) sl.value = slugify(this.value);
+    }
+  });
+
+  // Cover URL change → preview
+  $("#bf-cover-url")?.addEventListener("input", function () {
+    if (this.value) showCoverPreview(this.value);
+    else hideCoverPreview();
+  });
+}
+
+// ============================================================
+// PATCH initNavTabs — tambah case books & book-genres
+// ============================================================
+
+const _origInitNavTabs = initNavTabs;
+function initNavTabs() {
+  _origInitNavTabs();
+
+  $$("[data-nav]").forEach(btn => {
+    // Hapus listener lama agar tidak duplikat
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+  });
+
+  $$("[data-nav]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      $$("[data-nav]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const target  = btn.dataset.nav;
+      const titleEl = document.getElementById("topbar-title");
+
+      if (target === "articles") {
+        if (titleEl) titleEl.textContent = "Artikel";
+        showView("list");
+        loadArticleList(1);
+      } else if (target === "categories") {
+        if (titleEl) titleEl.textContent = "Kategori";
+        showView("categories");
+        loadCategories();
+      } else if (target === "authors") {
+        if (titleEl) titleEl.textContent = "Penulis";
+        showView("authors");
+        loadAuthors();
+      } else if (target === "books") {
+        if (titleEl) titleEl.textContent = "Buku";
+        showView("books");
+        loadBookList(1);
+      } else if (target === "book-genres") {
+        if (titleEl) titleEl.textContent = "Genre Buku";
+        showView("book-genres");
+        loadBookGenreList();
+      }
+    });
+  });
+}
+
+// ============================================================
+// PATCH initApp — tambah event listener buku
+// ============================================================
+
+const _origInitApp = initApp;
+function initApp() {
+  _origInitApp();
+
+  // Daftar buku
+  document.getElementById("btn-new-book")?.addEventListener("click", openNewBookForm);
+  document.getElementById("btn-back-to-books")?.addEventListener("click", () => {
+    showView("books");
+    loadBookList(bookListPage);
+    const titleEl = document.getElementById("topbar-title");
+    if (titleEl) titleEl.textContent = "Buku";
+  });
+  document.getElementById("btn-cancel-book")?.addEventListener("click", () => {
+    showView("books");
+    const titleEl = document.getElementById("topbar-title");
+    if (titleEl) titleEl.textContent = "Buku";
+  });
+
+  // Filter buku
+  document.getElementById("book-filter-status")?.addEventListener("change", function () {
+    bookFilter.status = this.value;
+    loadBookList(1);
+  });
+  document.getElementById("book-filter-format")?.addEventListener("change", function () {
+    bookFilter.format = this.value;
+    loadBookList(1);
+  });
+  document.getElementById("book-search")?.addEventListener("input", () => {
+    clearTimeout(window._bookSearchTimer);
+    window._bookSearchTimer = setTimeout(() => {
+      bookFilter.search = document.getElementById("book-search")?.value.trim() || "";
+      loadBookList(1);
+    }, 600);
+  });
+
+  // Submit form buku
+  document.getElementById("book-form")?.addEventListener("submit", submitBookForm);
+
+  // Upload
+  initCoverUpload();
+  initBookFileUpload();
+
+  // Clear cover preview
+  document.getElementById("cover-preview-clear")?.addEventListener("click", hideCoverPreview);
+
+  // Clear file info
+  document.getElementById("file-info-clear")?.addEventListener("click", hideFileInfo);
+
+  // Form bindings (auto-slug, cover preview)
+  initBookFormBindings();
+
+  // Genre buku
+  document.getElementById("book-genre-form")?.addEventListener("submit", submitBookGenreForm);
+  document.getElementById("btn-cancel-book-genre")?.addEventListener("click", resetBookGenreForm);
+  document.getElementById("btn-new-book-genre")?.addEventListener("click", () => openBookGenreForm());
+}
