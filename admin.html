@@ -71,6 +71,15 @@
           <span class="snav-icon">👤</span>
           <span class="snav-label">Penulis</span>
         </button>
+        <div class="snav-divider" aria-hidden="true"></div>
+        <button class="snav-item" data-nav="books">
+          <span class="snav-icon">📚</span>
+          <span class="snav-label">Buku</span>
+        </button>
+        <button class="snav-item" data-nav="book-genres">
+          <span class="snav-icon">🏷️</span>
+          <span class="snav-label">Genre Buku</span>
+        </button>
       </nav>
 
       <div class="sidebar-bottom">
@@ -363,6 +372,293 @@
       </div>
 
     </div><!-- /admin-main -->
+
+      <!-- ===== VIEW: DAFTAR BUKU ===== -->
+      <div class="admin-view apage" id="view-books" hidden>
+        <div class="page-toolbar">
+          <div class="toolbar-filters">
+            <input type="search" id="book-search" class="toolbar-search" placeholder="Cari judul atau penulis..." aria-label="Cari buku">
+            <select id="book-filter-status" class="toolbar-select" aria-label="Filter status">
+              <option value="">Semua Status</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+              <option value="archived">Archived</option>
+            </select>
+            <select id="book-filter-format" class="toolbar-select" aria-label="Filter format">
+              <option value="">Semua Format</option>
+              <option value="pdf">PDF</option>
+              <option value="epub">EPUB</option>
+              <option value="mobi">MOBI</option>
+              <option value="docx">DOCX</option>
+              <option value="doc">DOC</option>
+              <option value="txt">TXT</option>
+            </select>
+          </div>
+          <button class="btn-primary" id="btn-new-book">＋ Tambah Buku</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="atable" role="table">
+            <thead>
+              <tr>
+                <th scope="col">Buku</th>
+                <th scope="col">Genre</th>
+                <th scope="col">Format</th>
+                <th scope="col">Status</th>
+                <th scope="col">Views</th>
+                <th scope="col">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="book-table-body">
+              <tr><td colspan="6" class="tbl-loading">Memuat...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tbl-pagination" id="book-list-pagination" aria-label="Navigasi halaman buku"></div>
+      </div>
+
+      <!-- ===== VIEW: FORM BUKU ===== -->
+      <div class="admin-view apage" id="view-book-form" hidden>
+        <div class="page-toolbar">
+          <button class="btn-secondary" id="btn-back-to-books" aria-label="Kembali ke daftar buku">← Kembali</button>
+        </div>
+
+        <form id="book-form" class="form-panel" novalidate>
+          <input type="hidden" id="bf-id">
+
+          <!-- Status & Bahasa -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="bf-status">Status <span class="req">*</span></label>
+              <select id="bf-status" class="form-input" aria-required="true">
+                <option value="draft">📋 Draft</option>
+                <option value="published">✅ Published</option>
+                <option value="archived">📦 Archived</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bf-language">Bahasa</label>
+              <select id="bf-language" class="form-input">
+                <option value="id">Indonesia</option>
+                <option value="en">English</option>
+                <option value="other">Lainnya</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Judul -->
+          <div class="form-group">
+            <label class="form-label" for="bf-title">Judul Buku <span class="req">*</span></label>
+            <input type="text" id="bf-title" class="form-input" placeholder="Judul buku..." aria-required="true">
+          </div>
+
+          <!-- Slug -->
+          <div class="form-group">
+            <label class="form-label" for="bf-slug">Slug (URL)</label>
+            <div class="slug-wrap">
+              <span class="slug-prefix">revpeak.web.id/buku/</span>
+              <input type="text" id="bf-slug" class="form-input" placeholder="judul-buku">
+            </div>
+          </div>
+
+          <!-- Penulis & Genre -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="bf-author">Penulis <span class="req">*</span></label>
+              <input type="text" id="bf-author" class="form-input" placeholder="Nama penulis buku" aria-required="true">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bf-genre">Genre</label>
+              <select id="bf-genre" class="form-input">
+                <option value="">— Pilih Genre —</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Deskripsi -->
+          <div class="form-group">
+            <label class="form-label" for="bf-description">Deskripsi / Sinopsis</label>
+            <textarea id="bf-description" class="form-input ftarea" rows="3" placeholder="Sinopsis singkat buku..."></textarea>
+          </div>
+
+          <!-- Info buku -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="bf-isbn">ISBN</label>
+              <input type="text" id="bf-isbn" class="form-input" placeholder="978-xxx-xxx-xxx-x">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bf-publisher">Penerbit</label>
+              <input type="text" id="bf-publisher" class="form-input" placeholder="Nama penerbit">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="bf-year">Tahun Terbit</label>
+              <input type="number" id="bf-year" class="form-input" placeholder="2024" min="1900" max="2099">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bf-pages">Jumlah Halaman</label>
+              <input type="number" id="bf-pages" class="form-input" placeholder="320" min="1">
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div class="form-group">
+            <label class="form-label" for="bf-tags">Tags <span class="form-hint">(pisah koma)</span></label>
+            <input type="text" id="bf-tags" class="form-input" placeholder="fiksi, sains, bestseller">
+          </div>
+
+          <hr class="form-divider">
+
+          <!-- SAMPUL BUKU -->
+          <h3 class="form-section-title">🖼 Sampul Buku <span class="form-hint">(rasio 9:16 — portrait)</span></h3>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="bf-cover-url">URL Sampul (dari R2)</label>
+              <input type="url" id="bf-cover-url" class="form-input" placeholder="https://pub-xxx.r2.dev/covers/...">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bf-cover-alt">Alt Text Sampul <span class="form-hint">(SEO)</span></label>
+              <input type="text" id="bf-cover-alt" class="form-input" placeholder="Sampul buku Judul Buku">
+            </div>
+          </div>
+
+          <!-- Upload sampul -->
+          <div class="book-upload-row">
+            <div class="book-upload-area" id="cover-upload-area" data-type="cover">
+              <input type="file" id="cover-file-input" class="upload-file-input" accept="image/jpeg,image/png,image/webp" aria-label="Upload sampul buku">
+              <div class="upload-area-inner">
+                <span class="upload-icon">🖼</span>
+                <span class="upload-label">Klik atau seret gambar ke sini</span>
+                <span class="upload-hint">JPG, PNG, WebP · Maks 5 MB</span>
+              </div>
+              <div class="upload-progress" id="cover-upload-progress" style="display:none">
+                <div class="upload-bar"><div class="upload-fill" id="cover-upload-fill"></div></div>
+                <span class="upload-pct" id="cover-upload-pct">0%</span>
+              </div>
+            </div>
+            <!-- Preview cover 9:16 -->
+            <div class="book-cover-preview" id="cover-preview-wrap" style="display:none">
+              <img id="cover-preview-img" alt="Preview sampul">
+              <button type="button" class="cover-preview-clear" id="cover-preview-clear" aria-label="Hapus cover">✕</button>
+            </div>
+          </div>
+
+          <hr class="form-divider">
+
+          <!-- FILE BUKU (dokumen/ebook) -->
+          <h3 class="form-section-title">📄 File Dokumen / E-book</h3>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="bf-file-url">URL File (dari R2)</label>
+              <input type="url" id="bf-file-url" class="form-input" placeholder="https://pub-xxx.r2.dev/books/...">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bf-file-type">Format File</label>
+              <select id="bf-file-type" class="form-input">
+                <option value="">— Pilih Format —</option>
+                <option value="pdf">PDF</option>
+                <option value="epub">EPUB</option>
+                <option value="mobi">MOBI</option>
+                <option value="docx">DOCX</option>
+                <option value="doc">DOC</option>
+                <option value="txt">TXT</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="bf-file-size">Ukuran File <span class="form-hint">(bytes — diisi otomatis saat upload)</span></label>
+            <input type="number" id="bf-file-size" class="form-input" placeholder="0" min="0" readonly>
+          </div>
+
+          <!-- Upload file buku -->
+          <div class="book-upload-area" id="file-upload-area" data-type="file">
+            <input type="file" id="book-file-input" class="upload-file-input" accept=".pdf,.epub,.mobi,.docx,.doc,.txt" aria-label="Upload file buku">
+            <div class="upload-area-inner">
+              <span class="upload-icon">📄</span>
+              <span class="upload-label">Klik atau seret file ke sini</span>
+              <span class="upload-hint">PDF, EPUB, MOBI, DOCX · Maks 100 MB</span>
+            </div>
+            <div class="upload-progress" id="file-upload-progress" style="display:none">
+              <div class="upload-bar"><div class="upload-fill" id="file-upload-fill"></div></div>
+              <span class="upload-pct" id="file-upload-pct">0%</span>
+            </div>
+          </div>
+
+          <div class="book-file-info" id="book-file-info" style="display:none">
+            <span class="file-info-icon">📎</span>
+            <span class="file-info-name" id="file-info-name"></span>
+            <span class="file-info-size" id="file-info-size"></span>
+            <button type="button" class="file-info-clear" id="file-info-clear" aria-label="Hapus file">✕</button>
+          </div>
+
+          <!-- Form footer -->
+          <div class="form-footer">
+            <button type="button" class="btn-secondary" id="btn-cancel-book">Batal</button>
+            <button type="submit" class="btn-primary" id="btn-submit-book">💾 Simpan Buku</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ===== VIEW: GENRE BUKU ===== -->
+      <div class="admin-view apage" id="view-book-genres" hidden>
+        <div class="page-toolbar">
+          <div class="toolbar-filters">
+            <input type="search" id="book-genre-search" class="toolbar-search" placeholder="Cari genre..." aria-label="Cari genre buku">
+          </div>
+          <button class="btn-primary" id="btn-new-book-genre">＋ Tambah Genre</button>
+        </div>
+
+        <!-- Form genre buku -->
+        <div class="form-panel form-inline-panel" id="book-genre-form-section" hidden>
+          <h3 class="form-panel-title">Form Genre Buku</h3>
+          <form id="book-genre-form" class="form-row-wrap" novalidate>
+            <input type="hidden" id="bg-form-id">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="bg-form-name">Nama <span class="req">*</span></label>
+                <input type="text" id="bg-form-name" class="form-input" placeholder="Fiksi" aria-required="true">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="bg-form-slug">Slug <span class="req">*</span></label>
+                <input type="text" id="bg-form-slug" class="form-input" placeholder="fiksi">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bg-form-desc">Deskripsi</label>
+              <input type="text" id="bg-form-desc" class="form-input" placeholder="Deskripsi singkat genre...">
+            </div>
+            <div class="form-footer">
+              <button type="button" class="btn-secondary" id="btn-cancel-book-genre">Batal</button>
+              <button type="submit" class="btn-primary">💾 Simpan Genre</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="table-wrap">
+          <table class="atable" role="table">
+            <thead>
+              <tr>
+                <th scope="col">Nama Genre</th>
+                <th scope="col">Slug</th>
+                <th scope="col">Deskripsi</th>
+                <th scope="col">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="book-genre-table-body">
+              <tr><td colspan="4" class="tbl-loading">Memuat...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /app-section (ditutup di bawah) -->
   </div><!-- /app-section -->
 
   <!-- ===== MODAL: KONFIRMASI HAPUS ===== -->
