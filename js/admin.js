@@ -858,6 +858,14 @@ function initNavTabs() {
         if (titleEl) titleEl.textContent = "Penulis";
         showView("authors");
         loadAuthors();
+      } else if (target === "books") {
+        if (titleEl) titleEl.textContent = "Buku";
+        showView("books");
+        loadBookList(1);
+      } else if (target === "book-genres") {
+        if (titleEl) titleEl.textContent = "Genre Buku";
+        showView("book-genres");
+        loadBookGenreList();
       }
     });
   });
@@ -994,6 +1002,59 @@ function initApp() {
   // Logout
   $("#btn-logout")?.addEventListener("click", handleLogout);
 
+  // ── BUKU ──────────────────────────────────────────────────
+  // Daftar buku
+  $("#btn-new-book")?.addEventListener("click", openNewBookForm);
+
+  // Kembali ke daftar buku (dari form)
+  $("#btn-back-to-books")?.addEventListener("click", () => {
+    showView("books");
+    loadBookList(bookListPage);
+    const titleEl = document.getElementById("topbar-title");
+    if (titleEl) titleEl.textContent = "Buku";
+  });
+
+  // Batal di form buku
+  $("#btn-cancel-book")?.addEventListener("click", () => {
+    showView("books");
+    const titleEl = document.getElementById("topbar-title");
+    if (titleEl) titleEl.textContent = "Buku";
+  });
+
+  // Filter buku
+  $("#book-filter-status")?.addEventListener("change", function () {
+    bookFilter.status = this.value;
+    loadBookList(1);
+  });
+  $("#book-filter-format")?.addEventListener("change", function () {
+    bookFilter.format = this.value;
+    loadBookList(1);
+  });
+  $("#book-search")?.addEventListener("input", () => {
+    clearTimeout(window._bookSearchTimer);
+    window._bookSearchTimer = setTimeout(() => {
+      bookFilter.search = document.getElementById("book-search")?.value.trim() || "";
+      loadBookList(1);
+    }, 600);
+  });
+
+  // Submit form buku
+  $("#book-form")?.addEventListener("submit", submitBookForm);
+
+  // Upload R2
+  initCoverUpload();
+  initBookFileUpload();
+  $("#cover-preview-clear")?.addEventListener("click", hideCoverPreview);
+  $("#file-info-clear")?.addEventListener("click", hideFileInfo);
+
+  // Auto-slug & bindings form buku
+  initBookFormBindings();
+
+  // Genre buku
+  $("#book-genre-form")?.addEventListener("submit", submitBookGenreForm);
+  $("#btn-cancel-book-genre")?.addEventListener("click", resetBookGenreForm);
+  $("#btn-new-book-genre")?.addEventListener("click", () => openBookGenreForm());
+
   // Load list awal
   loadArticleList(1);
 }
@@ -1007,24 +1068,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ============================================================
-// ██████╗  ██████╗  ██╗  ██╗ ██╗   ██╗
-// ██╔══██╗██╔═══██╗ ██║ ██╔╝ ██║   ██║
-// ██████╔╝██║   ██║ █████╔╝  ██║   ██║
-// ██╔══██╗██║   ██║ ██╔═██╗  ██║   ██║
-// ██████╔╝╚██████╔╝ ██║  ██╗ ╚██████╔╝
-// ╚═════╝  ╚═════╝  ╚═╝  ╚═╝  ╚═════╝
-// MANAJEMEN PERPUSTAKAAN — BUKU & GENRE
+// BUKU — Manajemen Perpustakaan
 // ============================================================
 
-// ── Config R2 Upload ────────────────────────────────────────
-// Worker harus punya endpoint POST /api/r2/upload
-// Header: X-Worker-Secret, body: FormData { file, folder }
-// Folder: "covers" untuk sampul, "books" untuk file buku
-const R2_UPLOAD_PATH  = "/api/r2/upload";
-const R2_MAX_IMG      = 5   * 1024 * 1024;  // 5 MB
-const R2_MAX_FILE     = 100 * 1024 * 1024;  // 100 MB
+const R2_UPLOAD_PATH = "/api/r2/upload";
+const R2_MAX_IMG     = 5   * 1024 * 1024;  // 5 MB
+const R2_MAX_FILE    = 100 * 1024 * 1024;  // 100 MB
 
-// ── Cache genre buku ─────────────────────────────────────────
 let cachedBookGenres = [];
 
 async function loadBookGenreCache() {
@@ -1034,25 +1084,22 @@ async function loadBookGenreCache() {
 }
 
 function populateBookGenreSelect(selectedId = "") {
-  const sel = $("#bf-genre");
+  const sel = document.getElementById("bf-genre");
   if (!sel) return;
   sel.innerHTML = `<option value="">— Pilih Genre —</option>`
     + cachedBookGenres.map(g =>
-        `<option value="${g.id}" ${selectedId == g.id ? "selected" : ""}>${escapeHtml(g.name)}</option>`
+        `<option value="${g.id}" ${String(selectedId) === String(g.id) ? "selected" : ""}>${escapeHtml(g.name)}</option>`
       ).join("");
 }
 
-// ============================================================
-// HALAMAN: DAFTAR BUKU
-// ============================================================
-
-let bookListPage  = 1;
-const bookLimit   = 20;
-let bookFilter    = { status: "", format: "", search: "" };
+// ── Daftar Buku ──────────────────────────────────────────────
+let bookListPage = 1;
+const bookLimit  = 20;
+let bookFilter   = { status: "", format: "", search: "" };
 
 async function loadBookList(page = 1) {
   bookListPage = page;
-  const tbody = $("#book-table-body");
+  const tbody = document.getElementById("book-table-body");
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="6" class="tbl-loading">Memuat data...</td></tr>`;
 
@@ -1062,12 +1109,15 @@ async function loadBookList(page = 1) {
 
     if (bookFilter.status) path += `&status=eq.${bookFilter.status}`;
     if (bookFilter.format) path += `&file_type=eq.${bookFilter.format}`;
-    if (bookFilter.search) path += `&or=(title.ilike.*${encodeURIComponent(bookFilter.search)}*,author.ilike.*${encodeURIComponent(bookFilter.search)}*)`;
+    if (bookFilter.search) {
+      path += `&or=(title.ilike.*${encodeURIComponent(bookFilter.search)}*,author.ilike.*${encodeURIComponent(bookFilter.search)}*)`;
+    }
 
     const books = await dbFetch(path);
 
     if (!books || !books.length) {
       tbody.innerHTML = `<tr><td colspan="6" class="tbl-empty">Belum ada buku.</td></tr>`;
+      renderBookListPagination(0);
       return;
     }
 
@@ -1108,12 +1158,12 @@ async function loadBookList(page = 1) {
     renderBookListPagination(books.length);
 
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="6" class="tbl-error" role="alert">Gagal memuat: ${escapeHtml(e.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="tbl-error" role="alert">Gagal: ${escapeHtml(e.message)}</td></tr>`;
   }
 }
 
 function renderBookListPagination(count) {
-  const el = $("#book-list-pagination");
+  const el = document.getElementById("book-list-pagination");
   if (!el) return;
   const prevDis = bookListPage <= 1;
   const nextDis = count < bookLimit;
@@ -1121,154 +1171,123 @@ function renderBookListPagination(count) {
     <button class="btn-secondary" id="btn-book-prev" ${prevDis ? "disabled" : ""}>← Sebelumnya</button>
     <span class="pagination-info">Halaman ${bookListPage}</span>
     <button class="btn-secondary" id="btn-book-next" ${nextDis ? "disabled" : ""}>Berikutnya →</button>`;
-  if (!prevDis) $("#btn-book-prev")?.addEventListener("click", () => loadBookList(bookListPage - 1));
-  if (!nextDis) $("#btn-book-next")?.addEventListener("click", () => loadBookList(bookListPage + 1));
+  if (!prevDis) document.getElementById("btn-book-prev")?.addEventListener("click", () => loadBookList(bookListPage - 1));
+  if (!nextDis) document.getElementById("btn-book-next")?.addEventListener("click", () => loadBookList(bookListPage + 1));
 }
 
-// ============================================================
-// FORM BUKU: BUKA / RESET
-// ============================================================
-
+// ── Form Buku ─────────────────────────────────────────────────
 async function openNewBookForm() {
-  try {
-    showToast("Memuat form...", "info");
-    await loadBookGenreCache();
-    resetBookForm();
-    populateBookGenreSelect();
-    showView("book-form");
-    const titleEl = document.getElementById("topbar-title");
-    if (titleEl) titleEl.textContent = "Tambah Buku";
-    $("#bf-title")?.focus();
-  } catch (e) {
-    showToast("Gagal membuka form: " + e.message, "error");
-  }
+  showToast("Memuat form...", "info");
+  await loadBookGenreCache();
+  resetBookForm();
+  populateBookGenreSelect();
+  showView("book-form");
+  const titleEl = document.getElementById("topbar-title");
+  if (titleEl) titleEl.textContent = "Tambah Buku";
+  document.getElementById("bf-title")?.focus();
 }
 
 async function openEditBookForm(id) {
+  showToast("Memuat data buku...", "info");
+  await loadBookGenreCache();
+  resetBookForm();
   try {
-    showToast("Memuat data buku...", "info");
-    await loadBookGenreCache();
-    resetBookForm();
-
     const books = await dbFetch(`/books?id=eq.${id}&select=*&limit=1`);
     if (!books || !books.length) { showToast("Buku tidak ditemukan.", "error"); return; }
-    const book = books[0];
-
-    fillBookForm(book);
-    populateBookGenreSelect(book.genre_id);
-
-    showView("book-form");
-    const titleEl = document.getElementById("topbar-title");
-    if (titleEl) titleEl.textContent = "Edit Buku";
-    $("#bf-title")?.focus();
-  } catch (e) {
-    showToast("Gagal memuat buku: " + e.message, "error");
-  }
+    fillBookForm(books[0]);
+    populateBookGenreSelect(books[0].genre_id);
+  } catch (e) { showToast("Gagal memuat buku: " + e.message, "error"); return; }
+  showView("book-form");
+  const titleEl = document.getElementById("topbar-title");
+  if (titleEl) titleEl.textContent = "Edit Buku";
 }
 
 function fillBookForm(book) {
-  const set = (id, val) => { const el = $(id); if (el) el.value = val ?? ""; };
-  set("#bf-id",          book.id);
-  set("#bf-title",       book.title);
-  set("#bf-slug",        book.slug);
-  set("#bf-author",      book.author);
-  set("#bf-description", book.description);
-  set("#bf-isbn",        book.isbn);
-  set("#bf-publisher",   book.publisher);
-  set("#bf-year",        book.year);
-  set("#bf-pages",       book.pages);
-  set("#bf-language",    book.language || "id");
-  set("#bf-status",      book.status   || "draft");
-  set("#bf-tags",        (book.tags || []).join(", "));
-  set("#bf-cover-url",   book.cover_url);
-  set("#bf-cover-alt",   book.cover_alt);
-  set("#bf-file-url",    book.file_url);
-  set("#bf-file-type",   book.file_type);
-  set("#bf-file-size",   book.file_size);
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ""; };
+  setVal("bf-id",          book.id);
+  setVal("bf-title",       book.title);
+  setVal("bf-slug",        book.slug);
+  setVal("bf-author",      book.author);
+  setVal("bf-description", book.description);
+  setVal("bf-isbn",        book.isbn);
+  setVal("bf-publisher",   book.publisher);
+  setVal("bf-year",        book.year);
+  setVal("bf-pages",       book.pages);
+  setVal("bf-language",    book.language || "id");
+  setVal("bf-status",      book.status   || "draft");
+  setVal("bf-tags",        (book.tags || []).join(", "));
+  setVal("bf-cover-url",   book.cover_url);
+  setVal("bf-cover-alt",   book.cover_alt);
+  setVal("bf-file-url",    book.file_url);
+  setVal("bf-file-type",   book.file_type);
+  setVal("bf-file-size",   book.file_size);
 
-  // Tandai slug sebagai manual agar tidak di-overwrite
-  const slugEl = $("#bf-slug");
+  const slugEl = document.getElementById("bf-slug");
   if (slugEl) slugEl.dataset.manual = "1";
 
-  // Tampilkan preview cover jika ada
   if (book.cover_url) showCoverPreview(book.cover_url);
-
-  // Tampilkan info file jika ada
-  if (book.file_url) {
-    const name = book.file_url.split("/").pop();
-    showFileInfo(name, book.file_size);
-  }
+  if (book.file_url)  showFileInfo(book.file_url.split("/").pop(), book.file_size);
 }
 
 function resetBookForm() {
-  const form = $("#book-form");
-  if (form) { form.reset(); form.dataset.editingId = ""; }
-  const idEl = $("#bf-id");
+  const form = document.getElementById("book-form");
+  if (form) form.reset();
+  const idEl = document.getElementById("bf-id");
   if (idEl) idEl.value = "";
-  const slugEl = $("#bf-slug");
+  const slugEl = document.getElementById("bf-slug");
   if (slugEl) { slugEl.value = ""; delete slugEl.dataset.manual; }
   hideCoverPreview();
   hideFileInfo();
 }
 
-// ============================================================
-// SUBMIT & DELETE BUKU
-// ============================================================
-
 async function submitBookForm(e) {
   e.preventDefault();
-  const id          = $("#bf-id")?.value?.trim();
-  const title       = $("#bf-title")?.value?.trim();
-  const slug        = $("#bf-slug")?.value?.trim() || slugify(title);
-  const author      = $("#bf-author")?.value?.trim();
-  const genreId     = $("#bf-genre")?.value || null;
-  const genreName   = genreId
+  const id     = document.getElementById("bf-id")?.value?.trim();
+  const title  = document.getElementById("bf-title")?.value?.trim();
+  const author = document.getElementById("bf-author")?.value?.trim();
+  const slug   = document.getElementById("bf-slug")?.value?.trim() || slugify(title);
+  const genreId   = document.getElementById("bf-genre")?.value || null;
+  const genreName = genreId
     ? (cachedBookGenres.find(g => String(g.id) === String(genreId))?.name || null)
     : null;
 
   if (!title)  { showToast("Judul buku wajib diisi.", "error"); return; }
   if (!author) { showToast("Nama penulis wajib diisi.", "error"); return; }
 
-  const tagsRaw  = $("#bf-tags")?.value?.trim();
+  const tagsRaw  = document.getElementById("bf-tags")?.value?.trim();
   const tags     = tagsRaw ? tagsRaw.split(",").map(t => t.trim()).filter(Boolean) : [];
-  const fileSize = parseInt($("#bf-file-size")?.value) || null;
-  const year     = parseInt($("#bf-year")?.value) || null;
-  const pages    = parseInt($("#bf-pages")?.value) || null;
 
   const payload = {
     title,
     slug,
     author,
-    description: $("#bf-description")?.value?.trim() || null,
-    isbn:        $("#bf-isbn")?.value?.trim()        || null,
-    publisher:   $("#bf-publisher")?.value?.trim()   || null,
-    year,
-    pages,
-    language:   $("#bf-language")?.value  || "id",
-    status:     $("#bf-status")?.value    || "draft",
+    description : document.getElementById("bf-description")?.value?.trim() || null,
+    isbn        : document.getElementById("bf-isbn")?.value?.trim()        || null,
+    publisher   : document.getElementById("bf-publisher")?.value?.trim()   || null,
+    year        : parseInt(document.getElementById("bf-year")?.value)      || null,
+    pages       : parseInt(document.getElementById("bf-pages")?.value)     || null,
+    language    : document.getElementById("bf-language")?.value            || "id",
+    status      : document.getElementById("bf-status")?.value              || "draft",
     tags,
-    cover_url:  $("#bf-cover-url")?.value?.trim() || null,
-    cover_alt:  $("#bf-cover-alt")?.value?.trim() || null,
-    file_url:   $("#bf-file-url")?.value?.trim()  || null,
-    file_type:  $("#bf-file-type")?.value         || null,
-    file_size:  fileSize,
+    cover_url   : document.getElementById("bf-cover-url")?.value?.trim()  || null,
+    cover_alt   : document.getElementById("bf-cover-alt")?.value?.trim()  || null,
+    file_url    : document.getElementById("bf-file-url")?.value?.trim()   || null,
+    file_type   : document.getElementById("bf-file-type")?.value          || null,
+    file_size   : parseInt(document.getElementById("bf-file-size")?.value) || null,
+    updated_at  : new Date().toISOString(),
     ...(genreId ? { genre_id: Number(genreId), genre: genreName } : {}),
-    updated_at: new Date().toISOString(),
   };
 
-  const submitBtn = $("#btn-submit-book");
-  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Menyimpan..."; }
+  const btn = document.getElementById("btn-submit-book");
+  if (btn) { btn.disabled = true; btn.textContent = "Menyimpan..."; }
 
   try {
     if (id) {
-      await dbFetch(`/books?id=eq.${id}`, {
-        method: "PATCH", prefer: "return=minimal",
-        body: JSON.stringify(payload),
-      });
+      await dbFetch(`/books?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body: JSON.stringify(payload) });
       showToast("Buku berhasil diperbarui.");
     } else {
-      payload.created_at = new Date().toISOString();
-      payload.view_count = 0;
+      payload.created_at    = new Date().toISOString();
+      payload.view_count    = 0;
       payload.download_count = 0;
       await dbFetch("/books", { method: "POST", body: JSON.stringify(payload) });
       showToast("Buku berhasil ditambahkan.");
@@ -1280,7 +1299,7 @@ async function submitBookForm(e) {
   } catch (err) {
     showToast("Gagal menyimpan: " + err.message, "error");
   } finally {
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "💾 Simpan Buku"; }
+    if (btn) { btn.disabled = false; btn.textContent = "💾 Simpan Buku"; }
   }
 }
 
@@ -1295,12 +1314,9 @@ async function deleteBook(id, title) {
   }
 }
 
-// ============================================================
-// GENRE BUKU
-// ============================================================
-
+// ── Genre Buku ────────────────────────────────────────────────
 async function loadBookGenreList() {
-  const tbody = $("#book-genre-table-body");
+  const tbody = document.getElementById("book-genre-table-body");
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="4" class="tbl-loading">Memuat...</td></tr>`;
   try {
@@ -1337,49 +1353,43 @@ async function loadBookGenreList() {
 }
 
 function openBookGenreForm(data = {}) {
-  const sec = $("#book-genre-form-section");
+  const sec = document.getElementById("book-genre-form-section");
   if (sec) sec.style.display = "block";
-  if ($("#bg-form-id"))   $("#bg-form-id").value   = data.id   || "";
-  if ($("#bg-form-name")) $("#bg-form-name").value = data.name || "";
-  if ($("#bg-form-slug")) $("#bg-form-slug").value = data.slug || "";
-  if ($("#bg-form-desc")) $("#bg-form-desc").value = data.desc || "";
-  $("#bg-form-name")?.focus();
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ""; };
+  setVal("bg-form-id",   data.id   || "");
+  setVal("bg-form-name", data.name || "");
+  setVal("bg-form-slug", data.slug || "");
+  setVal("bg-form-desc", data.desc || "");
+  document.getElementById("bg-form-name")?.focus();
 }
 
 function resetBookGenreForm() {
-  const sec = $("#book-genre-form-section");
+  const sec = document.getElementById("book-genre-form-section");
   if (sec) sec.style.display = "none";
-  ["#bg-form-id","#bg-form-name","#bg-form-slug","#bg-form-desc"].forEach(sel => {
-    const el = $(sel); if (el) el.value = "";
+  ["bg-form-id","bg-form-name","bg-form-slug","bg-form-desc"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
   });
 }
 
 async function submitBookGenreForm(e) {
   e.preventDefault();
-  const id   = $("#bg-form-id")?.value;
-  const name = $("#bg-form-name")?.value?.trim();
-  const slug = $("#bg-form-slug")?.value?.trim() || slugify(name);
-  const desc = $("#bg-form-desc")?.value?.trim();
+  const id   = document.getElementById("bg-form-id")?.value;
+  const name = document.getElementById("bg-form-name")?.value?.trim();
+  const slug = document.getElementById("bg-form-slug")?.value?.trim() || slugify(name);
+  const desc = document.getElementById("bg-form-desc")?.value?.trim();
   if (!name) { showToast("Nama genre wajib diisi.", "error"); return; }
   try {
     if (id) {
-      await dbFetch(`/book_genres?id=eq.${id}`, {
-        method: "PATCH", prefer: "return=minimal",
-        body: JSON.stringify({ name, slug, description: desc || null }),
-      });
+      await dbFetch(`/book_genres?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body: JSON.stringify({ name, slug, description: desc || null }) });
       showToast("Genre diperbarui.");
     } else {
-      await dbFetch("/book_genres", {
-        method: "POST",
-        body: JSON.stringify({ name, slug, description: desc || null }),
-      });
+      await dbFetch("/book_genres", { method: "POST", body: JSON.stringify({ name, slug, description: desc || null }) });
       showToast("Genre ditambahkan.");
     }
     resetBookGenreForm();
     loadBookGenreList();
-  } catch (e) {
-    showToast("Gagal: " + e.message, "error");
-  }
+  } catch (e) { showToast("Gagal: " + e.message, "error"); }
 }
 
 async function deleteBookGenre(id, name) {
@@ -1388,140 +1398,100 @@ async function deleteBookGenre(id, name) {
     await dbFetch(`/book_genres?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
     showToast("Genre dihapus.");
     loadBookGenreList();
-  } catch (e) {
-    showToast("Gagal: " + e.message, "error");
-  }
+  } catch (e) { showToast("Gagal: " + e.message, "error"); }
 }
 
-// ============================================================
-// UPLOAD KE R2 via Worker
-// ============================================================
-
+// ── Upload ke R2 ──────────────────────────────────────────────
 async function uploadToR2(file, folder) {
   const token = await getValidToken();
   if (!token) throw new Error("Sesi tidak valid.");
-
   const formData = new FormData();
   formData.append("file",   file);
   formData.append("folder", folder);
-
   const res = await fetch(API_BASE + R2_UPLOAD_PATH, {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "apikey": SUPABASE_KEY,
-    },
+    headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY },
     body: formData,
   });
-
-  if (!res.ok) {
-    const err = await res.text().catch(() => "Unknown error");
-    throw new Error(`Upload gagal (${res.status}): ${err}`);
-  }
-  return res.json(); // { url, key, size }
+  if (!res.ok) throw new Error(`Upload gagal (${res.status}): ${await res.text().catch(() => "")}`);
+  return res.json();
 }
 
-// ── Cover upload ─────────────────────────────────────────────
 function initCoverUpload() {
-  const input   = document.getElementById("cover-file-input");
-  const area    = document.getElementById("cover-upload-area");
-
-  area?.addEventListener("click", () => input?.click());
-  area?.addEventListener("dragover",  e => { e.preventDefault(); area.classList.add("drag-over"); });
-  area?.addEventListener("dragleave", () => area.classList.remove("drag-over"));
-  area?.addEventListener("drop", e => {
-    e.preventDefault();
-    area.classList.remove("drag-over");
-    const file = e.dataTransfer?.files?.[0];
-    if (file) handleCoverFile(file);
+  const input = document.getElementById("cover-file-input");
+  const area  = document.getElementById("cover-upload-area");
+  if (!area || !input) return;
+  area.addEventListener("click", () => input.click());
+  area.addEventListener("dragover",  e => { e.preventDefault(); area.classList.add("drag-over"); });
+  area.addEventListener("dragleave", () => area.classList.remove("drag-over"));
+  area.addEventListener("drop", e => {
+    e.preventDefault(); area.classList.remove("drag-over");
+    const f = e.dataTransfer?.files?.[0]; if (f) handleCoverFile(f);
   });
-
-  input?.addEventListener("change", () => {
-    const file = input.files?.[0];
-    if (file) handleCoverFile(file);
-    input.value = "";
+  input.addEventListener("change", () => {
+    const f = input.files?.[0]; if (f) handleCoverFile(f); input.value = "";
   });
 }
 
 async function handleCoverFile(file) {
-  if (!file.type.startsWith("image/")) {
-    showToast("File harus berupa gambar (JPG, PNG, WebP).", "error"); return;
-  }
-  if (file.size > R2_MAX_IMG) {
-    showToast("Ukuran gambar maksimal 5 MB.", "error"); return;
-  }
-
-  setUploadProgress("cover", 0, true);
+  if (!file.type.startsWith("image/")) { showToast("File harus berupa gambar (JPG, PNG, WebP).", "error"); return; }
+  if (file.size > R2_MAX_IMG) { showToast("Ukuran gambar maksimal 5 MB.", "error"); return; }
+  setUploadProgress("cover", 10, true);
   try {
     const result = await uploadToR2(file, "covers");
     const urlEl  = document.getElementById("bf-cover-url");
     if (urlEl) urlEl.value = result.url;
     showCoverPreview(result.url);
     setUploadProgress("cover", 100, false);
-    showToast("Sampul berhasil diupload ke R2.");
+    showToast("Sampul berhasil diupload.");
   } catch (e) {
     setUploadProgress("cover", 0, false);
     showToast("Upload sampul gagal: " + e.message, "error");
   }
 }
 
-// ── File buku upload ─────────────────────────────────────────
 function initBookFileUpload() {
   const input = document.getElementById("book-file-input");
   const area  = document.getElementById("file-upload-area");
-
-  area?.addEventListener("click", () => input?.click());
-  area?.addEventListener("dragover",  e => { e.preventDefault(); area.classList.add("drag-over"); });
-  area?.addEventListener("dragleave", () => area.classList.remove("drag-over"));
-  area?.addEventListener("drop", e => {
-    e.preventDefault();
-    area.classList.remove("drag-over");
-    const file = e.dataTransfer?.files?.[0];
-    if (file) handleBookFile(file);
+  if (!area || !input) return;
+  area.addEventListener("click", () => input.click());
+  area.addEventListener("dragover",  e => { e.preventDefault(); area.classList.add("drag-over"); });
+  area.addEventListener("dragleave", () => area.classList.remove("drag-over"));
+  area.addEventListener("drop", e => {
+    e.preventDefault(); area.classList.remove("drag-over");
+    const f = e.dataTransfer?.files?.[0]; if (f) handleBookFile(f);
   });
-
-  input?.addEventListener("change", () => {
-    const file = input.files?.[0];
-    if (file) handleBookFile(file);
-    input.value = "";
+  input.addEventListener("change", () => {
+    const f = input.files?.[0]; if (f) handleBookFile(f); input.value = "";
   });
 }
 
 async function handleBookFile(file) {
-  if (file.size > R2_MAX_FILE) {
-    showToast("Ukuran file maksimal 100 MB.", "error"); return;
-  }
-
-  setUploadProgress("file", 0, true);
+  if (file.size > R2_MAX_FILE) { showToast("Ukuran file maksimal 100 MB.", "error"); return; }
+  setUploadProgress("file", 10, true);
   try {
     const result = await uploadToR2(file, "books");
     const urlEl  = document.getElementById("bf-file-url");
     const sizeEl = document.getElementById("bf-file-size");
     const typeEl = document.getElementById("bf-file-type");
-
     if (urlEl)  urlEl.value  = result.url;
     if (sizeEl) sizeEl.value = result.size || file.size;
-
-    // Auto-detect format dari ekstensi
     const ext = file.name.split(".").pop().toLowerCase();
-    const validExt = ["pdf","epub","mobi","docx","doc","txt"];
-    if (typeEl && validExt.includes(ext)) typeEl.value = ext;
-
+    if (typeEl && ["pdf","epub","mobi","docx","doc","txt"].includes(ext)) typeEl.value = ext;
     showFileInfo(file.name, result.size || file.size);
     setUploadProgress("file", 100, false);
-    showToast("File berhasil diupload ke R2.");
+    showToast("File berhasil diupload.");
   } catch (e) {
     setUploadProgress("file", 0, false);
     showToast("Upload file gagal: " + e.message, "error");
   }
 }
 
-// ── UI helpers upload ────────────────────────────────────────
 function setUploadProgress(type, pct, show) {
-  const progressWrap = document.getElementById(`${type}-upload-progress`);
-  const fill         = document.getElementById(`${type}-upload-fill`);
-  const pctEl        = document.getElementById(`${type}-upload-pct`);
-  if (progressWrap) progressWrap.style.display = show ? "flex" : "none";
+  const wrap = document.getElementById(`${type}-upload-progress`);
+  const fill = document.getElementById(`${type}-upload-fill`);
+  const pctEl = document.getElementById(`${type}-upload-pct`);
+  if (wrap) wrap.style.display = show ? "flex" : "none";
   if (fill) fill.style.width = pct + "%";
   if (pctEl) pctEl.textContent = pct + "%";
 }
@@ -1543,12 +1513,12 @@ function hideCoverPreview() {
 }
 
 function showFileInfo(name, size) {
-  const info    = document.getElementById("book-file-info");
-  const nameEl  = document.getElementById("file-info-name");
-  const sizeEl  = document.getElementById("file-info-size");
-  if (info)   info.style.display = "flex";
-  if (nameEl) nameEl.textContent = name;
-  if (sizeEl) sizeEl.textContent = size ? formatFileSize(size) : "";
+  const info   = document.getElementById("book-file-info");
+  const nameEl = document.getElementById("file-info-name");
+  const sizeEl = document.getElementById("file-info-size");
+  if (info)   info.style.display  = "flex";
+  if (nameEl) nameEl.textContent  = name;
+  if (sizeEl) sizeEl.textContent  = size ? formatFileSize(size) : "";
 }
 
 function hideFileInfo() {
@@ -1567,140 +1537,30 @@ function formatFileSize(bytes) {
   return bytes + " B";
 }
 
-// ── Auto-slug dari judul buku ────────────────────────────────
 function initBookFormBindings() {
-  const titleInput = $("#bf-title");
-  const slugInput  = $("#bf-slug");
+  const titleInput = document.getElementById("bf-title");
+  const slugInput  = document.getElementById("bf-slug");
 
   titleInput?.addEventListener("input", () => {
     if (slugInput && !slugInput.dataset.manual) {
       slugInput.value = slugify(titleInput.value);
     }
   });
-
   slugInput?.addEventListener("input", () => {
     if (slugInput) slugInput.dataset.manual = "1";
   });
 
-  // Auto-slug genre buku
-  $("#bg-form-name")?.addEventListener("input", function () {
-    if (!$("#bg-form-id")?.value) {
-      const sl = $("#bg-form-slug");
+  // Auto-slug genre
+  document.getElementById("bg-form-name")?.addEventListener("input", function () {
+    if (!document.getElementById("bg-form-id")?.value) {
+      const sl = document.getElementById("bg-form-slug");
       if (sl) sl.value = slugify(this.value);
     }
   });
 
-  // Cover URL change → preview
-  $("#bf-cover-url")?.addEventListener("input", function () {
+  // Cover URL manual → update preview
+  document.getElementById("bf-cover-url")?.addEventListener("input", function () {
     if (this.value) showCoverPreview(this.value);
     else hideCoverPreview();
   });
-}
-
-// ============================================================
-// PATCH initNavTabs — tambah case books & book-genres
-// ============================================================
-
-const _origInitNavTabs = initNavTabs;
-function initNavTabs() {
-  _origInitNavTabs();
-
-  $$("[data-nav]").forEach(btn => {
-    // Hapus listener lama agar tidak duplikat
-    const newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-  });
-
-  $$("[data-nav]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      $$("[data-nav]").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      const target  = btn.dataset.nav;
-      const titleEl = document.getElementById("topbar-title");
-
-      if (target === "articles") {
-        if (titleEl) titleEl.textContent = "Artikel";
-        showView("list");
-        loadArticleList(1);
-      } else if (target === "categories") {
-        if (titleEl) titleEl.textContent = "Kategori";
-        showView("categories");
-        loadCategories();
-      } else if (target === "authors") {
-        if (titleEl) titleEl.textContent = "Penulis";
-        showView("authors");
-        loadAuthors();
-      } else if (target === "books") {
-        if (titleEl) titleEl.textContent = "Buku";
-        showView("books");
-        loadBookList(1);
-      } else if (target === "book-genres") {
-        if (titleEl) titleEl.textContent = "Genre Buku";
-        showView("book-genres");
-        loadBookGenreList();
-      }
-    });
-  });
-}
-
-// ============================================================
-// PATCH initApp — tambah event listener buku
-// ============================================================
-
-const _origInitApp = initApp;
-function initApp() {
-  _origInitApp();
-
-  // Daftar buku
-  document.getElementById("btn-new-book")?.addEventListener("click", openNewBookForm);
-  document.getElementById("btn-back-to-books")?.addEventListener("click", () => {
-    showView("books");
-    loadBookList(bookListPage);
-    const titleEl = document.getElementById("topbar-title");
-    if (titleEl) titleEl.textContent = "Buku";
-  });
-  document.getElementById("btn-cancel-book")?.addEventListener("click", () => {
-    showView("books");
-    const titleEl = document.getElementById("topbar-title");
-    if (titleEl) titleEl.textContent = "Buku";
-  });
-
-  // Filter buku
-  document.getElementById("book-filter-status")?.addEventListener("change", function () {
-    bookFilter.status = this.value;
-    loadBookList(1);
-  });
-  document.getElementById("book-filter-format")?.addEventListener("change", function () {
-    bookFilter.format = this.value;
-    loadBookList(1);
-  });
-  document.getElementById("book-search")?.addEventListener("input", () => {
-    clearTimeout(window._bookSearchTimer);
-    window._bookSearchTimer = setTimeout(() => {
-      bookFilter.search = document.getElementById("book-search")?.value.trim() || "";
-      loadBookList(1);
-    }, 600);
-  });
-
-  // Submit form buku
-  document.getElementById("book-form")?.addEventListener("submit", submitBookForm);
-
-  // Upload
-  initCoverUpload();
-  initBookFileUpload();
-
-  // Clear cover preview
-  document.getElementById("cover-preview-clear")?.addEventListener("click", hideCoverPreview);
-
-  // Clear file info
-  document.getElementById("file-info-clear")?.addEventListener("click", hideFileInfo);
-
-  // Form bindings (auto-slug, cover preview)
-  initBookFormBindings();
-
-  // Genre buku
-  document.getElementById("book-genre-form")?.addEventListener("submit", submitBookGenreForm);
-  document.getElementById("btn-cancel-book-genre")?.addEventListener("click", resetBookGenreForm);
-  document.getElementById("btn-new-book-genre")?.addEventListener("click", () => openBookGenreForm());
 }
