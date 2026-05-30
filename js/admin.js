@@ -1134,10 +1134,10 @@ async function loadBookList(page = 1) {
             </div>
           </div>
         </td>
-        <td>${b.genre ? `<span class="badge bt-genre">${escapeHtml(b.genre)}</span>` : "-"}</td>
-        <td>${b.file_type ? `<span class="badge bt-format">${b.file_type.toUpperCase()}</span>` : "-"}</td>
+        <td>${b.genre ? `<span class="badge-type bt-genre">${escapeHtml(b.genre)}</span>` : "-"}</td>
+        <td>${b.file_type ? `<span class="badge-type bt-format">${b.file_type.toUpperCase()}</span>` : "-"}</td>
         <td>
-          <span class="status-badge status-${b.status}">
+          <span class="status-badge status-${b.status === "archived" ? "archived" : b.status}">
             ${b.status === "published" ? "✅ Terbit" : b.status === "archived" ? "📦 Arsip" : "📋 Draft"}
           </span>
         </td>
