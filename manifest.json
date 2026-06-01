@@ -1,0 +1,17 @@
+{
+  "name": "Revpeak",
+  "short_name": "Revpeak",
+  "description": "Platform berita dan artikel terkini",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#E03E0B",
+  "icons": [
+    {
+      "src": "https://revpeak.web.id/logo-revpeak.webp",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

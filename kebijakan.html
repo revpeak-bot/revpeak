@@ -7,6 +7,8 @@
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://revpeak.web.id/kebijakan.html">
   <link rel="icon" type="image/webp" href="https://assets.revpeak.web.id/logo-revpeak.webp">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#E03E0B">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -179,5 +181,10 @@
 
   </script>
   <script src="js/app.js"></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
 </body>
 </html>
