@@ -1306,7 +1306,27 @@ async function submitBookForm(e) {
 async function deleteBook(id, title) {
   if (!confirmDialog(`Hapus buku "${title}"?\nTindakan ini tidak bisa dibatalkan.`)) return;
   try {
+    // 1. Ambil URL file sebelum record dihapus
+    const bookData = await dbFetch(`/books?id=eq.${id}&select=cover_url,file_url&limit=1`);
+    const fileUrls = [bookData?.[0]?.cover_url, bookData?.[0]?.file_url]
+      .filter(url => url && typeof url === "string" && url.trim() !== "");
+
+    // 2. Hapus record dari Supabase
     await dbFetch(`/books?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+
+    // 3. Hapus file dari R2 (fire-and-forget — tidak memblokir UI)
+    if (fileUrls.length) {
+      const token = await getValidToken();
+      fetch(`${API_BASE}/api/r2/delete`, {
+        method:  "DELETE",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ urls: fileUrls }),
+      }).catch(() => {}); // tidak fatal jika gagal
+    }
+
     showToast("Buku berhasil dihapus.");
     loadBookList(bookListPage);
   } catch (e) {
@@ -1421,32 +1441,13 @@ function initCoverUpload() {
   const input = document.getElementById("cover-file-input");
   const area  = document.getElementById("cover-upload-area");
   if (!area || !input) return;
-
-  // Klik area → buka file picker (kecuali klik langsung ke input)
-  area.addEventListener("click", e => { if (e.target !== input) input.click(); });
-
-  // Helper: tambah drag listeners ke sebuah elemen
-  // — dipasang di AREA dan INPUT agar drag yang tertangkap input tidak terlewat
-  function bindDrag(el) {
-    el.addEventListener("dragover", e => {
-      e.preventDefault();
-      area.classList.add("drag-over");
-    });
-    el.addEventListener("dragleave", e => {
-      // Cegah false-leave saat pointer berpindah ke child element
-      if (!area.contains(e.relatedTarget)) area.classList.remove("drag-over");
-    });
-    el.addEventListener("drop", e => {
-      e.preventDefault(); // cegah browser membuka file secara default
-      area.classList.remove("drag-over");
-      const f = e.dataTransfer?.files?.[0];
-      if (f) handleCoverFile(f);
-    });
-  }
-  bindDrag(area);
-  bindDrag(input);
-
-  // Klik via file picker → change event
+  area.addEventListener("click", () => input.click());
+  area.addEventListener("dragover",  e => { e.preventDefault(); area.classList.add("drag-over"); });
+  area.addEventListener("dragleave", () => area.classList.remove("drag-over"));
+  area.addEventListener("drop", e => {
+    e.preventDefault(); area.classList.remove("drag-over");
+    const f = e.dataTransfer?.files?.[0]; if (f) handleCoverFile(f);
+  });
   input.addEventListener("change", () => {
     const f = input.files?.[0]; if (f) handleCoverFile(f); input.value = "";
   });
@@ -1473,30 +1474,13 @@ function initBookFileUpload() {
   const input = document.getElementById("book-file-input");
   const area  = document.getElementById("file-upload-area");
   if (!area || !input) return;
-
-  // Klik area → buka file picker (kecuali klik langsung ke input)
-  area.addEventListener("click", e => { if (e.target !== input) input.click(); });
-
-  // Pasang drag listeners di AREA dan INPUT
-  function bindDrag(el) {
-    el.addEventListener("dragover", e => {
-      e.preventDefault();
-      area.classList.add("drag-over");
-    });
-    el.addEventListener("dragleave", e => {
-      if (!area.contains(e.relatedTarget)) area.classList.remove("drag-over");
-    });
-    el.addEventListener("drop", e => {
-      e.preventDefault();
-      area.classList.remove("drag-over");
-      const f = e.dataTransfer?.files?.[0];
-      if (f) handleBookFile(f);
-    });
-  }
-  bindDrag(area);
-  bindDrag(input);
-
-  // Klik via file picker → change event
+  area.addEventListener("click", () => input.click());
+  area.addEventListener("dragover",  e => { e.preventDefault(); area.classList.add("drag-over"); });
+  area.addEventListener("dragleave", () => area.classList.remove("drag-over"));
+  area.addEventListener("drop", e => {
+    e.preventDefault(); area.classList.remove("drag-over");
+    const f = e.dataTransfer?.files?.[0]; if (f) handleBookFile(f);
+  });
   input.addEventListener("change", () => {
     const f = input.files?.[0]; if (f) handleBookFile(f); input.value = "";
   });
