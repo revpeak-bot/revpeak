@@ -231,17 +231,16 @@
     const fmt     = (book.file_type || "").toUpperCase();
     const delay   = (Math.min(index, 7) * 0.04).toFixed(2);
     const cover   = book.cover_url ? esc(book.cover_url) : COVER_FALLBACK;
+    const bukuUrl = `${BOOK_PATH}${esc(book.slug)}`;
 
     return `
     <article class="book-card" role="article" style="animation-delay:${delay}s">
 
-      <!-- Cover — klik membuka modal info, bukan download -->
-      <div
+      <!-- Cover — klik navigasi ke buku.html -->
+      <a
+        href="${bukuUrl}"
         class="book-cover-wrap"
-        role="button"
-        tabindex="0"
-        data-book-modal="${book.id}"
-        aria-label="Lihat detail ${esc(book.title)}"
+        aria-label="Baca buku ${esc(book.title)}"
       >
         <img
           class="book-cover-img"
@@ -267,17 +266,14 @@
         </button>
 
         <div class="book-cover-overlay">
-          <!-- "Baca Detail" membuka modal -->
-          <button
-            class="book-overlay-btn book-overlay-read"
-            data-book-modal="${book.id}"
-          >
+          <!-- "Baca" navigasi ke buku.html -->
+          <a href="${bukuUrl}" class="book-overlay-btn book-overlay-read">
             <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round"
                 d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/>
             </svg>
-            Baca Detail
-          </button>
+            Baca
+          </a>
           ${book.file_url ? `
           <!-- "Unduh" langsung ke file R2 -->
           <a
@@ -295,12 +291,12 @@
             Unduh${fmt ? " " + fmt : ""}
           </a>` : ""}
         </div>
-      </div>
+      </a>
 
       <!-- Info -->
       <div class="book-info">
         <h3 class="book-title">
-          <button class="book-title-btn" data-book-modal="${book.id}">${esc(book.title)}</button>
+          <a href="${bukuUrl}">${esc(book.title)}</a>
         </h3>
         <p class="book-author">${esc(book.author || "")}</p>
 
@@ -333,14 +329,13 @@
 
         <!-- Tombol aksi — tampil hanya di list view -->
         <div class="book-list-actions">
-          <!-- "Baca Detail" di list view juga buka modal -->
-          <button class="book-list-btn book-list-btn-read" data-book-modal="${book.id}">
+          <a href="${bukuUrl}" class="book-list-btn book-list-btn-read">
             <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round"
                 d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/>
             </svg>
             Baca Detail
-          </button>
+          </a>
           ${book.file_url ? `
           <a
             href="${esc(book.file_url)}"
@@ -400,26 +395,6 @@
       });
     });
 
-    // Event: buka modal (cover, "Baca Detail", judul) via event delegation
-    grid.addEventListener("click", e => {
-      // Cegah modal terbuka saat klik bookmark atau tombol unduh
-      if (e.target.closest(".book-bookmark-btn") || e.target.closest("[data-dl-slug]")) return;
-      const trigger = e.target.closest("[data-book-modal]");
-      if (trigger) {
-        e.preventDefault();
-        openBookModal(Number(trigger.dataset.bookModal));
-      }
-    });
-
-    // Keyboard: Enter/Space pada cover-wrap (role=button)
-    grid.addEventListener("keydown", e => {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      const trigger = e.target.closest("[data-book-modal]");
-      if (trigger && !e.target.closest(".book-bookmark-btn")) {
-        e.preventDefault();
-        openBookModal(Number(trigger.dataset.bookModal));
-      }
-    });
   }
 
   function renderError() {
@@ -694,7 +669,6 @@
   // ──────────────────────────────────────────────────────────────
   function initPerpustakaanPage() {
     loadBookmarks();
-    injectModal(); // Siapkan modal sekali saat halaman load
 
     // Muat genre & buku sekaligus
     renderSkeletons();
