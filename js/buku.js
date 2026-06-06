@@ -47,6 +47,12 @@
     return "none"; // EPUB, TXT, dan lainnya
   }
 
+  // Deteksi perangkat mobile (Android/iOS)
+  // Android Chrome tidak mendukung PDF inline di iframe — pakai Google Docs Viewer
+  function isMobileDevice() {
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  }
+
   // ──────────────────────────────────────────────────────────────
   // TRACKING
   // ──────────────────────────────────────────────────────────────
@@ -158,12 +164,44 @@
     skeleton?.remove();
 
     if (viewer === "pdf") {
-      // ── PDF: iframe native browser ──────────────────────────
+      // Desktop → iframe native browser (lebih cepat, offline-capable)
+      // Mobile  → Google Docs Viewer (Android Chrome tidak render PDF di iframe)
+      const mobile = isMobileDevice();
+      const src    = mobile
+        ? `https://docs.google.com/gview?url=${encodeURIComponent(book.file_url)}&embedded=true`
+        : book.file_url;
+
       const iframe = document.createElement("iframe");
-      iframe.id              = "buku-viewer-frame";
-      iframe.src             = book.file_url;
-      iframe.title           = `Membaca: ${title}`;
+      iframe.id    = "buku-viewer-frame";
+      iframe.src   = src;
+      iframe.title = `Membaca: ${title}`;
       iframe.setAttribute("aria-label", `Viewer PDF: ${title}`);
+      iframe.setAttribute("frameborder", "0");
+
+      // Fallback: jika Google Docs Viewer gagal memuat (timeout 15 detik),
+      // tampilkan tombol "Buka PDF" sebagai alternatif
+      if (mobile) {
+        const fallbackTimer = setTimeout(() => {
+          const existing = document.getElementById("buku-gdocs-fallback");
+          if (!existing) {
+            const fallback = document.createElement("p");
+            fallback.id        = "buku-gdocs-fallback";
+            fallback.innerHTML = `
+              Viewer tidak muncul?
+              <a href="${esc(book.file_url)}" target="_blank" rel="noopener noreferrer"
+                 style="color:var(--accent,#E03E0B);font-weight:700">
+                Buka PDF langsung ↗
+              </a>`;
+            fallback.style.cssText =
+              "font-size:.8rem;text-align:center;padding:8px 16px;color:var(--text-muted)";
+            panel.appendChild(fallback);
+          }
+        }, 15000);
+
+        // Batalkan timer jika iframe berhasil load
+        iframe.addEventListener("load", () => clearTimeout(fallbackTimer), { once: true });
+      }
+
       panel.appendChild(iframe);
 
     } else if (viewer === "office") {
