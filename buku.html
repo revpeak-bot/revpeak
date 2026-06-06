@@ -96,6 +96,7 @@
       border: none; border-radius: 8px; cursor: pointer;
       font-family: inherit; font-size: .85rem; font-weight: 700;
       text-decoration: none; transition: opacity .15s;
+      box-sizing: border-box;
     }
 
     .buku-dl-btn:hover { opacity: .86; }
@@ -111,7 +112,7 @@
 
     /* ── Panel kanan: iframe viewer ─────────────────────────── */
     .buku-viewer-panel {
-      padding: 0 0 0 0;
+      padding: 0 0 0 24px; /* jarak dari sidebar */
       min-height: calc(100vh - 110px);
       display: flex;
       flex-direction: column;
@@ -119,10 +120,12 @@
 
     .buku-viewer-toolbar {
       display: flex; align-items: center; gap: 10px;
-      padding: 10px 20px;
+      padding: 10px 16px;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
       font-size: .8rem; color: var(--text-muted);
+      border-radius: 8px 8px 0 0;
+      margin-bottom: 0;
     }
 
     .buku-viewer-title {
@@ -134,7 +137,9 @@
       flex: 1;
       width: 100%;
       min-height: calc(100vh - 150px);
-      border: none;
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
       display: block;
       background: var(--surface);
     }
@@ -145,46 +150,74 @@
       flex-direction: column; align-items: center; justify-content: center;
       gap: 12px; padding: 48px 24px;
       text-align: center; color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: 8px;
     }
 
     .buku-no-viewer p { font-size: .95rem; line-height: 1.6; }
 
     /* Skeleton awal */
     .buku-sidebar-skeleton { display: flex; flex-direction: column; gap: 12px; padding: 28px 20px 28px 0; }
-    .buku-viewer-skeleton   { flex: 1; min-height: calc(100vh - 150px); }
+    .buku-viewer-skeleton   {
+      flex: 1; min-height: calc(100vh - 150px);
+      border-radius: 0 0 8px 8px;
+    }
 
     /* ── Responsif ──────────────────────────────────────────── */
     @media (max-width: 768px) {
       .buku-page-wrap {
         grid-template-columns: 1fr;
         min-height: unset;
+        gap: 16px;
       }
 
       .buku-sidebar {
         position: static;
-        padding: 20px 0 0;
+        padding: 20px 0 16px;
         border-right: none;
         border-bottom: 1px solid var(--border);
         max-height: unset;
         display: grid;
-        grid-template-columns: 120px 1fr;
-        gap: 16px;
+        grid-template-columns: 110px 1fr;
+        gap: 14px;
         align-items: start;
+        overflow: visible;
+      }
+
+      /* Cegah kolom kanan overflow container */
+      .buku-sidebar-right {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
       }
 
       .buku-cover-wrap { margin-bottom: 0; }
 
-      .buku-sidebar-right { display: flex; flex-direction: column; }
+      /* Hilangkan padding kiri viewer di mobile */
+      .buku-viewer-panel {
+        padding: 0;
+        min-height: unset;
+      }
 
       .buku-back-link { display: none; }
 
       #buku-viewer-frame { min-height: 75vh; }
 
-      .buku-viewer-toolbar { padding: 8px 14px; }
+      .buku-viewer-toolbar { padding: 8px 12px; border-radius: 8px 8px 0 0; }
+
+      .buku-viewer-skeleton { min-height: 75vh; }
     }
 
     @media (max-width: 480px) {
-      .buku-sidebar { grid-template-columns: 100px 1fr; }
+      .buku-sidebar {
+        grid-template-columns: 95px 1fr;
+        gap: 12px;
+      }
+
+      .buku-title { font-size: .92rem; }
+
+      .buku-meta-list li { font-size: .74rem; }
+
+      .buku-meta-label { min-width: 54px; }
     }
   </style>
 </head>
