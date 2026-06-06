@@ -230,19 +230,18 @@
     const saved   = state.bookmarks.includes(book.id);
     const fmt     = (book.file_type || "").toUpperCase();
     const delay   = (Math.min(index, 7) * 0.04).toFixed(2);
-    const cover   = book.cover_url
-      ? esc(book.cover_url)
-      : COVER_FALLBACK;
+    const cover   = book.cover_url ? esc(book.cover_url) : COVER_FALLBACK;
 
     return `
     <article class="book-card" role="article" style="animation-delay:${delay}s">
 
-      <!-- Cover -->
-      <a
-        href="${BOOK_PATH}${esc(book.slug)}"
+      <!-- Cover — klik membuka modal info, bukan download -->
+      <div
         class="book-cover-wrap"
-        aria-label="Buka detail ${esc(book.title)}"
-        onclick="(function(){var s='${esc(book.slug)}';fetch(window._libApiBase+'/api/views/book/'+s,{method:'POST'}).catch(()=>{})})()"
+        role="button"
+        tabindex="0"
+        data-book-modal="${book.id}"
+        aria-label="Lihat detail ${esc(book.title)}"
       >
         <img
           class="book-cover-img"
@@ -268,14 +267,19 @@
         </button>
 
         <div class="book-cover-overlay">
-          <a href="${BOOK_PATH}${esc(book.slug)}" class="book-overlay-btn book-overlay-read">
+          <!-- "Baca Detail" membuka modal -->
+          <button
+            class="book-overlay-btn book-overlay-read"
+            data-book-modal="${book.id}"
+          >
             <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round"
                 d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/>
             </svg>
             Baca Detail
-          </a>
+          </button>
           ${book.file_url ? `
+          <!-- "Unduh" langsung ke file R2 -->
           <a
             href="${esc(book.file_url)}"
             class="book-overlay-btn book-overlay-download"
@@ -291,12 +295,12 @@
             Unduh${fmt ? " " + fmt : ""}
           </a>` : ""}
         </div>
-      </a>
+      </div>
 
       <!-- Info -->
       <div class="book-info">
         <h3 class="book-title">
-          <a href="${BOOK_PATH}${esc(book.slug)}">${esc(book.title)}</a>
+          <button class="book-title-btn" data-book-modal="${book.id}">${esc(book.title)}</button>
         </h3>
         <p class="book-author">${esc(book.author || "")}</p>
 
@@ -329,13 +333,14 @@
 
         <!-- Tombol aksi — tampil hanya di list view -->
         <div class="book-list-actions">
-          <a href="${BOOK_PATH}${esc(book.slug)}" class="book-list-btn book-list-btn-read">
+          <!-- "Baca Detail" di list view juga buka modal -->
+          <button class="book-list-btn book-list-btn-read" data-book-modal="${book.id}">
             <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round"
                 d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/>
             </svg>
             Baca Detail
-          </a>
+          </button>
           ${book.file_url ? `
           <a
             href="${esc(book.file_url)}"
@@ -393,6 +398,27 @@
       a.addEventListener("click", () => {
         trackDownload(a.dataset.dlSlug);
       });
+    });
+
+    // Event: buka modal (cover, "Baca Detail", judul) via event delegation
+    grid.addEventListener("click", e => {
+      // Cegah modal terbuka saat klik bookmark atau tombol unduh
+      if (e.target.closest(".book-bookmark-btn") || e.target.closest("[data-dl-slug]")) return;
+      const trigger = e.target.closest("[data-book-modal]");
+      if (trigger) {
+        e.preventDefault();
+        openBookModal(Number(trigger.dataset.bookModal));
+      }
+    });
+
+    // Keyboard: Enter/Space pada cover-wrap (role=button)
+    grid.addEventListener("keydown", e => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const trigger = e.target.closest("[data-book-modal]");
+      if (trigger && !e.target.closest(".book-bookmark-btn")) {
+        e.preventDefault();
+        openBookModal(Number(trigger.dataset.bookModal));
+      }
     });
   }
 
@@ -471,10 +497,204 @@
   }
 
   // ──────────────────────────────────────────────────────────────
+  // MODAL DETAIL BUKU
+  // Menampilkan info buku tanpa berpindah halaman.
+  // Tombol "Unduh" di modal mengarah langsung ke file R2.
+  // ──────────────────────────────────────────────────────────────
+  function injectModal() {
+    if (document.getElementById("book-modal")) return;
+
+    // Injeksi CSS modal ke <head>
+    const style = document.createElement("style");
+    style.textContent = `
+      .book-modal-overlay {
+        position: fixed; inset: 0; z-index: 9999;
+        background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 16px;
+        opacity: 0; pointer-events: none;
+        transition: opacity .22s ease;
+      }
+      .book-modal-overlay.open { opacity: 1; pointer-events: all; }
+      .book-modal-box {
+        position: relative;
+        background: var(--bg, #fff); color: var(--text, #111);
+        border-radius: 14px; overflow: hidden;
+        width: 100%; max-width: 640px; max-height: 90dvh;
+        overflow-y: auto;
+        box-shadow: 0 24px 64px rgba(0,0,0,.3);
+        transform: translateY(20px);
+        transition: transform .22s ease;
+      }
+      .book-modal-overlay.open .book-modal-box { transform: translateY(0); }
+      .book-modal-close {
+        position: absolute; top: 12px; right: 12px; z-index: 2;
+        background: var(--surface, #f5f5f5); border: none; border-radius: 50%;
+        width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; color: var(--text, #111);
+        transition: background .15s;
+      }
+      .book-modal-close:hover { background: var(--border, #ddd); }
+      .book-modal-inner {
+        display: flex; gap: 24px; padding: 28px;
+      }
+      .book-modal-cover-col { flex-shrink: 0; width: 130px; }
+      .book-modal-cover {
+        width: 130px; aspect-ratio: 9/16;
+        border-radius: 8px; overflow: hidden;
+        box-shadow: 0 6px 20px rgba(0,0,0,.18);
+      }
+      .book-modal-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .book-modal-dl-btn {
+        margin-top: 12px; display: flex; align-items: center; justify-content: center;
+        gap: 6px; padding: 9px 10px;
+        background: var(--accent, #E03E0B); color: #fff;
+        border-radius: 8px; font-size: .82rem; font-weight: 700;
+        text-decoration: none; transition: opacity .15s;
+        width: 100%; text-align: center;
+      }
+      .book-modal-dl-btn:hover { opacity: .85; }
+      .book-modal-info { flex: 1; min-width: 0; }
+      .book-modal-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+      .book-modal-title {
+        font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800;
+        line-height: 1.25; margin: 0 0 6px; color: var(--text, #111);
+      }
+      .book-modal-author { font-size: .85rem; color: var(--text-muted, #888); margin-bottom: 12px; }
+      .book-modal-meta {
+        display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;
+        font-size: .78rem; color: var(--text-muted, #888);
+      }
+      .book-modal-meta span { background: var(--surface, #f5f5f5); border-radius: 4px; padding: 2px 7px; }
+      .book-modal-desc {
+        font-size: .88rem; line-height: 1.65; color: var(--text, #111);
+        max-height: 120px; overflow-y: auto; white-space: pre-line;
+      }
+      @media (max-width: 480px) {
+        .book-modal-inner { flex-direction: column; padding: 20px; gap: 16px; }
+        .book-modal-cover-col { width: 100%; display: flex; gap: 16px; align-items: flex-start; }
+        .book-modal-cover { width: 100px; }
+        .book-modal-dl-btn { margin-top: 0; align-self: flex-end; flex: 1; }
+      }
+      /* Judul buku sebagai button (style seperti link) */
+      .book-title-btn {
+        background: none; border: none; padding: 0; margin: 0;
+        font: inherit; color: var(--text, #111); cursor: pointer;
+        text-align: left; line-height: inherit;
+      }
+      .book-title-btn:hover { color: var(--accent, #E03E0B); }
+    `;
+    document.head.appendChild(style);
+
+    // Injeksi HTML modal ke <body>
+    const el = document.createElement("div");
+    el.id = "book-modal";
+    el.className = "book-modal-overlay";
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-modal", "true");
+    el.setAttribute("aria-labelledby", "bm-title");
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = `
+      <div class="book-modal-box" role="document">
+        <button class="book-modal-close" id="bm-close" aria-label="Tutup detail buku">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/>
+          </svg>
+        </button>
+        <div class="book-modal-inner">
+          <div class="book-modal-cover-col">
+            <div class="book-modal-cover">
+              <img id="bm-cover" src="" alt="" loading="eager">
+            </div>
+            <a id="bm-download" class="book-modal-dl-btn" href="#" download
+               target="_blank" rel="noopener noreferrer" style="display:none">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+              </svg>
+              <span id="bm-dl-label">Unduh</span>
+            </a>
+          </div>
+          <div class="book-modal-info">
+            <div id="bm-badges" class="book-modal-badges"></div>
+            <h2 id="bm-title" class="book-modal-title"></h2>
+            <p id="bm-author" class="book-modal-author"></p>
+            <div id="bm-meta" class="book-modal-meta"></div>
+            <p id="bm-desc" class="book-modal-desc"></p>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+
+    document.getElementById("bm-close").addEventListener("click", closeBookModal);
+    el.addEventListener("click", e => { if (e.target === el) closeBookModal(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeBookModal(); });
+  }
+
+  function openBookModal(bookId) {
+    const book = state.books.find(b => b.id === bookId);
+    if (!book) return;
+    const modal = document.getElementById("book-modal");
+    if (!modal) return;
+
+    const cover = book.cover_url || COVER_FALLBACK;
+    const fmt   = (book.file_type || "").toUpperCase();
+
+    // Isi konten modal
+    const coverImg = document.getElementById("bm-cover");
+    coverImg.src = cover;
+    coverImg.alt = `Sampul ${book.title}`;
+    document.getElementById("bm-title").textContent  = book.title  || "";
+    document.getElementById("bm-author").textContent = book.author ? `Oleh ${book.author}` : "";
+    document.getElementById("bm-desc").textContent   = book.description || "";
+
+    // Badges genre & format
+    document.getElementById("bm-badges").innerHTML = [
+      book.genre ? `<span class="book-genre-badge">${esc(book.genre)}</span>` : "",
+      fmt        ? `<span class="book-format-badge">${fmt}</span>`            : "",
+    ].join("");
+
+    // Meta: tahun, halaman, ukuran
+    const metaItems = [
+      book.year      ? book.year                  : null,
+      book.pages     ? `${book.pages} halaman`    : null,
+      book.file_size ? fmtSize(book.file_size)    : null,
+    ].filter(Boolean).map(v => `<span>${esc(String(v))}</span>`);
+    document.getElementById("bm-meta").innerHTML = metaItems.join("");
+
+    // Tombol unduh — langsung ke file R2
+    const dlBtn = document.getElementById("bm-download");
+    if (book.file_url) {
+      dlBtn.href = book.file_url;
+      dlBtn.style.display = "flex";
+      document.getElementById("bm-dl-label").textContent = fmt ? `Unduh ${fmt}` : "Unduh";
+      dlBtn.onclick = () => trackDownload(book.slug);
+    } else {
+      dlBtn.style.display = "none";
+    }
+
+    // Catat view
+    trackView(book.slug);
+
+    modal.setAttribute("aria-hidden", "false");
+    modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeBookModal() {
+    const modal = document.getElementById("book-modal");
+    if (!modal) return;
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  }
+
+  // ──────────────────────────────────────────────────────────────
   // INIT HALAMAN PERPUSTAKAAN
   // ──────────────────────────────────────────────────────────────
   function initPerpustakaanPage() {
     loadBookmarks();
+    injectModal(); // Siapkan modal sekali saat halaman load
 
     // Muat genre & buku sekaligus
     renderSkeletons();
