@@ -9,6 +9,61 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css">
+  <style>
+    #bf-content-toolbar { border-bottom: none; border-radius: 8px 8px 0 0; }
+    #bf-content-editor  {
+      min-height: 320px; max-height: 600px; overflow-y: auto;
+      border-radius: 0 0 8px 8px; font-size: .95rem; line-height: 1.7;
+    }
+    .ql-container { font-family: 'DM Sans', sans-serif; }
+    .ql-editor p  { margin-bottom: .5em; }
+    .content-mode-tabs {
+      display: flex; gap: 0; margin-bottom: 12px;
+      border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    .content-mode-tab {
+      flex: 1; padding: 8px 12px; border: none; background: var(--surface);
+      font-family: inherit; font-size: .82rem; font-weight: 600;
+      cursor: pointer; color: var(--text-muted); transition: all .15s;
+    }
+    .content-mode-tab.active { background: var(--accent, #E03E0B); color: #fff; }
+    .content-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .preview-modal-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+      display: none; align-items: flex-start; justify-content: center;
+      padding: 24px 16px; overflow-y: auto;
+    }
+    .preview-modal-overlay.open { display: flex; }
+    .preview-modal-box {
+      background: var(--bg, #fff); border-radius: 12px;
+      width: 100%; max-width: 720px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.3);
+    }
+    .preview-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      font-weight: 700; font-size: .9rem;
+    }
+    .preview-modal-close {
+      background: none; border: none; font-size: 1.2rem;
+      cursor: pointer; color: var(--text-muted); padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .preview-modal-body { padding: 28px 32px; max-height: 75vh; overflow-y: auto; }
+    .preview-content h1 { font-size: 1.6rem; font-weight: 800; margin: 0 0 14px; }
+    .preview-content h2 { font-size: 1.3rem; font-weight: 700; margin: 20px 0 10px; }
+    .preview-content h3 { font-size: 1.1rem; font-weight: 700; margin: 16px 0 8px; }
+    .preview-content p  { margin-bottom: 12px; line-height: 1.75; }
+    .preview-content ul, .preview-content ol { padding-left: 24px; margin-bottom: 12px; }
+    .preview-content li { margin-bottom: 6px; line-height: 1.6; }
+    .preview-content blockquote {
+      border-left: 3px solid var(--accent, #E03E0B); margin: 16px 0;
+      padding: 8px 16px; background: var(--surface); border-radius: 0 6px 6px 0;
+      font-style: italic; color: var(--text-muted);
+    }
+  </style>
   <title>Admin — Revpeak</title>
 </head>
 <body>
@@ -596,12 +651,92 @@
             <button type="button" class="file-info-clear" id="file-info-clear" aria-label="Hapus file">✕</button>
           </div>
 
+          <hr class="form-divider">
+
+          <!-- KONTEN TULISAN (Mode 2) -->
+          <h3 class="form-section-title">✏️ Konten Tulisan
+            <span class="form-hint">— jika diisi, konten ini ditampilkan di halaman buku (prioritas di atas file)</span>
+          </h3>
+
+          <!-- Toggle: Upload File vs Tulis Konten -->
+          <div class="content-mode-tabs" role="tablist" aria-label="Mode konten buku">
+            <button type="button" class="content-mode-tab active" id="tab-file-mode"
+              role="tab" aria-selected="true" aria-controls="panel-file-mode">
+              📄 Upload File
+            </button>
+            <button type="button" class="content-mode-tab" id="tab-write-mode"
+              role="tab" aria-selected="false" aria-controls="panel-write-mode">
+              ✏️ Tulis Konten
+            </button>
+          </div>
+
+          <!-- Panel: info mode aktif -->
+          <p id="content-mode-info" class="form-hint" style="margin-bottom:12px">
+            Mode aktif: <strong id="content-mode-label">Upload File</strong>
+            — konten yang ditampilkan di halaman buku bergantung mode ini.
+          </p>
+
+          <!-- Editor Quill -->
+          <div id="panel-write-mode" style="display:none" role="tabpanel">
+            <div id="bf-content-toolbar">
+              <span class="ql-formats">
+                <select class="ql-header">
+                  <option selected></option>
+                  <option value="1">Heading 1</option>
+                  <option value="2">Heading 2</option>
+                  <option value="3">Heading 3</option>
+                </select>
+              </span>
+              <span class="ql-formats">
+                <button class="ql-bold"      title="Bold"></button>
+                <button class="ql-italic"    title="Italic"></button>
+                <button class="ql-underline" title="Underline"></button>
+              </span>
+              <span class="ql-formats">
+                <button class="ql-list" value="ordered"  title="Daftar Nomor"></button>
+                <button class="ql-list" value="bullet"   title="Daftar Poin"></button>
+                <button class="ql-blockquote"            title="Kutipan"></button>
+              </span>
+              <span class="ql-formats">
+                <button class="ql-link"   title="Link"></button>
+                <button class="ql-clean"  title="Hapus Format"></button>
+              </span>
+            </div>
+            <div id="bf-content-editor" aria-label="Editor konten buku"></div>
+            <input type="hidden" id="bf-content">
+
+            <div class="content-actions">
+              <button type="button" id="btn-preview-content" class="btn-secondary">
+                👁 Pratinjau
+              </button>
+              <button type="button" id="btn-clear-content" class="btn-secondary"
+                style="color:var(--error,#c0392b);border-color:var(--error,#c0392b)">
+                🗑 Hapus Konten
+              </button>
+            </div>
+          </div>
+
           <!-- Form footer -->
           <div class="form-footer">
             <button type="button" class="btn-secondary" id="btn-cancel-book">Batal</button>
             <button type="submit" class="btn-primary" id="btn-submit-book">💾 Simpan Buku</button>
           </div>
         </form>
+      </div>
+
+      <!-- ===== MODAL PRATINJAU KONTEN ===== -->
+      <div class="preview-modal-overlay" id="content-preview-modal" role="dialog"
+           aria-modal="true" aria-labelledby="preview-modal-title">
+        <div class="preview-modal-box">
+          <div class="preview-modal-header">
+            <span id="preview-modal-title">👁 Pratinjau Konten</span>
+            <button class="preview-modal-close" id="btn-close-preview"
+              aria-label="Tutup pratinjau">✕</button>
+          </div>
+          <div class="preview-modal-body">
+            <div class="preview-content" id="preview-content-body"></div>
+          </div>
+        </div>
       </div>
 
       <!-- ===== VIEW: GENRE BUKU ===== -->
@@ -762,6 +897,7 @@
       if (btn) btn.textContent = savedTheme === "dark" ? "☀️" : "🌙";
     }
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
   <script src="js/admin.js" defer></script>
 </body>
 </html>
