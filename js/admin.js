@@ -126,6 +126,31 @@ async function refreshSession() {
   }
 }
 
+
+// ── Helper untuk endpoint admin buku di Worker (D1) ──────────
+// Berbeda dari dbFetch yang ke Supabase — ini ke Worker endpoint.
+async function workerAdminFetch(path, options = {}) {
+  const token = await getValidToken();
+  if (!token) throw new Error("Sesi tidak valid.");
+  const isFormData = options.body instanceof FormData;
+  const res = await fetch(API_BASE + path, {
+    method: options.method || "GET",
+    headers: {
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      "Authorization": `Bearer ${token}`,
+      ...(options.headers || {}),
+    },
+    body: options.body || undefined,
+  });
+  if (!res.ok) {
+    const msg = await res.json()
+      .then(d => d.error || d.message || res.statusText)
+      .catch(() => res.statusText);
+    throw new Error(msg);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
 async function getValidToken() {
   let session = getSession();
   if (!session) return null;
@@ -1079,7 +1104,7 @@ let cachedBookGenres = [];
 
 async function loadBookGenreCache() {
   try {
-    cachedBookGenres = await dbFetch("/book_genres?select=id,name,slug&order=name.asc") || [];
+    cachedBookGenres = await workerAdminFetch("/api/book-genres") || [];
   } catch { cachedBookGenres = []; }
 }
 
@@ -1104,16 +1129,16 @@ async function loadBookList(page = 1) {
   tbody.innerHTML = `<tr><td colspan="6" class="tbl-loading">Memuat data...</td></tr>`;
 
   try {
-    let path = `/books?select=id,title,slug,author,genre,file_type,status,view_count,cover_url`
-      + `&order=created_at.desc&limit=${bookLimit}&offset=${(page - 1) * bookLimit}`;
+    const qp = new URLSearchParams({
+      page,
+      limit: bookLimit,
+      ...(bookFilter.status ? { status: bookFilter.status } : {}),
+      ...(bookFilter.format ? { format: bookFilter.format } : {}),
+      ...(bookFilter.search ? { q:      bookFilter.search } : {}),
+    });
 
-    if (bookFilter.status) path += `&status=eq.${bookFilter.status}`;
-    if (bookFilter.format) path += `&file_type=eq.${bookFilter.format}`;
-    if (bookFilter.search) {
-      path += `&or=(title.ilike.*${encodeURIComponent(bookFilter.search)}*,author.ilike.*${encodeURIComponent(bookFilter.search)}*)`;
-    }
-
-    const books = await dbFetch(path);
+    const res   = await workerAdminFetch(`/api/admin/books?${qp}`);
+    const books = res?.data;
 
     if (!books || !books.length) {
       tbody.innerHTML = `<tr><td colspan="6" class="tbl-empty">Belum ada buku.</td></tr>`;
@@ -1192,10 +1217,10 @@ async function openEditBookForm(id) {
   await loadBookGenreCache();
   resetBookForm();
   try {
-    const books = await dbFetch(`/books?id=eq.${id}&select=*&limit=1`);
-    if (!books || !books.length) { showToast("Buku tidak ditemukan.", "error"); return; }
-    fillBookForm(books[0]);
-    populateBookGenreSelect(books[0].genre_id);
+    const book = await workerAdminFetch(`/api/admin/books/${id}`);
+    if (!book) { showToast("Buku tidak ditemukan.", "error"); return; }
+    fillBookForm(book);
+    populateBookGenreSelect(book.genre_id);
   } catch (e) { showToast("Gagal memuat buku: " + e.message, "error"); return; }
   showView("book-form");
   const titleEl = document.getElementById("topbar-title");
@@ -1283,13 +1308,17 @@ async function submitBookForm(e) {
 
   try {
     if (id) {
-      await dbFetch(`/books?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body: JSON.stringify(payload) });
+      // UPDATE — sertakan id dalam payload agar worker tahu ini update
+      await workerAdminFetch("/api/admin/books", {
+        method: "POST",
+        body:   JSON.stringify({ ...payload, id: Number(id) }),
+      });
       showToast("Buku berhasil diperbarui.");
     } else {
-      payload.created_at    = new Date().toISOString();
-      payload.view_count    = 0;
-      payload.download_count = 0;
-      await dbFetch("/books", { method: "POST", body: JSON.stringify(payload) });
+      await workerAdminFetch("/api/admin/books", {
+        method: "POST",
+        body:   JSON.stringify(payload),
+      });
       showToast("Buku berhasil ditambahkan.");
     }
     showView("books");
@@ -1307,24 +1336,21 @@ async function deleteBook(id, title) {
   if (!confirmDialog(`Hapus buku "${title}"?\nTindakan ini tidak bisa dibatalkan.`)) return;
   try {
     // 1. Ambil URL file sebelum record dihapus
-    const bookData = await dbFetch(`/books?id=eq.${id}&select=cover_url,file_url&limit=1`);
-    const fileUrls = [bookData?.[0]?.cover_url, bookData?.[0]?.file_url]
+    const bookData = await workerAdminFetch(`/api/admin/books/${id}`);
+    const fileUrls = [bookData?.cover_url, bookData?.file_url]
       .filter(url => url && typeof url === "string" && url.trim() !== "");
 
-    // 2. Hapus record dari Supabase
-    await dbFetch(`/books?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+    // 2. Hapus record dari D1 via Worker
+    await workerAdminFetch(`/api/admin/books/${id}`, { method: "DELETE" });
 
-    // 3. Hapus file dari R2 (fire-and-forget — tidak memblokir UI)
+    // 3. Hapus file dari R2 (fire-and-forget)
     if (fileUrls.length) {
       const token = await getValidToken();
       fetch(`${API_BASE}/api/r2/delete`, {
         method:  "DELETE",
-        headers: {
-          "Content-Type":  "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ urls: fileUrls }),
-      }).catch(() => {}); // tidak fatal jika gagal
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body:    JSON.stringify({ urls: fileUrls }),
+      }).catch(() => {});
     }
 
     showToast("Buku berhasil dihapus.");
@@ -1340,7 +1366,7 @@ async function loadBookGenreList() {
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="4" class="tbl-loading">Memuat...</td></tr>`;
   try {
-    const genres = await dbFetch("/book_genres?select=id,name,slug,description&order=name.asc");
+    const genres = await workerAdminFetch("/api/book-genres");
     if (!genres || !genres.length) {
       tbody.innerHTML = `<tr><td colspan="4" class="tbl-empty">Belum ada genre.</td></tr>`;
       return;
@@ -1400,13 +1426,13 @@ async function submitBookGenreForm(e) {
   const desc = document.getElementById("bg-form-desc")?.value?.trim();
   if (!name) { showToast("Nama genre wajib diisi.", "error"); return; }
   try {
-    if (id) {
-      await dbFetch(`/book_genres?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body: JSON.stringify({ name, slug, description: desc || null }) });
-      showToast("Genre diperbarui.");
-    } else {
-      await dbFetch("/book_genres", { method: "POST", body: JSON.stringify({ name, slug, description: desc || null }) });
-      showToast("Genre ditambahkan.");
-    }
+    const genrePayload = { name, slug, description: desc || null };
+    if (id) genrePayload.id = Number(id);
+    await workerAdminFetch("/api/admin/book-genres", {
+      method: "POST",
+      body:   JSON.stringify(genrePayload),
+    });
+    showToast(id ? "Genre diperbarui." : "Genre ditambahkan.");
     resetBookGenreForm();
     loadBookGenreList();
   } catch (e) { showToast("Gagal: " + e.message, "error"); }
@@ -1415,7 +1441,7 @@ async function submitBookGenreForm(e) {
 async function deleteBookGenre(id, name) {
   if (!confirmDialog(`Hapus genre "${name}"?`)) return;
   try {
-    await dbFetch(`/book_genres?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+    await workerAdminFetch(`/api/admin/book-genres/${id}`, { method: "DELETE" });
     showToast("Genre dihapus.");
     loadBookGenreList();
   } catch (e) { showToast("Gagal: " + e.message, "error"); }
