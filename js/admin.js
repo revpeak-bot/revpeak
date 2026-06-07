@@ -1206,6 +1206,7 @@ async function openNewBookForm() {
   await loadBookGenreCache();
   resetBookForm();
   populateBookGenreSelect();
+  initBookContentEditor();
   showView("book-form");
   const titleEl = document.getElementById("topbar-title");
   if (titleEl) titleEl.textContent = "Tambah Buku";
@@ -1222,6 +1223,7 @@ async function openEditBookForm(id) {
     fillBookForm(book);
     populateBookGenreSelect(book.genre_id);
   } catch (e) { showToast("Gagal memuat buku: " + e.message, "error"); return; }
+  initBookContentEditor();
   showView("book-form");
   const titleEl = document.getElementById("topbar-title");
   if (titleEl) titleEl.textContent = "Edit Buku";
@@ -1252,6 +1254,9 @@ function fillBookForm(book) {
 
   if (book.cover_url) showCoverPreview(book.cover_url);
   if (book.file_url)  showFileInfo(book.file_url.split("/").pop(), book.file_size);
+
+  // Isi konten Quill (harus setelah editor init)
+  setTimeout(() => setBookContent(book.content || null), 50);
 }
 
 function resetBookForm() {
@@ -1263,6 +1268,7 @@ function resetBookForm() {
   if (slugEl) { slugEl.value = ""; delete slugEl.dataset.manual; }
   hideCoverPreview();
   hideFileInfo();
+  resetBookContent();
 }
 
 async function submitBookForm(e) {
@@ -1299,6 +1305,7 @@ async function submitBookForm(e) {
     file_url    : document.getElementById("bf-file-url")?.value?.trim()   || null,
     file_type   : document.getElementById("bf-file-type")?.value          || null,
     file_size   : parseInt(document.getElementById("bf-file-size")?.value) || null,
+    content     : getBookContent(),
     updated_at  : new Date().toISOString(),
     ...(genreId ? { genre_id: Number(genreId), genre: genreName } : {}),
   };
@@ -1477,6 +1484,104 @@ function initCoverUpload() {
   input.addEventListener("change", () => {
     const f = input.files?.[0]; if (f) handleCoverFile(f); input.value = "";
   });
+}
+
+// ── Quill editor init ────────────────────────────────────────
+function initBookContentEditor() {
+  if (window._bookQuill) return; // sudah init
+
+  if (typeof Quill === "undefined") {
+    console.warn("Quill belum dimuat.");
+    return;
+  }
+
+  window._bookQuill = new Quill("#bf-content-editor", {
+    theme:    "snow",
+    modules:  { toolbar: "#bf-content-toolbar" },
+    placeholder: "Tulis konten buku di sini...",
+  });
+
+  // ── Toggle tab mode ──────────────────────────────────────
+  const tabFile  = document.getElementById("tab-file-mode");
+  const tabWrite = document.getElementById("tab-write-mode");
+  const panelWrite = document.getElementById("panel-write-mode");
+  const modeLabel  = document.getElementById("content-mode-label");
+
+  function setMode(mode) {
+    const isWrite = mode === "write";
+    tabFile .classList.toggle("active", !isWrite);
+    tabWrite.classList.toggle("active",  isWrite);
+    tabFile .setAttribute("aria-selected", String(!isWrite));
+    tabWrite.setAttribute("aria-selected", String( isWrite));
+    panelWrite.style.display = isWrite ? "" : "none";
+    if (modeLabel) modeLabel.textContent = isWrite ? "Tulis Konten" : "Upload File";
+  }
+
+  tabFile ?.addEventListener("click", () => setMode("file"));
+  tabWrite?.addEventListener("click", () => setMode("write"));
+
+  // ── Pratinjau ────────────────────────────────────────────
+  document.getElementById("btn-preview-content")?.addEventListener("click", () => {
+    const html  = window._bookQuill.root.innerHTML;
+    const empty = !html || html === "<p><br></p>";
+    if (empty) { showToast("Editor masih kosong.", "error"); return; }
+
+    const body  = document.getElementById("preview-content-body");
+    const modal = document.getElementById("content-preview-modal");
+    const title = document.getElementById("bf-title")?.value?.trim() || "Pratinjau Konten";
+
+    if (body)  body.innerHTML = `<h1 style="margin-bottom:20px">${escapeHtml(title)}</h1>` + html;
+    if (modal) modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+  });
+
+  document.getElementById("btn-close-preview")?.addEventListener("click", closeContentPreview);
+  document.getElementById("content-preview-modal")?.addEventListener("click", e => {
+    if (e.target === e.currentTarget) closeContentPreview();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeContentPreview();
+  });
+
+  // ── Hapus konten ─────────────────────────────────────────
+  document.getElementById("btn-clear-content")?.addEventListener("click", () => {
+    if (!confirmDialog("Hapus seluruh konten tulisan?")) return;
+    window._bookQuill.setText("");
+    showToast("Konten dihapus.");
+  });
+}
+
+function closeContentPreview() {
+  const modal = document.getElementById("content-preview-modal");
+  if (modal) modal.classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+// ── Getter/setter konten Quill ────────────────────────────────
+function getBookContent() {
+  const q = window._bookQuill;
+  if (!q) return null;
+  const html = q.root.innerHTML;
+  return (!html || html === "<p><br></p>") ? null : html;
+}
+
+function setBookContent(html) {
+  const q = window._bookQuill;
+  if (!q) return;
+  if (html) {
+    q.root.innerHTML = html;
+    // Aktifkan tab "Tulis Konten" jika ada konten
+    document.getElementById("tab-write-mode")?.click();
+  } else {
+    q.setText("");
+    document.getElementById("tab-file-mode")?.click();
+  }
+}
+
+function resetBookContent() {
+  const q = window._bookQuill;
+  if (q) q.setText("");
+  document.getElementById("tab-file-mode")?.click();
 }
 
 async function handleCoverFile(file) {
