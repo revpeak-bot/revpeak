@@ -104,6 +104,7 @@
         >
       </div>
 
+      <!-- Kolom kanan: hanya info (genre, judul, penulis, meta) -->
       <div class="buku-sidebar-right">
         ${book.genre ? `<span class="buku-genre-badge">${esc(book.genre)}</span>` : ""}
         <h1 class="buku-title">${esc(book.title)}</h1>
@@ -117,46 +118,46 @@
             <span class="buku-meta-value">${esc(String(val))}</span>
           </li>`).join("")}
         </ul>` : ""}
-
-        <!-- Tombol aksi utama -->
-        <div class="buku-action-btns">
-          ${hasContent ? `
-          <button id="buku-read-btn" class="buku-dl-btn" type="button"
-            aria-label="Baca konten buku ${esc(book.title)}">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/>
-            </svg>
-            Baca Konten
-          </button>` : ""}
-
-          ${hasDl ? `
-          <a id="buku-dl-btn" href="${esc(book.file_url)}"
-            class="buku-dl-btn${hasContent ? " buku-dl-btn-secondary" : ""}"
-            download target="_blank" rel="noopener noreferrer"
-            aria-label="Unduh${fmt ? " " + fmt : ""} — ${esc(book.title)}">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-            </svg>
-            Unduh${fmt ? " " + fmt : ""}
-          </a>` : (!hasContent ? `
-          <span class="buku-no-file-badge">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
-            </svg>
-            File Tidak Tersedia
-          </span>` : "")}
-        </div>
-
-        <!-- Deskripsi / Sinopsis -->
-        ${book.description ? `
-        <div class="buku-synopsis">
-          <p class="buku-synopsis-label">Tentang Buku</p>
-          <p class="buku-synopsis-text" id="buku-synopsis-text">${esc(book.description)}</p>
-        </div>` : ""}
       </div>
+
+      <!-- Tombol aksi — di luar kolom, span full width pada mobile -->
+      <div class="buku-action-btns">
+        ${hasContent ? `
+        <button id="buku-read-btn" class="buku-dl-btn" type="button"
+          aria-label="Baca konten buku ${esc(book.title)}">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/>
+          </svg>
+          Baca Konten
+        </button>` : ""}
+
+        ${hasDl ? `
+        <a id="buku-dl-btn" href="${esc(book.file_url)}"
+          class="buku-dl-btn${hasContent ? " buku-dl-btn-secondary" : ""}"
+          download target="_blank" rel="noopener noreferrer"
+          aria-label="Unduh${fmt ? " " + fmt : ""} — ${esc(book.title)}">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+          </svg>
+          Unduh${fmt ? " " + fmt : ""}
+        </a>` : (!hasContent ? `
+        <span class="buku-no-file-badge">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
+          </svg>
+          File Tidak Tersedia
+        </span>` : "")}
+      </div>
+
+      <!-- Sinopsis — di luar kolom, span full width pada mobile -->
+      ${book.description ? `
+      <div class="buku-synopsis">
+        <p class="buku-synopsis-label">Tentang Buku</p>
+        <p class="buku-synopsis-text">${esc(book.description)}</p>
+      </div>` : ""}
     `;
 
     // Tombol "Baca Konten" → scroll ke panel viewer
