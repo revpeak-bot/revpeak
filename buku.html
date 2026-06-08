@@ -256,53 +256,67 @@
         gap: 16px;
       }
 
+      /* Sidebar mobile: cover+info berdampingan, tombol+sinopsis di bawah full width */
       .buku-sidebar {
         position: static;
-        padding: 20px 0 16px;
+        padding: 16px 0 16px;
         border-right: none;
         border-bottom: 1px solid var(--border);
         max-height: unset;
+        overflow: visible;
         display: grid;
         grid-template-columns: 110px 1fr;
-        gap: 14px;
+        grid-template-rows: auto;
+        column-gap: 14px;
+        row-gap: 12px;
         align-items: start;
-        overflow: visible;
       }
 
-      /* Cegah kolom kanan overflow container */
+      /* back-link: tersembunyi di mobile */
+      .buku-back-link { display: none; }
+
+      /* Cover: kolom 1, baris 1 */
+      .buku-cover-wrap {
+        grid-column: 1;
+        grid-row: 1;
+        margin-bottom: 0;
+      }
+
+      /* Info (genre, judul, penulis, meta): kolom 2, baris 1 */
       .buku-sidebar-right {
+        grid-column: 2;
+        grid-row: 1;
         min-width: 0;
         display: flex;
         flex-direction: column;
       }
 
-      .buku-cover-wrap { margin-bottom: 0; }
-
-      /* Hilangkan padding kiri viewer di mobile */
-      .buku-viewer-panel {
-        padding: 0;
-        min-height: unset;
+      /* Tombol aksi: span kedua kolom (full width), baris 2 */
+      .buku-action-btns {
+        grid-column: 1 / -1;
+        grid-row: 2;
       }
 
-      .buku-back-link { display: none; }
+      /* Sinopsis: span kedua kolom (full width), baris 3 */
+      .buku-synopsis {
+        grid-column: 1 / -1;
+        grid-row: 3;
+      }
+
+      /* Hilangkan padding kiri viewer di mobile */
+      .buku-viewer-panel { padding: 0; min-height: unset; }
 
       #buku-viewer-frame { min-height: 75vh; }
-
       .buku-viewer-toolbar { padding: 8px 12px; border-radius: 8px 8px 0 0; }
-
       .buku-viewer-skeleton { min-height: 75vh; }
     }
 
     @media (max-width: 480px) {
       .buku-sidebar {
         grid-template-columns: 95px 1fr;
-        gap: 12px;
       }
-
       .buku-title { font-size: .92rem; }
-
       .buku-meta-list li { font-size: .74rem; }
-
       .buku-meta-label { min-width: 54px; }
     }
   </style>
@@ -382,7 +396,7 @@
   </header>
 
   <!-- BREADCRUMB -->
-  <div class="container" style="padding-top:14px;padding-bottom:6px">
+  <div class="container" style="padding-top:20px;padding-bottom:6px">
     <nav class="breadcrumb" id="book-breadcrumb" aria-label="Breadcrumb"
          style="font-size:.8rem;color:var(--text-muted)">
       <a href="/" style="color:var(--text-muted);text-decoration:none">Beranda</a>
