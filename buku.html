@@ -22,6 +22,9 @@
       gap: 0;
       min-height: calc(100vh - 110px);
       align-items: start;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
     }
 
     /* ── Sidebar kiri ───────────────────────────────────────── */
@@ -251,9 +254,10 @@
     /* ── Responsif ──────────────────────────────────────────── */
     @media (max-width: 768px) {
       .buku-page-wrap {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
         min-height: unset;
         gap: 16px;
+        overflow-x: hidden;
       }
 
       /* Sidebar mobile: cover+info berdampingan, tombol+sinopsis di bawah full width */
@@ -303,8 +307,17 @@
         grid-row: 3;
       }
 
-      /* Hilangkan padding kiri viewer di mobile */
-      .buku-viewer-panel { padding: 0; min-height: unset; }
+      /* Viewer panel: full width, tidak ada padding kiri */
+      .buku-viewer-panel {
+        padding: 0;
+        min-height: unset;
+        width: 100%;
+        overflow-x: hidden;
+      }
+
+      /* Konten tulisan: tidak overflow */
+      .buku-content-wrap { overflow-x: hidden; }
+      .buku-content-body { word-break: break-word; overflow-wrap: break-word; }
 
       #buku-viewer-frame { min-height: 75vh; }
       .buku-viewer-toolbar { padding: 8px 12px; border-radius: 8px 8px 0 0; }
@@ -408,8 +421,8 @@
   </div>
 
   <!-- MAIN -->
-  <main id="main-content">
-    <div class="container" style="padding-bottom:0">
+  <main id="main-content" style="overflow-x:hidden">
+    <div class="container" style="padding-bottom:0;overflow-x:hidden">
 
       <!-- SSR wrapper — diisi worker.js untuk Googlebot -->
       <div id="book-ssr-wrapper" aria-hidden="true" style="display:none"></div>
