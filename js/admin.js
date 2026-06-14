@@ -1585,15 +1585,20 @@ function selectChapter(id) {
   const ch = _chapters.find(c => c.id === id);
   if (!ch) return;
 
-  // Load konten bab ke editor
-  const q = window._bookQuill;
-  if (q) {
-    if (ch.content) {
-      q.root.innerHTML = ch.content;
-    } else {
-      q.setText("");
+  // Load konten bab ke editor yang sedang aktif
+  if (_editorMode === "html") {
+    const ta = document.getElementById("chapter-html-editor");
+    if (ta) ta.value = ch.content || "";
+  } else {
+    const q = window._bookQuill;
+    if (q) {
+      if (ch.content) {
+        q.root.innerHTML = ch.content;
+      } else {
+        q.setText("");
+      }
+      q.setSelection(0, 0);
     }
-    q.setSelection(0, 0);
   }
 
   // Update input judul bab
@@ -1609,11 +1614,7 @@ function saveActiveChapterContent() {
   const ch = _chapters.find(c => c.id === _activeChapterId);
   if (!ch) return;
 
-  const q = window._bookQuill;
-  if (q) {
-    const html = q.root.innerHTML;
-    ch.content = (html && html !== "<p><br></p>") ? html : "";
-  }
+  ch.content = getActiveEditorContent();
 
   // Simpan judul dari input
   const titleInput = document.getElementById("chapter-title-input");
@@ -1709,6 +1710,21 @@ function onChapterTitleInput() {
       if (titleEl) titleEl.textContent = input.value || "Tanpa Judul";
     }
   }
+}
+
+// ── Mode editor: 'visual' | 'html' ───────────────────────────
+let _editorMode = "visual";
+
+// Ambil konten bab aktif dari editor yang sedang aktif
+function getActiveEditorContent() {
+  if (_editorMode === "html") {
+    const ta = document.getElementById("chapter-html-editor");
+    return ta ? ta.value.trim() : "";
+  }
+  const q = window._bookQuill;
+  if (!q) return "";
+  const html = q.root.innerHTML;
+  return (html && html !== "<p><br></p>") ? html : "";
 }
 
 // ── Quill editor init ────────────────────────────────────────
@@ -1832,6 +1848,173 @@ function initBookContentEditor() {
     renderChapterList();
     showToast("Semua bab dihapus.");
   });
+
+  // ── Mode HTML ─────────────────────────────────────────────
+  initHtmlModeToggle();
+}
+
+// ============================================================
+// MODE HTML — Editor Kode Sumber
+// ============================================================
+
+function formatHtml(html) {
+  // Formatter sederhana: pisah setiap tag block ke baris baru & indentasi
+  if (!html) return "";
+  const BLOCK = /^(p|div|h[1-6]|ul|ol|li|table|thead|tbody|tr|th|td|blockquote|section|article|hr|br|figure|figcaption|pre|code)$/i;
+  let depth  = 0;
+  const TAB  = "  ";
+  // Tokenisasi tag
+  const tokens = html
+    .replace(/>\s+</g, "><")        // hapus whitespace antar tag
+    .replace(/(<[^>]+>)/g, "\n$1\n") // tiap tag di baris sendiri
+    .split("\n")
+    .map(t => t.trim())
+    .filter(Boolean);
+
+  const lines = [];
+  for (const tok of tokens) {
+    const closeTag  = tok.match(/^<\/([a-z0-9]+)/i);
+    const openTag   = tok.match(/^<([a-z0-9]+)/i);
+    const selfClose = tok.match(/\/>$/);
+
+    if (closeTag && BLOCK.test(closeTag[1])) {
+      depth = Math.max(0, depth - 1);
+      lines.push(TAB.repeat(depth) + tok);
+    } else if (openTag && BLOCK.test(openTag[1]) && !selfClose) {
+      lines.push(TAB.repeat(depth) + tok);
+      depth++;
+    } else {
+      lines.push(TAB.repeat(depth) + tok);
+    }
+  }
+  return lines.join("\n");
+}
+
+function wrapSelection(textarea, open, close) {
+  const s   = textarea.selectionStart;
+  const e   = textarea.selectionEnd;
+  const sel = textarea.value.substring(s, e);
+  const rep = open + (sel || "teks") + close;
+  textarea.value = textarea.value.substring(0, s) + rep + textarea.value.substring(e);
+  textarea.focus();
+  textarea.selectionStart = s + open.length;
+  textarea.selectionEnd   = s + open.length + (sel || "teks").length;
+}
+
+function initHtmlModeToggle() {
+  const btnVisual  = document.getElementById("btn-mode-visual");
+  const btnHtml    = document.getElementById("btn-mode-html");
+  const quillWrap  = document.getElementById("bf-content-editor");
+  const toolbar    = document.getElementById("bf-content-toolbar");
+  const htmlTa     = document.getElementById("chapter-html-editor");
+  const htmlBar    = document.getElementById("html-toolbar");
+
+  if (!btnVisual || !btnHtml || !quillWrap || !htmlTa) return;
+
+  // ── Switch ke mode Visual ─────────────────────────────────
+  function activateVisual() {
+    const currentHtml = htmlTa.value.trim();
+
+    // Coba load ke Quill
+    const q = window._bookQuill;
+    if (q) {
+      if (currentHtml) {
+        q.root.innerHTML = currentHtml;
+      } else {
+        q.setText("");
+      }
+      q.setSelection(0, 0);
+    }
+
+    // Update state bab
+    if (_activeChapterId) {
+      const ch = _chapters.find(c => c.id === _activeChapterId);
+      if (ch) ch.content = currentHtml || "";
+    }
+
+    _editorMode = "visual";
+    htmlTa.style.display     = "none";
+    if (htmlBar) htmlBar.classList.remove("visible");
+    quillWrap.style.display  = "";
+    toolbar.style.display    = "";
+
+    btnVisual.classList.add("active");    btnVisual.setAttribute("aria-pressed","true");
+    btnHtml  .classList.remove("active"); btnHtml  .setAttribute("aria-pressed","false");
+  }
+
+  // ── Switch ke mode HTML ───────────────────────────────────
+  function activateHtml() {
+    // Ambil HTML dari Quill
+    const q    = window._bookQuill;
+    const html = (q && q.root.innerHTML !== "<p><br></p>") ? q.root.innerHTML : "";
+
+    htmlTa.value            = html;
+    _editorMode             = "html";
+    quillWrap.style.display = "none";
+    toolbar.style.display   = "none";
+    htmlTa.style.display    = "";
+    if (htmlBar) htmlBar.classList.add("visible");
+    htmlTa.focus();
+
+    // Update state bab
+    if (_activeChapterId) {
+      const ch = _chapters.find(c => c.id === _activeChapterId);
+      if (ch) ch.content = html || "";
+    }
+
+    btnHtml  .classList.add("active");    btnHtml  .setAttribute("aria-pressed","true");
+    btnVisual.classList.remove("active"); btnVisual.setAttribute("aria-pressed","false");
+  }
+
+  btnVisual.addEventListener("click", activateVisual);
+  btnHtml  .addEventListener("click", activateHtml);
+
+  // ── Toolbar HTML: format & helper tag ────────────────────
+  document.getElementById("btn-html-format")?.addEventListener("click", () => {
+    if (!htmlTa) return;
+    htmlTa.value = formatHtml(htmlTa.value);
+    showToast("HTML diformat.");
+  });
+
+  document.getElementById("btn-html-copy")?.addEventListener("click", () => {
+    navigator.clipboard?.writeText(htmlTa.value)
+      .then(() => showToast("HTML disalin ke clipboard."))
+      .catch(() => showToast("Gagal menyalin.", "error"));
+  });
+
+  // Pasang wrap-tag buttons
+  const wrapMap = {
+    "btn-html-wrap-p":      ["<p>", "</p>"],
+    "btn-html-wrap-h2":     ["<h2>", "</h2>"],
+    "btn-html-wrap-h3":     ["<h3>", "</h3>"],
+    "btn-html-wrap-strong": ["<strong>", "</strong>"],
+    "btn-html-wrap-em":     ["<em>", "</em>"],
+    "btn-html-wrap-bq":     ["<blockquote>", "</blockquote>"],
+    "btn-html-wrap-a":      ['<a href="">', "</a>"],
+    "btn-html-wrap-ul":     ["<ul>\n  <li>", "</li>\n</ul>"],
+    "btn-html-wrap-img":    ['<img src="" alt="" loading="lazy">', ""],
+  };
+  Object.entries(wrapMap).forEach(([btnId, [open, close]]) => {
+    document.getElementById(btnId)?.addEventListener("click", () => {
+      wrapSelection(htmlTa, open, close);
+    });
+  });
+
+  // Ctrl+S di textarea HTML → simpan ke bab tanpa pindah mode
+  htmlTa.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+      e.preventDefault();
+      saveActiveChapterContent();
+      showToast("Konten bab disimpan.");
+    }
+    // Tab key → sisipkan 2 spasi
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const s = htmlTa.selectionStart;
+      htmlTa.value = htmlTa.value.substring(0, s) + "  " + htmlTa.value.substring(s);
+      htmlTa.selectionStart = htmlTa.selectionEnd = s + 2;
+    }
+  });
 }
 
 function closeContentPreview() {
@@ -1910,8 +2093,26 @@ function resetBookContent() {
   _chapters        = [];
   _activeChapterId = null;
   _chapterCounter  = 0;
+  _editorMode      = "visual";
+
   const q = window._bookQuill;
   if (q) q.setText("");
+
+  // Kembalikan ke tampilan mode visual
+  const htmlTa    = document.getElementById("chapter-html-editor");
+  const quillEl   = document.getElementById("bf-content-editor");
+  const toolbarEl = document.getElementById("bf-content-toolbar");
+  const htmlBar   = document.getElementById("html-toolbar");
+  const btnVisual = document.getElementById("btn-mode-visual");
+  const btnHtml   = document.getElementById("btn-mode-html");
+  if (htmlTa)   htmlTa.style.display   = "none";
+  if (htmlTa)   htmlTa.value           = "";
+  if (quillEl)  quillEl.style.display  = "";
+  if (toolbarEl) toolbarEl.style.display = "";
+  if (htmlBar)  htmlBar.classList.remove("visible");
+  if (btnVisual) { btnVisual.classList.add("active");    btnVisual.setAttribute("aria-pressed","true"); }
+  if (btnHtml)   { btnHtml.classList.remove("active");   btnHtml.setAttribute("aria-pressed","false"); }
+
   renderChapterList();
   document.getElementById("tab-file-mode")?.click();
 }
