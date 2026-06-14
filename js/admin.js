@@ -1495,9 +1495,41 @@ function initBookContentEditor() {
     return;
   }
 
+  // ── Register custom Divider (HR) blot ─────────────────────
+  if (!Quill.imports['formats/divider']) {
+    const BlockEmbed = Quill.import('blots/block/embed');
+    class DividerBlot extends BlockEmbed {}
+    DividerBlot.blotName = 'divider';
+    DividerBlot.tagName  = 'hr';
+    Quill.register(DividerBlot);
+  }
+
+  // ── Register font whitelist ────────────────────────────────
+  const Font = Quill.import('formats/font');
+  Font.whitelist = ['serif', 'monospace'];
+  Quill.register(Font, true);
+
   window._bookQuill = new Quill("#bf-content-editor", {
-    theme:    "snow",
-    modules:  { toolbar: "#bf-content-toolbar" },
+    theme:   "snow",
+    modules: {
+      toolbar: {
+        container: "#bf-content-toolbar",
+        handlers: {
+          // Handler kustom: Garis Horizontal
+          hr: function () {
+            const quill = this.quill;
+            const range = quill.getSelection(true);
+            if (!range) return;
+            quill.insertEmbed(range.index, 'divider', true, Quill.sources.USER);
+            quill.setSelection(range.index + 1, Quill.sources.SILENT);
+          },
+          // Handler kustom: Sisipkan Tabel
+          table: function () {
+            openTableInsertModal();
+          },
+        },
+      },
+    },
     placeholder: "Tulis konten buku di sini...",
   });
 
@@ -1519,6 +1551,9 @@ function initBookContentEditor() {
 
   tabFile ?.addEventListener("click", () => setMode("file"));
   tabWrite?.addEventListener("click", () => setMode("write"));
+
+  // ── Modal tabel ───────────────────────────────────────────
+  initTableInsertModal();
 
   // ── Pratinjau ────────────────────────────────────────────
   document.getElementById("btn-preview-content")?.addEventListener("click", () => {
@@ -1582,6 +1617,105 @@ function resetBookContent() {
   const q = window._bookQuill;
   if (q) q.setText("");
   document.getElementById("tab-file-mode")?.click();
+}
+
+// ============================================================
+// MODAL SISIPKAN TABEL
+// ============================================================
+
+let _tblRows = 3;
+let _tblCols = 3;
+const TBL_MIN = 1;
+const TBL_MAX = 10;
+
+function openTableInsertModal() {
+  _tblRows = 3;
+  _tblCols = 3;
+  updateTableModal();
+  const modal = document.getElementById("tbl-insert-modal");
+  if (modal) { modal.classList.add("open"); document.body.style.overflow = "hidden"; }
+}
+
+function closeTableInsertModal() {
+  const modal = document.getElementById("tbl-insert-modal");
+  if (modal) { modal.classList.remove("open"); document.body.style.overflow = ""; }
+}
+
+function updateTableModal() {
+  const rowEl  = document.getElementById("tbl-row-val");
+  const colEl  = document.getElementById("tbl-col-val");
+  const preview = document.getElementById("tbl-grid-preview");
+  if (rowEl) rowEl.textContent = _tblRows;
+  if (colEl) colEl.textContent = _tblCols;
+
+  // Pratinjau mini grid
+  if (preview) {
+    preview.style.gridTemplateColumns = `repeat(${_tblCols}, 1fr)`;
+    preview.innerHTML = "";
+    const total = _tblRows * _tblCols;
+    for (let i = 0; i < total; i++) {
+      const cell = document.createElement("div");
+      cell.className = "tbl-preview-cell";
+      preview.appendChild(cell);
+    }
+  }
+}
+
+function insertTableIntoQuill(rows, cols) {
+  const quill = window._bookQuill;
+  if (!quill) return;
+
+  const range = quill.getSelection(true);
+  const idx   = range ? range.index : quill.getLength();
+
+  // Bangun HTML tabel
+  let html = '<table><tbody>';
+  // Baris header
+  html += '<tr>';
+  for (let c = 0; c < cols; c++) {
+    html += `<th>Kolom ${c + 1}</th>`;
+  }
+  html += '</tr>';
+  // Baris data
+  for (let r = 1; r < rows; r++) {
+    html += '<tr>';
+    for (let c = 0; c < cols; c++) {
+      html += '<td>&nbsp;</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table><p><br></p>';
+
+  quill.clipboard.dangerouslyPasteHTML(idx, html, Quill.sources.USER);
+  quill.setSelection(idx + 1, 0, Quill.sources.SILENT);
+  showToast(`Tabel ${rows}×${cols} berhasil disisipkan.`);
+}
+
+function initTableInsertModal() {
+  document.getElementById("tbl-row-inc")?.addEventListener("click", () => {
+    if (_tblRows < TBL_MAX) { _tblRows++; updateTableModal(); }
+  });
+  document.getElementById("tbl-row-dec")?.addEventListener("click", () => {
+    if (_tblRows > TBL_MIN) { _tblRows--; updateTableModal(); }
+  });
+  document.getElementById("tbl-col-inc")?.addEventListener("click", () => {
+    if (_tblCols < TBL_MAX) { _tblCols++; updateTableModal(); }
+  });
+  document.getElementById("tbl-col-dec")?.addEventListener("click", () => {
+    if (_tblCols > TBL_MIN) { _tblCols--; updateTableModal(); }
+  });
+  document.getElementById("btn-confirm-tbl")?.addEventListener("click", () => {
+    closeTableInsertModal();
+    insertTableIntoQuill(_tblRows, _tblCols);
+  });
+  document.getElementById("btn-cancel-tbl")?.addEventListener("click", closeTableInsertModal);
+  document.getElementById("btn-close-tbl-modal")?.addEventListener("click", closeTableInsertModal);
+  document.getElementById("tbl-insert-modal")?.addEventListener("click", e => {
+    if (e.target === e.currentTarget) closeTableInsertModal();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeTableInsertModal();
+  });
 }
 
 async function handleCoverFile(file) {
