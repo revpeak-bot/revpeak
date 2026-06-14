@@ -120,14 +120,14 @@
 
 /* ─── Article Content — Typography ────────────────────────── */
 .article-content {
-  font-size: 1.0625rem;      /* 17px — optimal untuk long-form */
+  font-size: 0.9375rem;      /* 15px — ukuran sedang, nyaman dibaca */
   line-height: 1.9;
   color: var(--text);
 }
 
 /* Paragraf pertama tampil lebih besar sebagai lead */
 .article-content > p:first-of-type {
-  font-size: 1.125rem;
+  font-size: 1rem;
   line-height: 1.85;
   color: var(--text);
   font-weight: 400;
@@ -144,7 +144,7 @@
 /* H2 — heading seksi utama, Syne agar hierarki jelas */
 .article-content h2 {
   font-family: 'Syne', sans-serif;
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--text);
   margin: 2.5em 0 0.8em;
@@ -158,7 +158,7 @@
 /* H3 — sub-heading, Syne sedang */
 .article-content h3 {
   font-family: 'Syne', sans-serif;
-  font-size: 1.08rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text);
   margin: 2em 0 0.65em;
@@ -500,9 +500,9 @@ textarea.form-input-k { resize: vertical; line-height: 1.6; }
   .article-title { font-size: 1.45rem; }
   .article-main { padding: 22px 20px 36px; border-radius: var(--radius); }
   .article-thumbnail-wrap { margin: 20px -20px; }
-  .article-content { font-size: 1rem; }
-  .article-content > p:first-of-type { font-size: 1.05rem; }
-  .article-content h2 { font-size: 1.2rem; }
+  .article-content { font-size: 0.875rem; }
+  .article-content > p:first-of-type { font-size: 0.9375rem; }
+  .article-content h2 { font-size: 1.1rem; }
   .page-title { font-size: 1.5rem; }
   .related-grid { grid-template-columns: 1fr; }
   .authors-grid { grid-template-columns: 1fr; }
