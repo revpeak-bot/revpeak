@@ -23,21 +23,23 @@ const INSTANCES = {
 
 // ============================================================
 // HELPER: Upload satu file Markdown ke AI Search instance
-// PUT /instances/{instance}/items/{fileId}
+// POST /instances/{instance}/items
+// Docs: https://developers.cloudflare.com/ai-search/get-started/api/
 // ============================================================
 async function uploadItem(instance, fileId, markdownContent, metadata = {}) {
-  const url = `${AI_SEARCH_BASE}/${instance}/items/${encodeURIComponent(fileId)}`;
+  const url = `${AI_SEARCH_BASE}/${instance}/items`;
 
   const form = new FormData();
   form.append(
     "file",
     new Blob([markdownContent], { type: "text/markdown" }),
-    `${fileId}.md`
+    `${fileId}.md`   // nama file = fileId, digunakan sebagai key unik di AI Search
   );
+  // Metadata opsional: dikirim sebagai JSON string di field "metadata"
   form.append("metadata", JSON.stringify(metadata));
 
   const res = await fetch(url, {
-    method : "PUT",
+    method : "POST",
     headers: { Authorization: `Bearer ${CF_API_TOKEN}` },
     body   : form,
   });
@@ -54,12 +56,15 @@ async function uploadItem(instance, fileId, markdownContent, metadata = {}) {
 
 // ============================================================
 // HELPER: Fetch dari Supabase REST API
+// Gunakan SUPABASE_SERVICE_KEY agar bisa baca field content (bypass RLS)
 // ============================================================
 async function supabaseFetch(path) {
+  // Prioritaskan service key agar RLS tidak memblokir field content
+  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     headers: {
-      "apikey"       : SUPABASE_KEY,
-      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "apikey"       : key,
+      "Authorization": `Bearer ${key}`,
       "Content-Type" : "application/json",
     },
   });
@@ -229,8 +234,12 @@ async function syncBuku() {
   console.log(`   Worker  : ${WORKER_URL || "(tidak diset)"}`);
 
   // Validasi secrets wajib
-  const missing = ["SUPABASE_URL", "SUPABASE_KEY", "CF_ACCOUNT_ID", "CF_API_TOKEN"]
+  const missing = ["SUPABASE_URL", "CF_ACCOUNT_ID", "CF_API_TOKEN"]
     .filter(k => !process.env[k]);
+
+  if (!process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_KEY) {
+    missing.push("SUPABASE_SERVICE_KEY atau SUPABASE_KEY");
+  }
 
   if (missing.length) {
     console.error(`\n❌ Secret berikut belum diset: ${missing.join(", ")}`);
