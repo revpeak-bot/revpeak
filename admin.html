@@ -135,6 +135,82 @@
       padding: 8px 16px; background: var(--surface); border-radius: 0 6px 6px 0;
       font-style: italic; color: var(--text-muted);
     }
+
+    /* ===== CHAPTER / BAB UI ===== */
+    .chapter-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px; flex-wrap: wrap; gap: 8px;
+    }
+    .chapter-count-label {
+      font-size: .82rem; color: var(--text-muted); font-weight: 500;
+    }
+    .chapter-list {
+      display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px;
+    }
+    .chapter-item {
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); overflow: hidden;
+      transition: border-color .15s;
+    }
+    .chapter-item.active { border-color: var(--accent, #E03E0B); }
+    .chapter-item-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px; cursor: pointer; user-select: none;
+    }
+    .chapter-item-header:hover { background: rgba(0,0,0,.04); }
+    .chapter-item.active .chapter-item-header {
+      background: var(--accent, #E03E0B); color: #fff;
+    }
+    .chapter-item-num {
+      font-size: .72rem; font-weight: 800; min-width: 20px;
+      background: rgba(0,0,0,.12); border-radius: 4px;
+      padding: 1px 5px; text-align: center;
+    }
+    .chapter-item.active .chapter-item-num { background: rgba(255,255,255,.25); }
+    .chapter-item-title {
+      flex: 1; font-size: .875rem; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .chapter-item-actions { display: flex; gap: 3px; flex-shrink: 0; }
+    .chapter-btn {
+      background: none; border: 1px solid transparent;
+      border-radius: 5px; padding: 3px 7px; cursor: pointer;
+      font-size: .8rem; line-height: 1; color: inherit;
+      transition: all .12s;
+    }
+    .chapter-btn:hover { border-color: currentColor; background: rgba(0,0,0,.07); }
+    .chapter-btn.del:hover { color: var(--error, #c0392b); border-color: var(--error, #c0392b); }
+    .chapter-item.active .chapter-btn:hover { background: rgba(255,255,255,.2); }
+    .chapter-empty-hint {
+      text-align: center; padding: 18px; color: var(--text-muted);
+      font-size: .88rem; border: 1.5px dashed var(--border); border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    .chapter-editor-wrap {
+      border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .chapter-editor-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; background: var(--surface);
+      border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .chapter-editor-header label {
+      font-size: .82rem; font-weight: 700; white-space: nowrap;
+      color: var(--text-muted); margin: 0;
+    }
+    #chapter-title-input {
+      flex: 1; min-width: 160px; font-size: .9rem;
+      border: none !important; background: transparent !important;
+      box-shadow: none !important; padding: 0 !important;
+      font-weight: 700; color: var(--text);
+    }
+    #chapter-title-input:focus { outline: none; }
+    #bf-content-toolbar { border: none; border-bottom: 1px solid var(--border); border-radius: 0; flex-wrap: wrap; }
+    #bf-content-editor  {
+      min-height: 280px; max-height: 560px; overflow-y: auto;
+      border-radius: 0; font-size: .95rem; line-height: 1.7;
+    }
   </style>
   <title>Admin — Revpeak</title>
 </head>
@@ -748,97 +824,118 @@
             — konten yang ditampilkan di halaman buku bergantung mode ini.
           </p>
 
-          <!-- Editor Quill -->
+          <!-- Editor Quill dengan Sistem Bab -->
           <div id="panel-write-mode" style="display:none" role="tabpanel">
-            <div id="bf-content-toolbar">
-              <!-- Heading & Ukuran Teks -->
-              <span class="ql-formats">
-                <select class="ql-header" title="Gaya Teks">
-                  <option selected>Teks Normal</option>
-                  <option value="1">Heading 1</option>
-                  <option value="2">Heading 2</option>
-                  <option value="3">Heading 3</option>
-                  <option value="4">Heading 4</option>
-                </select>
-              </span>
-              <span class="ql-formats">
-                <select class="ql-font" title="Jenis Font">
-                  <option selected>Sans-serif</option>
-                  <option value="serif">Serif</option>
-                  <option value="monospace">Monospace</option>
-                </select>
-              </span>
-              <span class="ql-formats">
-                <select class="ql-size" title="Ukuran Font">
-                  <option value="small">Kecil</option>
-                  <option selected>Normal</option>
-                  <option value="large">Besar</option>
-                  <option value="huge">Sangat Besar</option>
-                </select>
-              </span>
-              <!-- Format Teks: B / I / U / Coret -->
-              <span class="ql-formats">
-                <button class="ql-bold"      title="Tebal (Bold)"></button>
-                <button class="ql-italic"    title="Miring (Italic)"></button>
-                <button class="ql-underline" title="Garis Bawah (Underline)"></button>
-                <button class="ql-strike"    title="Coret (Strikethrough)"></button>
-              </span>
-              <!-- Superskrip & Subskrip (X² / X₂) -->
-              <span class="ql-formats">
-                <button class="ql-script" value="super" title="Superskrip (X²)"></button>
-                <button class="ql-script" value="sub"   title="Subskrip (X₂)"></button>
-              </span>
-              <!-- Warna Teks & Sorot -->
-              <span class="ql-formats">
-                <select class="ql-color"      title="Warna Teks"></select>
-                <select class="ql-background" title="Sorot Teks (Highlight)"></select>
-              </span>
-              <!-- Perataan Teks -->
-              <span class="ql-formats">
-                <select class="ql-align" title="Perataan Teks">
-                  <option selected title="Rata Kiri"></option>
-                  <option value="center"  title="Rata Tengah"></option>
-                  <option value="right"   title="Rata Kanan"></option>
-                  <option value="justify" title="Rata Kanan-Kiri"></option>
-                </select>
-              </span>
-              <!-- Indentasi -->
-              <span class="ql-formats">
-                <button class="ql-indent" value="-1" title="Kurangi Indentasi"></button>
-                <button class="ql-indent" value="+1" title="Tambah Indentasi"></button>
-              </span>
-              <!-- Daftar & Blok -->
-              <span class="ql-formats">
-                <button class="ql-list"      value="ordered" title="Daftar Nomor"></button>
-                <button class="ql-list"      value="bullet"  title="Daftar Poin"></button>
-                <button class="ql-blockquote"               title="Kutipan (Blockquote)"></button>
-                <button class="ql-code-block"               title="Blok Kode (Markup)"></button>
-              </span>
-              <!-- Sisipkan: Link / Gambar / Tabel / Garis Horizontal -->
-              <span class="ql-formats">
-                <button class="ql-link"  title="Sisipkan Link"></button>
-                <button class="ql-image" title="Sisipkan Gambar"></button>
-                <button class="ql-table" title="Sisipkan Tabel"></button>
-                <button class="ql-hr"    title="Garis Horizontal">—</button>
-              </span>
-              <!-- Hapus Format -->
-              <span class="ql-formats">
-                <button class="ql-clean" title="Hapus Format"></button>
-              </span>
+
+            <!-- Toolbar manajemen bab -->
+            <div class="chapter-toolbar">
+              <span class="chapter-count-label" id="chapter-count-label">Belum ada bab</span>
+              <button type="button" id="btn-add-chapter" class="btn-secondary" title="Tambah bab baru">
+                ＋ Tambah Bab
+              </button>
             </div>
-            <div id="bf-content-editor" aria-label="Editor konten buku"></div>
-            <input type="hidden" id="bf-content">
+
+            <!-- Daftar bab -->
+            <div class="chapter-list" id="chapter-list" aria-label="Daftar bab buku">
+              <div class="chapter-empty-hint" id="chapter-empty-hint">
+                📖 Belum ada bab. Klik <strong>＋ Tambah Bab</strong> untuk mulai menulis.
+              </div>
+            </div>
+
+            <!-- Area editor (aktif saat bab dipilih) -->
+            <div class="chapter-editor-wrap" id="chapter-editor-wrap" style="display:none">
+              <!-- Header: label bab + input judul -->
+              <div class="chapter-editor-header">
+                <label for="chapter-title-input">Judul Bab:</label>
+                <input type="text" id="chapter-title-input" class="form-input"
+                  placeholder="Masukkan judul bab..." maxlength="120"
+                  aria-label="Judul bab yang sedang diedit">
+              </div>
+
+              <!-- Toolbar Quill -->
+              <div id="bf-content-toolbar">
+                <span class="ql-formats">
+                  <select class="ql-header" title="Gaya Teks">
+                    <option selected>Teks Normal</option>
+                    <option value="1">Heading 1</option>
+                    <option value="2">Heading 2</option>
+                    <option value="3">Heading 3</option>
+                    <option value="4">Heading 4</option>
+                  </select>
+                </span>
+                <span class="ql-formats">
+                  <select class="ql-font" title="Jenis Font">
+                    <option selected>Sans-serif</option>
+                    <option value="serif">Serif</option>
+                    <option value="monospace">Monospace</option>
+                  </select>
+                </span>
+                <span class="ql-formats">
+                  <select class="ql-size" title="Ukuran Font">
+                    <option value="small">Kecil</option>
+                    <option selected>Normal</option>
+                    <option value="large">Besar</option>
+                    <option value="huge">Sangat Besar</option>
+                  </select>
+                </span>
+                <span class="ql-formats">
+                  <button class="ql-bold"      title="Tebal (Bold)"></button>
+                  <button class="ql-italic"    title="Miring (Italic)"></button>
+                  <button class="ql-underline" title="Garis Bawah (Underline)"></button>
+                  <button class="ql-strike"    title="Coret (Strikethrough)"></button>
+                </span>
+                <span class="ql-formats">
+                  <button class="ql-script" value="super" title="Superskrip (X²)"></button>
+                  <button class="ql-script" value="sub"   title="Subskrip (X₂)"></button>
+                </span>
+                <span class="ql-formats">
+                  <select class="ql-color"      title="Warna Teks"></select>
+                  <select class="ql-background" title="Sorot Teks (Highlight)"></select>
+                </span>
+                <span class="ql-formats">
+                  <select class="ql-align" title="Perataan Teks">
+                    <option selected title="Rata Kiri"></option>
+                    <option value="center"  title="Rata Tengah"></option>
+                    <option value="right"   title="Rata Kanan"></option>
+                    <option value="justify" title="Rata Kanan-Kiri"></option>
+                  </select>
+                </span>
+                <span class="ql-formats">
+                  <button class="ql-indent" value="-1" title="Kurangi Indentasi"></button>
+                  <button class="ql-indent" value="+1" title="Tambah Indentasi"></button>
+                </span>
+                <span class="ql-formats">
+                  <button class="ql-list"       value="ordered" title="Daftar Nomor"></button>
+                  <button class="ql-list"       value="bullet"  title="Daftar Poin"></button>
+                  <button class="ql-blockquote"                 title="Kutipan (Blockquote)"></button>
+                  <button class="ql-code-block"                 title="Blok Kode (Markup)"></button>
+                </span>
+                <span class="ql-formats">
+                  <button class="ql-link"  title="Sisipkan Link"></button>
+                  <button class="ql-image" title="Sisipkan Gambar"></button>
+                  <button class="ql-table" title="Sisipkan Tabel"></button>
+                  <button class="ql-hr"    title="Garis Horizontal">—</button>
+                </span>
+                <span class="ql-formats">
+                  <button class="ql-clean" title="Hapus Format"></button>
+                </span>
+              </div>
+
+              <!-- Quill editor canvas -->
+              <div id="bf-content-editor" aria-label="Editor konten bab buku"></div>
+              <input type="hidden" id="bf-content">
+            </div><!-- /chapter-editor-wrap -->
 
             <div class="content-actions">
               <button type="button" id="btn-preview-content" class="btn-secondary">
-                👁 Pratinjau
+                👁 Pratinjau Semua Bab
               </button>
               <button type="button" id="btn-clear-content" class="btn-secondary"
                 style="color:var(--error,#c0392b);border-color:var(--error,#c0392b)">
-                🗑 Hapus Konten
+                🗑 Hapus Semua Bab
               </button>
             </div>
-          </div>
+          </div><!-- /panel-write-mode -->
 
           <!-- Form footer -->
           <div class="form-footer">
