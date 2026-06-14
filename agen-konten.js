@@ -160,7 +160,7 @@ async function callAI(prompt, maxTokens = 1200) {
       messages: [
         {
           role: "system",
-          content: `Anda adalah jurnalis dan editor senior untuk media digital Indonesia bernama Revpeak. Anda menulis dengan gaya jurnalisme profesional: lugas, informatif, mengalir, dan tidak terasa seperti ditulis oleh AI. Hindari kalimat generik seperti "Dalam era modern ini..." atau "Sangat penting untuk diketahui bahwa...". Tulis selalu dalam bahasa Indonesia baku yang hidup. Ikuti instruksi format HTML dengan tepat.`,
+          content: `Anda adalah jurnalis dan editor senior Revpeak, media digital Indonesia. Gaya penulisan: lugas, informatif, tidak terasa ditulis AI, SEO-friendly. Aturan wajib: (1) Paragraf pendek—maksimal 3-4 kalimat per paragraf. (2) Tempatkan kata kunci utama secara natural di paragraf pertama setiap sub-bagian. (3) Gunakan <strong> untuk angka, statistik, dan fakta kunci—bukan sekadar dekorasi. (4) Hindari pembuka klise: "Dalam era modern ini...", "Tidak dapat dipungkiri...", "Sangat penting untuk diketahui...". (5) Sertakan minimal satu data atau contoh konkret per sub-bagian. (6) Ikuti format HTML yang diperintahkan dengan tepat—jangan gunakan Markdown.`,
         },
         { role: "user", content: prompt },
       ],
@@ -344,14 +344,15 @@ async function generateAndUploadImage(imagePrompt, slug) {
 async function generateMetadata(topik, subtopik, postType) {
   const isBerita = postType === "news";
 
-  const prompt = `Buat metadata untuk ${isBerita ? "berita" : "artikel"} tentang "${subtopik}" kategori ${topik}.
+  const prompt = `Buat metadata SEO untuk ${isBerita ? "berita" : "artikel"} tentang "${subtopik}" kategori ${topik}.
 
-Balas dengan format ini PERSIS (satu nilai per baris, tanpa penjelasan lain):
-TITLE: [judul menarik maksimal 80 karakter dalam bahasa Indonesia]
-EXCERPT: [ringkasan 1-2 kalimat maksimal 160 karakter dalam bahasa Indonesia]
-TAGS: [tag1, tag2, tag3, tag4, tag5]
-META_DESC: [meta description SEO 120-155 karakter bahasa Indonesia]
-IMAGE_PROMPT: [deskripsi gambar dalam bahasa Inggris untuk AI image generator, spesifik dan visual, 10-20 kata, gaya fotorealistik profesional]`;
+Balas PERSIS dengan format ini (satu nilai per baris, tanpa penjelasan lain):
+FOCUS_KW: [kata kunci utama 2-4 kata yang paling sering dicari di Google Indonesia]
+TITLE: [judul 50-60 karakter: letakkan kata kunci di AWAL, gunakan angka atau kata tanya jika relevan, harus menarik untuk diklik]
+EXCERPT: [140-155 karakter: sebut kata kunci di kalimat pertama, padat dan bernilai, hindari frasa "artikel ini membahas"]
+TAGS: [6-8 tag relevan dari umum ke spesifik, pisahkan koma]
+META_DESC: [130-155 karakter: buka dengan kata kunci, sebutkan manfaat utama pembaca, akhiri dengan CTA seperti "Simak panduan lengkapnya." atau "Pelajari lebih lanjut di sini."]
+IMAGE_PROMPT: [10-20 kata bahasa Inggris: photorealistic professional scene yang relevan dengan topik, no text overlay, no watermark, high resolution]`;
 
   const raw = await callAI(prompt, 600);
 
@@ -360,11 +361,12 @@ IMAGE_PROMPT: [deskripsi gambar dalam bahasa Inggris untuk AI image generator, s
     return m ? m[1].trim() : "";
   };
 
-  const title        = get("TITLE")        || subtopik.substring(0, 70);
+  const focusKw     = get("FOCUS_KW")     || subtopik.split(" ").slice(0, 3).join(" ");
+  const title        = get("TITLE")        || subtopik.substring(0, 60);
   const excerpt      = get("EXCERPT")      || "";
   const metaDesc     = get("META_DESC")    || excerpt;
   const tagsRaw      = get("TAGS")         || "";
-  const imagePrompt  = get("IMAGE_PROMPT") || `${topik.toLowerCase()} concept, professional photography, high quality`;
+  const imagePrompt  = get("IMAGE_PROMPT") || `${topik.toLowerCase()} professional photography, high quality`;
 
   const tags = tagsRaw
     .replace(/[\[\]]/g, "")
@@ -372,7 +374,7 @@ IMAGE_PROMPT: [deskripsi gambar dalam bahasa Inggris untuk AI image generator, s
     .map(t => t.trim().replace(/^["']|["']$/g, ""))
     .filter(Boolean);
 
-  return { title, excerpt, metaDesc, tags, imagePrompt };
+  return { title, excerpt, metaDesc, tags, imagePrompt, focusKw };
 }
 
 async function generateOutline(topik, subtopik, postType, title) {
@@ -383,11 +385,17 @@ async function generateOutline(topik, subtopik, postType, title) {
     ? "artikel berita dengan struktur: latar belakang, detail peristiwa, dampak, analisis, penutup"
     : "artikel informatif mendalam dengan pendahuluan, beberapa sub-topik utama, dan kesimpulan";
 
-  const prompt = `Buat outline untuk ${isBerita ? "berita" : "artikel"} panjang tentang "${subtopik}" kategori ${topik}.
-Judul: ${title}
-Tipe konten: ${tipeKonten}
+  const prompt = `Buat outline SEO-friendly untuk ${isBerita ? "berita" : "artikel"} panjang tentang "${subtopik}" kategori ${topik}.
+Judul artikel: ${title}
+Struktur: ${tipeKonten}
 
-Balas HANYA dengan daftar tepat ${jumlah} judul sub-bagian (tanpa nomor, tanpa penjelasan, satu per baris):`;
+Aturan wajib untuk setiap judul sub-bagian:
+- Mengandung kata kunci atau variasi sinonimnya secara natural
+- Gunakan format pertanyaan ("Bagaimana...", "Apa...", "Mengapa...", "Berapa...") untuk 1-2 sub-bagian di tengah
+- Sub-bagian TERAKHIR wajib berisi kata "Pertanyaan Umum" diikuti kata kunci singkat (untuk FAQ schema Google)
+- JANGAN gunakan nomor urut, tanda bintang, tanda strip, atau tanda petik di depan judul
+
+Balas HANYA dengan daftar tepat ${jumlah} judul sub-bagian, satu per baris:`;
 
   const raw = await callAI(prompt, 512);
 
@@ -440,42 +448,52 @@ async function generateSection(subtopik, title, sectionTitle, index, total) {
     instruksiPosisi = `Ini adalah bagian ISI artikel. Bahas sub-topik ini secara mendalam dengan data, contoh nyata, atau analisis yang tajam. Jadikan setiap paragraf bernilai—tidak ada kalimat pengisi.`;
   }
 
-  const prompt = `Tulis satu bagian dari artikel jurnalistik profesional tentang "${subtopik}" untuk Revpeak.
+  const instruksiFAQ = isLast
+    ? `\n\n   CATATAN: Jika judul sub-bagian ini mengandung kata "Pertanyaan" atau "FAQ", gunakan format berikut:\n   <h3>Pertanyaan yang sering ditanyakan 1?</h3>\n   <p>Jawaban ringkas 2-3 kalimat yang informatif.</p>\n   (ulangi untuk 3-4 pertanyaan umum tentang topik ini)`
+    : "";
+
+  const prompt = `Tulis satu bagian artikel jurnalistik SEO-friendly tentang "${subtopik}" untuk Revpeak.
 
 Judul artikel: ${title}
 Judul sub-bagian ini: ${sectionTitle}
 Posisi: ${instruksiPosisi}
 
-═══ ATURAN FORMAT HTML (WAJIB DIIKUTI) ═══
+═══ FORMAT HTML — WAJIB DIIKUTI ═══
 
-1. JUDUL SUB-BAGIAN — Gunakan tepat satu tag <h2> di baris pertama:
-   <h2>${sectionTitle}</h2>
+1. JUDUL SUB-BAGIAN
+   Buka tepat dengan satu: <h2>${sectionTitle}</h2>
 
-2. SUB-POIN DI DALAM BAGIAN — Jika ada sub-topik di bawahnya, gunakan <h3>:
-   <h3>Judul Sub-Poin</h3>
-   Baru kemudian paragraf <p>...</p> di bawahnya.
+2. PARAGRAF
+   - Bungkus setiap paragraf dengan <p>...</p>
+   - Satu paragraf = 2-4 kalimat (jangan lebih panjang)
+   - Paragraf pertama: masukkan kata kunci topik secara natural di kalimat pertama atau kedua
 
-3. PARAGRAF — Setiap paragraf dibungkus <p>...</p>. Satu paragraf = 3–5 kalimat.
+3. SUB-POIN (gunakan jika ada 2+ aspek berbeda)
+   <h3>Judul Sub-Poin yang Deskriptif</h3>
+   <p>Penjelasan paragraf di bawahnya...</p>
 
-4. PENEKANAN — Gunakan <strong> untuk istilah penting, angka, atau fakta kunci.
-   Gunakan <em> hanya untuk penekanan makna, bukan dekorasi.
+4. PENEKANAN
+   - <strong> untuk: angka/statistik (mis. <strong>85%</strong>), nama produk/lembaga penting, fakta kunci
+   - <em> hanya untuk penekanan makna yang benar-benar perlu
+   - Tempatkan 2-4 tag <strong> per bagian secara natural, bukan dipaksakan
 
-5. DAFTAR — Jika ada 3+ item serupa, gunakan <ul><li>...</li></ul> atau <ol><li>...</li></ul>.
-   Setiap <li> minimal 1 kalimat lengkap, bukan hanya kata.
+5. DAFTAR — wajib jika ada 3+ item/langkah/manfaat yang setara:
+   <ul><li>Item dengan minimal 1 kalimat penjelasan</li></ul>
+   atau <ol> untuk urutan langkah yang harus berurutan${instruksiFAQ}
 
-6. LARANGAN:
-   - JANGAN gunakan <h1> sama sekali
-   - JANGAN tulis heading dan isi dengan ukuran/bobot yang sama
-   - JANGAN gunakan Markdown (**, ##, dsb.)
-   - JANGAN tambahkan komentar atau penjelasan di luar konten artikel
+═══ LARANGAN ═══
+- JANGAN gunakan <h1> sama sekali
+- JANGAN gunakan Markdown (**, ##, *, __, dsb.)
+- JANGAN tulis kalimat pengisi seperti "Dalam sub-bagian ini..." atau "Seperti yang telah dibahas..."
+- JANGAN tambahkan komentar, catatan, atau teks apa pun di luar konten artikel
 
 ═══ GAYA PENULISAN ═══
 - Bahasa Indonesia baku, kalimat aktif, langsung ke inti
-- Hindari basa-basi pembuka seperti "Perlu diketahui bahwa..." atau "Tidak dapat dipungkiri..."
-- Setiap paragraf harus punya satu ide utama yang jelas
-- Target panjang: 300–450 kata untuk bagian ini
+- Sertakan minimal satu data, angka konkret, atau contoh nyata per bagian
+- Hindari kalimat pasif berlebihan dan kata sifat yang tidak terukur ("sangat", "banyak", "berbagai")
+- Target: 280-380 kata untuk bagian ini
 
-Langsung tulis konten HTML-nya, mulai dari tag <h2>:`;
+Langsung tulis konten HTML mulai dari <h2>:`;
 
   const raw = await callAI(prompt, 1400);
   return sanitizeHTML(raw);
@@ -581,6 +599,7 @@ async function main() {
   try {
     meta = await generateMetadata(topikDipilih.kategori, subtopik, topikDipilih.post_type);
     log(`✅ Judul        : "${meta.title}"`);
+    log(`🔑 Focus KW     : "${meta.focusKw}"`);
     log(`📎 Tags         : ${meta.tags.join(", ")}`);
     log(`🎨 Image prompt : "${meta.imagePrompt}"`);
   } catch (e) {

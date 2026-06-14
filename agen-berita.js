@@ -319,14 +319,14 @@ async function selectTopicsFromRSS(rssItems) {
     .map((item, i) => `${i + 1}. [${item.sumber}] ${item.judul}`)
     .join("\n");
   const text = await callAI([
-    { role: "system", content: "Kamu adalah editor berita Indonesia." },
+    { role: "system", content: "Kamu adalah editor berita senior Indonesia yang ahli SEO dan tahu topik apa yang diminati pembaca digital." },
     { role: "user", content:
-      `Dari daftar berita berikut, pilih ${JUMLAH_ARTIKEL} yang paling menarik dan beragam.\n\n` +
+      `Dari daftar berita berikut, pilih ${JUMLAH_ARTIKEL} yang paling bernilai dan menarik—utamakan topik teknologi, bisnis digital, sains, dan isu nasional yang relevan luas.\n\n` +
       `DAFTAR:\n${daftarBerita}\n\n` +
-      `Untuk setiap topik, tulis format PERSIS ini:\n` +
-      `TOPIK: judul topik\n` +
-      `RINGKASAN: ringkasan 1 kalimat\n` +
-      `GAMBAR: 3 kata Inggris untuk ilustrasi\n` +
+      `Untuk setiap topik yang dipilih, tulis format PERSIS ini (tanpa penjelasan lain):\n` +
+      `TOPIK: judul topik yang diparafrase—informatif dan SEO-friendly\n` +
+      `RINGKASAN: 2 kalimat—(1) apa yang terjadi dan siapa yang terlibat, (2) mengapa ini penting bagi pembaca Indonesia\n` +
+      `GAMBAR: 8-12 kata bahasa Inggris deskriptif untuk generate ilustrasi berita (contoh: "Indonesian tech startup team celebrating Series A funding in modern office")\n` +
       `KATEGORI: teknologi/hiburan/olahraga/nasional/bisnis/gaya-hidup/kesehatan/sains\n` +
       `---\nUlangi untuk setiap topik. Tidak ada teks lain.`
     },
@@ -343,13 +343,13 @@ async function selectTopicsFallback() {
     timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
   const text = await callAI([
-    { role: "system", content: "Kamu adalah editor berita Indonesia." },
+    { role: "system", content: "Kamu adalah editor berita senior Indonesia yang ahli SEO dan tahu topik apa yang diminati pembaca digital." },
     { role: "user", content:
-      `Hari ini ${hari}. Buat ${JUMLAH_ARTIKEL} topik berita yang sedang ramai di Indonesia, pilih yang beragam.\n\n` +
-      `Untuk setiap topik, tulis format PERSIS ini:\n` +
-      `TOPIK: judul topik\n` +
-      `RINGKASAN: ringkasan 1 kalimat\n` +
-      `GAMBAR: 3 kata Inggris untuk ilustrasi\n` +
+      `Hari ini ${hari}. Buat ${JUMLAH_ARTIKEL} topik berita aktual yang sedang relevan di Indonesia—fokus pada teknologi, AI, bisnis digital, ekonomi, atau sains terapan yang menarik pembaca luas.\n\n` +
+      `Untuk setiap topik, tulis format PERSIS ini (tanpa teks lain):\n` +
+      `TOPIK: judul berita informatif dan SEO-friendly (bukan terlalu clickbait)\n` +
+      `RINGKASAN: 2 kalimat—(1) apa yang sedang terjadi atau berkembang, (2) mengapa penting dan apa dampaknya bagi pembaca Indonesia\n` +
+      `GAMBAR: 8-12 kata bahasa Inggris deskriptif untuk generate gambar ilustrasi (contoh: "Indonesian businessman using AI software on laptop in modern Jakarta office")\n` +
       `KATEGORI: teknologi/hiburan/olahraga/nasional/bisnis/gaya-hidup/kesehatan/sains\n` +
       `---\nUlangi untuk setiap topik. Tidak ada teks lain.`
     },
@@ -384,17 +384,18 @@ async function generateArticle(topic) {
   // ── Langkah 3a: Generate metadata (plain text label) ──
   log(`   📋 Langkah 1: Generate metadata...`);
   const metaText = await callAI([
-    { role: "system", content: "Kamu adalah editor berita Indonesia." },
+    { role: "system", content: "Kamu adalah editor berita senior Indonesia yang ahli SEO on-page." },
     { role: "user", content:
-      `Buat metadata artikel berita Bahasa Indonesia tentang: "${topic.topik}"\n\n` +
-      `Tulis dalam format PERSIS ini, tidak ada teks lain:\n` +
-      `JUDUL: judul artikel menarik dan SEO-friendly\n` +
-      `SLUG: judul-dalam-format-slug-huruf-kecil\n` +
-      `EXCERPT: ringkasan 1 kalimat maksimal 150 karakter\n` +
-      `TAGS: tag1, tag2, tag3\n` +
-      `META: deskripsi SEO maksimal 150 karakter`
+      `Buat metadata SEO untuk artikel berita Bahasa Indonesia tentang:\n"${topic.topik}"\nKonteks: ${topic.ringkasan}\n\n` +
+      `Tulis PERSIS format ini, tidak ada teks lain:\n` +
+      `FOCUS_KW: kata kunci utama 2-4 kata yang paling banyak dicari di Google Indonesia\n` +
+      `JUDUL: 50-60 karakter — kata kunci di AWAL kalimat, gunakan angka jika relevan, harus menarik diklik\n` +
+      `SLUG: judul-format-slug-huruf-kecil-tanpa-angka-di-depan\n` +
+      `EXCERPT: 130-150 karakter — sebut kata kunci di kalimat pertama, padat dan informatif, hindari "artikel ini"\n` +
+      `TAGS: 5-7 tag dari umum ke spesifik, pisahkan koma\n` +
+      `META: 130-155 karakter — buka dengan kata kunci, manfaat untuk pembaca, akhiri dengan "Baca selengkapnya." atau "Simak ulasan lengkapnya."`
     },
-  ], 400);
+  ], 450);
 
   // Parse plain text label
   const getLabel = (label) => {
@@ -402,14 +403,16 @@ async function generateArticle(topic) {
     return m?.[1]?.trim() ?? '';
   };
 
+  let focusKw = getLabel('FOCUS_KW');
   let judul   = getLabel('JUDUL');
   let slug    = getLabel('SLUG');
   let excerpt = getLabel('EXCERPT');
-  const tagsRaw = getLabel('TAGS');
+  const tagsRaw  = getLabel('TAGS');
   const metaDesc = getLabel('META');
 
   if (!judul) judul = topic.topik;
   if (!excerpt) excerpt = topic.ringkasan?.slice(0, 150) || judul;
+  if (!focusKw) focusKw = topic.topik.split(" ").slice(0, 3).join(" ");
 
   // Generate/sanitasi slug
   if (!slug) slug = judul;
@@ -419,7 +422,7 @@ async function generateArticle(topic) {
 
   const tags = tagsRaw ? tagsRaw.split(/,\s*/).map(t => t.trim()).filter(Boolean) : [];
 
-  const meta = { judul, slug, excerpt, tags };
+  const meta = { judul, slug, excerpt, tags, focusKw, metaDesc };
 
   log(`   ✅ Judul : ${meta.judul}`);
   log(`   ✅ Slug  : ${meta.slug}`);
@@ -429,15 +432,23 @@ async function generateArticle(topic) {
   // ── Langkah 3b: Generate konten HTML (plain text, bukan JSON) ──
   log(`   📄 Langkah 2: Generate konten artikel...`);
   const kontenText = await callAI([
-    { role: "system", content: "Kamu adalah jurnalis Indonesia. Tulis artikel berita langsung tanpa penjelasan tambahan." },
+    { role: "system", content: "Kamu adalah jurnalis Indonesia berpengalaman. Tulis berita dengan gaya piramida terbalik: fakta paling penting di awal, detail di tengah, konteks di akhir. Bahasa baku, paragraf pendek (2-4 kalimat), tidak terasa ditulis AI." },
     { role: "user", content:
-      `Tulis artikel berita Bahasa Indonesia tentang: "${topic.topik}"\n` +
-      `Konteks: ${topic.ringkasan}\n\n` +
-      `Ketentuan:\n` +
-      `- Minimal 400 kata\n` +
-      `- Format HTML menggunakan tag: <p>, <h2>, <ul>, <li>, <strong>\n` +
-      `- Mulai langsung dengan <p> atau <h2>, tanpa judul di awal\n` +
-      `- Jangan tambahkan penjelasan, langsung isi artikel saja`
+      `Tulis artikel berita jurnalistik Bahasa Indonesia tentang:\n"${topic.topik}"\nKonteks: ${topic.ringkasan}\n\n` +
+      `STRUKTUR WAJIB:\n` +
+      `1. Paragraf pembuka <p>: jawab 5W+1H dalam 2-3 kalimat. Masukkan kata kunci utama di kalimat pertama.\n` +
+      `2. <h2>Latar Belakang</h2> + 2 paragraf <p>: konteks dan kronologi singkat\n` +
+      `3. <h2>[Judul Sub-Topik Paling Relevan]</h2> + 2-3 paragraf: detail peristiwa, data, angka konkret\n` +
+      `4. <h2>Dampak dan Implikasi</h2> + <ul><li>: 3-5 poin dampak nyata yang konkret\n` +
+      `5. <h2>Analisis</h2> + 1-2 paragraf: sudut pandang atau kutipan ahli dalam <blockquote>\n\n` +
+      `ATURAN FORMAT HTML:\n` +
+      `- Semua teks dalam <p>...</p>, maksimal 4 kalimat per paragraf\n` +
+      `- <strong> untuk angka penting, nama lembaga/produk, dan fakta kunci\n` +
+      `- <ul><li> untuk daftar 3+ item, setiap <li> minimal 1 kalimat\n` +
+      `- <blockquote> untuk kutipan atau pernyataan ahli\n` +
+      `- JANGAN gunakan <h1> atau Markdown (**, ##, *)\n` +
+      `- Mulai langsung dengan <p>, tanpa judul artikel di awal\n\n` +
+      `Target: minimal 500 kata. Tulis langsung konten HTML-nya:`
     },
   ], 3000);
 
@@ -462,6 +473,8 @@ async function generateArticle(topic) {
     excerpt          : meta.excerpt,
     konten           : konten,
     tags             : meta.tags ?? [],
+    focusKw          : meta.focusKw,
+    metaDesc         : meta.metaDesc || meta.excerpt,
   };
 }
 
