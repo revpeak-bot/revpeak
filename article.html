@@ -36,6 +36,9 @@
 </head>
 <body>
 
+  <!-- READING PROGRESS BAR -->
+  <div class="reading-progress-bar" id="reading-progress" aria-hidden="true"></div>
+
   <!-- DRAWER OVERLAY -->
   <div class="drawer-overlay" id="drawer-overlay"></div>
 
@@ -280,6 +283,20 @@
       sc.addEventListener("click", () => { si.value = ""; sc.style.display = "none"; si.focus(); });
     }
 
+    // Reading Progress Bar
+    const progressBar = document.getElementById('reading-progress');
+    if (progressBar) {
+      window.addEventListener('scroll', () => {
+        const articleMain = document.querySelector('.article-main');
+        if (!articleMain) return;
+        const rect   = articleMain.getBoundingClientRect();
+        const total  = articleMain.offsetHeight - window.innerHeight;
+        const scrolled = Math.max(0, -rect.top);
+        const pct    = total > 0 ? Math.min(100, (scrolled / total) * 100) : 0;
+        progressBar.style.width = pct + '%';
+      }, { passive: true });
+    }
+
     // Scroll top
     const scrollBtn = document.getElementById("scroll-top");
     window.addEventListener("scroll", () => {
@@ -291,10 +308,10 @@
     // Fungsi ini dipanggil otomatis setelah article.js menyuntikkan konten,
     // ATAU bisa dipanggil manual dari article.js: window.injectReadingTime()
     function injectReadingTime() {
-      const body = document.querySelector('.article-body');
+      const body = document.querySelector('.article-content');  /* fix: was .article-body */
       if (!body) return;
 
-      const WPM   = 200; // rata-rata kecepatan baca Bahasa Indonesia
+      const WPM   = 200;
       const words = body.innerText.trim().split(/\s+/).filter(Boolean).length;
       const mins  = Math.max(1, Math.round(words / WPM));
       const label = mins === 1 ? '1 menit baca' : `${mins} menit baca`;
@@ -308,14 +325,11 @@
         </svg>
         ${label}`;
 
-      // Coba sisipkan ke .article-meta (setelah tanggal/penulis)
       const meta = document.querySelector('.article-meta');
       if (meta) {
         meta.appendChild(badge);
         return;
       }
-
-      // Fallback: sisipkan sebelum .article-body
       body.insertAdjacentElement('beforebegin', badge);
     }
 
