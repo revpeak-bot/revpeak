@@ -1,25 +1,37 @@
+# ============================================================
+# REVPEAK — .github/workflows/sync-ai-search.yml
+# Sync konten artikel, berita, dan buku ke Cloudflare AI Search
+#
+# Jadwal: setiap hari jam 01:00 UTC (08:00 WIB)
+# Bisa dipicu manual: Actions → Sync AI Search Index → Run workflow
+# ============================================================
+
 name: Sync AI Search Index
 
 on:
   schedule:
-    # Jalankan setiap hari jam 01:00 UTC
-    - cron: '0 1 * * *'
-  workflow_dispatch: # Bisa dipicu manual dari Dashboard
+    - cron: "0 1 * * *"   # 01:00 UTC = 08:00 WIB
+  workflow_dispatch:       # Trigger manual dari GitHub Actions
 
 jobs:
   sync:
+    name: Sync ke Cloudflare AI Search
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout repo
+        uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: "20"
 
-      - name: Run sync script
+      - name: Jalankan script sync
         run: node .github/scripts/sync-ai-search.js
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          SUPABASE_URL  : ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY  : ${{ secrets.SUPABASE_KEY }}
+          CF_ACCOUNT_ID : ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN  : ${{ secrets.CF_API_TOKEN }}
+          WORKER_URL    : ${{ secrets.WORKER_URL }}
