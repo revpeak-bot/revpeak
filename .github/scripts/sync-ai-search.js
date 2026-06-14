@@ -79,19 +79,14 @@ async function supabaseFetch(path) {
 async function syncArtikels() {
   console.log("\n📰 Sync Artikel...");
 
-  // DEBUG: cek total rows tanpa filter dulu
-  const allRows = await supabaseFetch("articles?select=id,post_type,status&limit=5");
-  console.log("  [DEBUG] Sample rows (no filter):", JSON.stringify(allRows.slice(0, 3)));
-
   const rows = await supabaseFetch(
     "articles"
     + "?select=slug,title,excerpt,content,published_at,categories(name),authors(name)"
-    + "&post_type=eq.artikel"
+    + "&post_type=eq.article"
     + "&status=eq.published"
     + "&order=published_at.desc"
     + "&limit=500"
   );
-  console.log(`  [DEBUG] Rows setelah filter post_type=artikel & status=published: ${rows.length}`);
 
   let ok = 0, fail = 0;
   for (const a of rows) {
@@ -136,7 +131,7 @@ async function syncBerita() {
   const rows = await supabaseFetch(
     "articles"
     + "?select=slug,title,excerpt,content,published_at,categories(name),authors(name)"
-    + "&post_type=eq.berita"
+    + "&post_type=eq.news"
     + "&status=eq.published"
     + "&order=published_at.desc"
     + "&limit=500"
