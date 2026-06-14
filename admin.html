@@ -11,13 +11,85 @@
   <link rel="stylesheet" href="css/admin.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css">
   <style>
-    #bf-content-toolbar { border-bottom: none; border-radius: 8px 8px 0 0; }
+    #bf-content-toolbar { border-bottom: none; border-radius: 8px 8px 0 0; flex-wrap: wrap; }
     #bf-content-editor  {
       min-height: 320px; max-height: 600px; overflow-y: auto;
       border-radius: 0 0 8px 8px; font-size: .95rem; line-height: 1.7;
     }
     .ql-container { font-family: 'DM Sans', sans-serif; }
     .ql-editor p  { margin-bottom: .5em; }
+    /* Tombol garis horizontal kustom */
+    .ql-hr { font-size: 1rem; font-weight: 700; line-height: 1; padding: 0 4px !important; }
+    /* Tombol tabel kustom */
+    .ql-table::before { content: "⊞"; font-size: .95rem; }
+    /* Toolbar wrap di mobile */
+    .ql-toolbar.ql-snow { flex-wrap: wrap !important; }
+    .ql-toolbar.ql-snow .ql-formats { margin-bottom: 2px; }
+    /* Tabel di dalam editor Quill */
+    .ql-editor table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+    .ql-editor table th,
+    .ql-editor table td { border: 1px solid #ccc; padding: 7px 10px; min-width: 60px; vertical-align: top; }
+    .ql-editor table th { background: rgba(0,0,0,.05); font-weight: 700; text-align: left; }
+    /* Tabel di pratinjau konten */
+    .preview-content table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+    .preview-content table th,
+    .preview-content table td { border: 1px solid var(--border,#ccc); padding: 8px 12px; }
+    .preview-content table th { background: var(--surface); font-weight: 700; }
+    /* Modal sisipkan tabel */
+    .tbl-insert-overlay {
+      position: fixed; inset: 0; z-index: 10000;
+      background: rgba(0,0,0,.55); backdrop-filter: blur(3px);
+      display: none; align-items: center; justify-content: center; padding: 16px;
+    }
+    .tbl-insert-overlay.open { display: flex; }
+    .tbl-insert-box {
+      background: var(--bg, #fff); border-radius: 14px;
+      width: 100%; max-width: 340px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      overflow: hidden;
+    }
+    .tbl-insert-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      font-weight: 700; font-size: .95rem;
+    }
+    .tbl-insert-close {
+      background: none; border: none; font-size: 1.1rem;
+      cursor: pointer; color: var(--text-muted); padding: 4px 8px; border-radius: 6px;
+    }
+    .tbl-insert-body { padding: 20px 18px; }
+    .tbl-counter-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .tbl-counter-label { font-size: .9rem; font-weight: 600; color: var(--text); }
+    .tbl-counter {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .tbl-counter button {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--surface);
+      font-size: 1.1rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text); transition: background .15s;
+    }
+    .tbl-counter button:hover { background: var(--accent,#E03E0B); color: #fff; border-color: var(--accent,#E03E0B); }
+    .tbl-counter-val {
+      min-width: 28px; text-align: center;
+      font-size: 1.05rem; font-weight: 700; color: var(--text);
+    }
+    .tbl-preview {
+      display: grid; gap: 3px; margin-top: 8px; margin-bottom: 4px;
+    }
+    .tbl-preview-cell {
+      height: 18px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 2px;
+    }
+    .tbl-insert-footer {
+      display: flex; gap: 8px; padding: 14px 18px;
+      border-top: 1px solid var(--border);
+    }
+    .tbl-insert-footer button { flex: 1; }
     .content-mode-tabs {
       display: flex; gap: 0; margin-bottom: 12px;
       border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
@@ -679,27 +751,79 @@
           <!-- Editor Quill -->
           <div id="panel-write-mode" style="display:none" role="tabpanel">
             <div id="bf-content-toolbar">
+              <!-- Heading & Ukuran Teks -->
               <span class="ql-formats">
-                <select class="ql-header">
-                  <option selected></option>
+                <select class="ql-header" title="Gaya Teks">
+                  <option selected>Teks Normal</option>
                   <option value="1">Heading 1</option>
                   <option value="2">Heading 2</option>
                   <option value="3">Heading 3</option>
+                  <option value="4">Heading 4</option>
                 </select>
               </span>
               <span class="ql-formats">
-                <button class="ql-bold"      title="Bold"></button>
-                <button class="ql-italic"    title="Italic"></button>
-                <button class="ql-underline" title="Underline"></button>
+                <select class="ql-font" title="Jenis Font">
+                  <option selected>Sans-serif</option>
+                  <option value="serif">Serif</option>
+                  <option value="monospace">Monospace</option>
+                </select>
               </span>
               <span class="ql-formats">
-                <button class="ql-list" value="ordered"  title="Daftar Nomor"></button>
-                <button class="ql-list" value="bullet"   title="Daftar Poin"></button>
-                <button class="ql-blockquote"            title="Kutipan"></button>
+                <select class="ql-size" title="Ukuran Font">
+                  <option value="small">Kecil</option>
+                  <option selected>Normal</option>
+                  <option value="large">Besar</option>
+                  <option value="huge">Sangat Besar</option>
+                </select>
               </span>
+              <!-- Format Teks: B / I / U / Coret -->
               <span class="ql-formats">
-                <button class="ql-link"   title="Link"></button>
-                <button class="ql-clean"  title="Hapus Format"></button>
+                <button class="ql-bold"      title="Tebal (Bold)"></button>
+                <button class="ql-italic"    title="Miring (Italic)"></button>
+                <button class="ql-underline" title="Garis Bawah (Underline)"></button>
+                <button class="ql-strike"    title="Coret (Strikethrough)"></button>
+              </span>
+              <!-- Superskrip & Subskrip (X² / X₂) -->
+              <span class="ql-formats">
+                <button class="ql-script" value="super" title="Superskrip (X²)"></button>
+                <button class="ql-script" value="sub"   title="Subskrip (X₂)"></button>
+              </span>
+              <!-- Warna Teks & Sorot -->
+              <span class="ql-formats">
+                <select class="ql-color"      title="Warna Teks"></select>
+                <select class="ql-background" title="Sorot Teks (Highlight)"></select>
+              </span>
+              <!-- Perataan Teks -->
+              <span class="ql-formats">
+                <select class="ql-align" title="Perataan Teks">
+                  <option selected title="Rata Kiri"></option>
+                  <option value="center"  title="Rata Tengah"></option>
+                  <option value="right"   title="Rata Kanan"></option>
+                  <option value="justify" title="Rata Kanan-Kiri"></option>
+                </select>
+              </span>
+              <!-- Indentasi -->
+              <span class="ql-formats">
+                <button class="ql-indent" value="-1" title="Kurangi Indentasi"></button>
+                <button class="ql-indent" value="+1" title="Tambah Indentasi"></button>
+              </span>
+              <!-- Daftar & Blok -->
+              <span class="ql-formats">
+                <button class="ql-list"      value="ordered" title="Daftar Nomor"></button>
+                <button class="ql-list"      value="bullet"  title="Daftar Poin"></button>
+                <button class="ql-blockquote"               title="Kutipan (Blockquote)"></button>
+                <button class="ql-code-block"               title="Blok Kode (Markup)"></button>
+              </span>
+              <!-- Sisipkan: Link / Gambar / Tabel / Garis Horizontal -->
+              <span class="ql-formats">
+                <button class="ql-link"  title="Sisipkan Link"></button>
+                <button class="ql-image" title="Sisipkan Gambar"></button>
+                <button class="ql-table" title="Sisipkan Tabel"></button>
+                <button class="ql-hr"    title="Garis Horizontal">—</button>
+              </span>
+              <!-- Hapus Format -->
+              <span class="ql-formats">
+                <button class="ql-clean" title="Hapus Format"></button>
               </span>
             </div>
             <div id="bf-content-editor" aria-label="Editor konten buku"></div>
@@ -808,6 +932,41 @@
       <div class="modal-ftr">
         <button class="btn-secondary" onclick="document.getElementById('modal-confirm').style.display='none'">Batal</button>
         <button class="btn-danger" id="btn-confirm-ok">Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: SISIPKAN TABEL ===== -->
+  <div class="tbl-insert-overlay" id="tbl-insert-modal" role="dialog"
+       aria-modal="true" aria-labelledby="tbl-insert-title">
+    <div class="tbl-insert-box">
+      <div class="tbl-insert-header">
+        <span id="tbl-insert-title">⊞ Sisipkan Tabel</span>
+        <button class="tbl-insert-close" id="btn-close-tbl-modal" aria-label="Tutup">✕</button>
+      </div>
+      <div class="tbl-insert-body">
+        <div class="tbl-counter-row">
+          <span class="tbl-counter-label">Baris</span>
+          <div class="tbl-counter">
+            <button type="button" id="tbl-row-dec" aria-label="Kurangi baris">−</button>
+            <span class="tbl-counter-val" id="tbl-row-val">3</span>
+            <button type="button" id="tbl-row-inc" aria-label="Tambah baris">+</button>
+          </div>
+        </div>
+        <div class="tbl-counter-row">
+          <span class="tbl-counter-label">Kolom</span>
+          <div class="tbl-counter">
+            <button type="button" id="tbl-col-dec" aria-label="Kurangi kolom">−</button>
+            <span class="tbl-counter-val" id="tbl-col-val">3</span>
+            <button type="button" id="tbl-col-inc" aria-label="Tambah kolom">+</button>
+          </div>
+        </div>
+        <!-- Pratinjau mini grid -->
+        <div class="tbl-preview" id="tbl-grid-preview"></div>
+      </div>
+      <div class="tbl-insert-footer">
+        <button type="button" class="btn-secondary" id="btn-cancel-tbl">Batal</button>
+        <button type="button" class="btn-primary"   id="btn-confirm-tbl">✅ Sisipkan</button>
       </div>
     </div>
   </div>
