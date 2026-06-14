@@ -1486,6 +1486,231 @@ function initCoverUpload() {
   });
 }
 
+// ============================================================
+// SISTEM BAB (CHAPTERS) — Konten Buku
+// ============================================================
+
+// State bab
+let _chapters        = [];   // [{ id, title, content }]
+let _activeChapterId = null;
+let _chapterCounter  = 0;
+
+function _newChapterId() { return ++_chapterCounter; }
+
+// ── Render daftar bab ────────────────────────────────────────
+function renderChapterList() {
+  const list    = document.getElementById("chapter-list");
+  const empty   = document.getElementById("chapter-empty-hint");
+  const edWrap  = document.getElementById("chapter-editor-wrap");
+  const countEl = document.getElementById("chapter-count-label");
+
+  if (!list) return;
+
+  const n = _chapters.length;
+  if (countEl) countEl.textContent = n === 0 ? "Belum ada bab" : `${n} bab`;
+
+  // Hapus item lama (tapi pertahankan elemen empty-hint)
+  list.querySelectorAll(".chapter-item").forEach(el => el.remove());
+
+  if (n === 0) {
+    if (empty)  empty.style.display  = "";
+    if (edWrap) edWrap.style.display = "none";
+    _activeChapterId = null;
+    return;
+  }
+
+  if (empty) empty.style.display = "none";
+
+  // Buat item per bab
+  _chapters.forEach((ch, idx) => {
+    const isActive = ch.id === _activeChapterId;
+    const item     = document.createElement("div");
+    item.className = "chapter-item" + (isActive ? " active" : "");
+    item.dataset.chapId = ch.id;
+
+    const canUp   = idx > 0;
+    const canDown = idx < n - 1;
+
+    item.innerHTML = `
+      <div class="chapter-item-header" role="button" tabindex="0"
+           aria-label="Pilih bab ${idx + 1}: ${escapeHtml(ch.title || 'Tanpa Judul')}"
+           aria-pressed="${isActive}">
+        <span class="chapter-item-num">${idx + 1}</span>
+        <span class="chapter-item-title">${escapeHtml(ch.title || "Tanpa Judul")}</span>
+        <span class="chapter-item-actions">
+          <button type="button" class="chapter-btn up"
+            title="Pindah ke atas" ${!canUp ? "disabled" : ""} aria-label="Pindah bab ke atas">↑</button>
+          <button type="button" class="chapter-btn down"
+            title="Pindah ke bawah" ${!canDown ? "disabled" : ""} aria-label="Pindah bab ke bawah">↓</button>
+          <button type="button" class="chapter-btn del"
+            title="Hapus bab ini" aria-label="Hapus bab ${idx + 1}">✕</button>
+        </span>
+      </div>`;
+
+    // Pilih bab saat klik header
+    const header = item.querySelector(".chapter-item-header");
+    header.addEventListener("click", (e) => {
+      // Jangan trigger jika klik tombol aksi
+      if (e.target.closest(".chapter-item-actions")) return;
+      selectChapter(ch.id);
+    });
+    header.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectChapter(ch.id); }
+    });
+
+    // Tombol aksi
+    item.querySelector(".chapter-btn.up")?.addEventListener("click", e => {
+      e.stopPropagation(); moveChapter(ch.id, -1);
+    });
+    item.querySelector(".chapter-btn.down")?.addEventListener("click", e => {
+      e.stopPropagation(); moveChapter(ch.id, 1);
+    });
+    item.querySelector(".chapter-btn.del")?.addEventListener("click", e => {
+      e.stopPropagation(); deleteChapter(ch.id);
+    });
+
+    list.appendChild(item);
+  });
+
+  // Tampilkan atau sembunyikan editor
+  if (edWrap) edWrap.style.display = _activeChapterId ? "" : "none";
+}
+
+// ── Pilih bab aktif ──────────────────────────────────────────
+function selectChapter(id) {
+  // Simpan konten editor ke bab yang sedang aktif sebelum pindah
+  saveActiveChapterContent();
+
+  _activeChapterId = id;
+  const ch = _chapters.find(c => c.id === id);
+  if (!ch) return;
+
+  // Load konten bab ke editor
+  const q = window._bookQuill;
+  if (q) {
+    if (ch.content) {
+      q.root.innerHTML = ch.content;
+    } else {
+      q.setText("");
+    }
+    q.setSelection(0, 0);
+  }
+
+  // Update input judul bab
+  const titleInput = document.getElementById("chapter-title-input");
+  if (titleInput) titleInput.value = ch.title || "";
+
+  renderChapterList();
+}
+
+// ── Simpan konten editor ke bab aktif ────────────────────────
+function saveActiveChapterContent() {
+  if (!_activeChapterId) return;
+  const ch = _chapters.find(c => c.id === _activeChapterId);
+  if (!ch) return;
+
+  const q = window._bookQuill;
+  if (q) {
+    const html = q.root.innerHTML;
+    ch.content = (html && html !== "<p><br></p>") ? html : "";
+  }
+
+  // Simpan judul dari input
+  const titleInput = document.getElementById("chapter-title-input");
+  if (titleInput) ch.title = titleInput.value.trim() || ch.title;
+}
+
+// ── Tambah bab baru ──────────────────────────────────────────
+function addChapter() {
+  saveActiveChapterContent();
+
+  const newCh = { id: _newChapterId(), title: `Bab ${_chapters.length + 1}`, content: "" };
+  _chapters.push(newCh);
+
+  _activeChapterId = newCh.id;
+  renderChapterList();
+
+  // Load bab kosong ke editor
+  const q = window._bookQuill;
+  if (q) { q.setText(""); q.setSelection(0, 0); }
+
+  const titleInput = document.getElementById("chapter-title-input");
+  if (titleInput) {
+    titleInput.value = newCh.title;
+    setTimeout(() => titleInput.focus(), 50);
+  }
+
+  const edWrap = document.getElementById("chapter-editor-wrap");
+  if (edWrap) edWrap.style.display = "";
+
+  showToast(`Bab ${_chapters.length} ditambahkan.`);
+}
+
+// ── Hapus bab ────────────────────────────────────────────────
+function deleteChapter(id) {
+  const ch  = _chapters.find(c => c.id === id);
+  const idx = _chapters.findIndex(c => c.id === id);
+  const label = ch?.title ? `"${ch.title}"` : `Bab ${idx + 1}`;
+
+  if (!confirmDialog(`Hapus ${label}? Konten bab ini akan dihapus permanen.`)) return;
+
+  // Jika yang dihapus adalah bab aktif, pindah ke bab lain
+  if (_activeChapterId === id) {
+    const next = _chapters[idx + 1] || _chapters[idx - 1];
+    _activeChapterId = next ? next.id : null;
+  }
+
+  _chapters.splice(idx, 1);
+
+  // Load bab aktif berikutnya (jika ada)
+  if (_activeChapterId) {
+    const nextCh = _chapters.find(c => c.id === _activeChapterId);
+    const q = window._bookQuill;
+    if (q && nextCh) {
+      q.root.innerHTML = nextCh.content || "";
+      q.setSelection(0, 0);
+    }
+    const titleInput = document.getElementById("chapter-title-input");
+    if (titleInput && nextCh) titleInput.value = nextCh.title || "";
+  } else {
+    const q = window._bookQuill;
+    if (q) q.setText("");
+  }
+
+  renderChapterList();
+  showToast(`${label} dihapus.`);
+}
+
+// ── Pindah urutan bab ────────────────────────────────────────
+function moveChapter(id, dir) {
+  saveActiveChapterContent();
+  const idx = _chapters.findIndex(c => c.id === id);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= _chapters.length) return;
+
+  const temp          = _chapters[idx];
+  _chapters[idx]      = _chapters[newIdx];
+  _chapters[newIdx]   = temp;
+
+  renderChapterList();
+}
+
+// ── Update judul bab aktif saat input berubah ────────────────
+function onChapterTitleInput() {
+  if (!_activeChapterId) return;
+  const ch    = _chapters.find(c => c.id === _activeChapterId);
+  const input = document.getElementById("chapter-title-input");
+  if (ch && input) {
+    ch.title = input.value;
+    // Update teks di daftar bab secara langsung
+    const item = document.querySelector(`.chapter-item[data-chap-id="${_activeChapterId}"]`);
+    if (item) {
+      const titleEl = item.querySelector(".chapter-item-title");
+      if (titleEl) titleEl.textContent = input.value || "Tanpa Judul";
+    }
+  }
+}
+
 // ── Quill editor init ────────────────────────────────────────
 function initBookContentEditor() {
   if (window._bookQuill) return; // sudah init
@@ -1515,7 +1740,6 @@ function initBookContentEditor() {
       toolbar: {
         container: "#bf-content-toolbar",
         handlers: {
-          // Handler kustom: Garis Horizontal
           hr: function () {
             const quill = this.quill;
             const range = quill.getSelection(true);
@@ -1523,19 +1747,24 @@ function initBookContentEditor() {
             quill.insertEmbed(range.index, 'divider', true, Quill.sources.USER);
             quill.setSelection(range.index + 1, Quill.sources.SILENT);
           },
-          // Handler kustom: Sisipkan Tabel
-          table: function () {
-            openTableInsertModal();
-          },
+          table: function () { openTableInsertModal(); },
         },
       },
     },
-    placeholder: "Tulis konten buku di sini...",
+    placeholder: "Tulis konten bab di sini...",
   });
 
+  // ── Input judul bab ───────────────────────────────────────
+  document.getElementById("chapter-title-input")
+    ?.addEventListener("input", onChapterTitleInput);
+
+  // ── Tombol tambah bab ─────────────────────────────────────
+  document.getElementById("btn-add-chapter")
+    ?.addEventListener("click", addChapter);
+
   // ── Toggle tab mode ──────────────────────────────────────
-  const tabFile  = document.getElementById("tab-file-mode");
-  const tabWrite = document.getElementById("tab-write-mode");
+  const tabFile    = document.getElementById("tab-file-mode");
+  const tabWrite   = document.getElementById("tab-write-mode");
   const panelWrite = document.getElementById("panel-write-mode");
   const modeLabel  = document.getElementById("content-mode-label");
 
@@ -1555,17 +1784,31 @@ function initBookContentEditor() {
   // ── Modal tabel ───────────────────────────────────────────
   initTableInsertModal();
 
-  // ── Pratinjau ────────────────────────────────────────────
+  // ── Pratinjau semua bab ───────────────────────────────────
   document.getElementById("btn-preview-content")?.addEventListener("click", () => {
-    const html  = window._bookQuill.root.innerHTML;
-    const empty = !html || html === "<p><br></p>";
-    if (empty) { showToast("Editor masih kosong.", "error"); return; }
+    saveActiveChapterContent();
 
-    const body  = document.getElementById("preview-content-body");
-    const modal = document.getElementById("content-preview-modal");
-    const title = document.getElementById("bf-title")?.value?.trim() || "Pratinjau Konten";
+    if (!_chapters.length) { showToast("Belum ada bab untuk dipratinjau.", "error"); return; }
 
-    if (body)  body.innerHTML = `<h1 style="margin-bottom:20px">${escapeHtml(title)}</h1>` + html;
+    const allEmpty = _chapters.every(ch => !ch.content || ch.content === "<p><br></p>");
+    if (allEmpty) { showToast("Semua bab masih kosong.", "error"); return; }
+
+    const bookTitle = document.getElementById("bf-title")?.value?.trim() || "Pratinjau Buku";
+    const body      = document.getElementById("preview-content-body");
+    const modal     = document.getElementById("content-preview-modal");
+
+    if (body) {
+      body.innerHTML = `<h1 style="margin-bottom:24px">${escapeHtml(bookTitle)}</h1>`
+        + _chapters.map((ch, i) => `
+          <section style="margin-bottom:32px">
+            <h2 style="font-size:1.15rem;font-weight:800;margin-bottom:12px;
+              padding-bottom:6px;border-bottom:2px solid var(--accent,#E03E0B)">
+              ${escapeHtml(ch.title || `Bab ${i + 1}`)}
+            </h2>
+            ${ch.content || "<p><em>(Bab masih kosong)</em></p>"}
+          </section>`).join("");
+    }
+
     if (modal) modal.classList.add("open");
     document.body.style.overflow = "hidden";
   });
@@ -1578,11 +1821,16 @@ function initBookContentEditor() {
     if (e.key === "Escape") closeContentPreview();
   });
 
-  // ── Hapus konten ─────────────────────────────────────────
+  // ── Hapus semua bab ───────────────────────────────────────
   document.getElementById("btn-clear-content")?.addEventListener("click", () => {
-    if (!confirmDialog("Hapus seluruh konten tulisan?")) return;
-    window._bookQuill.setText("");
-    showToast("Konten dihapus.");
+    if (!_chapters.length) { showToast("Tidak ada bab untuk dihapus.", "error"); return; }
+    if (!confirmDialog(`Hapus semua ${_chapters.length} bab? Tindakan ini tidak bisa dibatalkan.`)) return;
+    _chapters = [];
+    _activeChapterId = null;
+    const q = window._bookQuill;
+    if (q) q.setText("");
+    renderChapterList();
+    showToast("Semua bab dihapus.");
   });
 }
 
@@ -1592,30 +1840,79 @@ function closeContentPreview() {
   document.body.style.overflow = "";
 }
 
-// ── Getter/setter konten Quill ────────────────────────────────
+// ── Getter: gabungkan semua bab menjadi HTML ─────────────────
 function getBookContent() {
-  const q = window._bookQuill;
-  if (!q) return null;
-  const html = q.root.innerHTML;
-  return (!html || html === "<p><br></p>") ? null : html;
+  saveActiveChapterContent();
+
+  if (!_chapters.length) return null;
+  const allEmpty = _chapters.every(ch => !ch.content || ch.content === "<p><br></p>");
+  if (allEmpty) return null;
+
+  return _chapters.map((ch, i) =>
+    `<section class="buku-bab" data-bab="${i + 1}">` +
+    `<h2 class="bab-judul">${escapeHtml(ch.title || `Bab ${i + 1}`)}</h2>` +
+    `<div class="bab-isi">${ch.content || ""}</div>` +
+    `</section>`
+  ).join("\n");
 }
 
+// ── Setter: urai HTML menjadi daftar bab ─────────────────────
 function setBookContent(html) {
-  const q = window._bookQuill;
-  if (!q) return;
-  if (html) {
-    q.root.innerHTML = html;
-    // Aktifkan tab "Tulis Konten" jika ada konten
-    document.getElementById("tab-write-mode")?.click();
+  _chapters = [];
+  _activeChapterId = null;
+  _chapterCounter  = 0;
+
+  if (!html || html.trim() === "") {
+    renderChapterList();
+    document.getElementById("tab-file-mode")?.click();
+    return;
+  }
+
+  // Coba parse struktur bab
+  const parser   = new DOMParser();
+  const doc      = parser.parseFromString(html, "text/html");
+  const sections = doc.querySelectorAll("section.buku-bab");
+
+  if (sections.length) {
+    sections.forEach(sec => {
+      const title   = sec.querySelector(".bab-judul")?.textContent?.trim() || "";
+      const isiEl   = sec.querySelector(".bab-isi");
+      const content = isiEl ? isiEl.innerHTML : "";
+      _chapters.push({ id: _newChapterId(), title, content });
+    });
   } else {
-    q.setText("");
+    // Konten lama tanpa struktur bab → jadikan satu bab
+    _chapters.push({ id: _newChapterId(), title: "Konten", content: html });
+  }
+
+  // Aktifkan bab pertama
+  if (_chapters.length) {
+    _activeChapterId = _chapters[0].id;
+    setTimeout(() => {
+      const q = window._bookQuill;
+      if (q) {
+        q.root.innerHTML = _chapters[0].content || "";
+        q.setSelection(0, 0);
+      }
+      const titleInput = document.getElementById("chapter-title-input");
+      if (titleInput) titleInput.value = _chapters[0].title || "";
+      renderChapterList();
+      document.getElementById("tab-write-mode")?.click();
+    }, 50);
+  } else {
+    renderChapterList();
     document.getElementById("tab-file-mode")?.click();
   }
 }
 
+// ── Reset semua bab ──────────────────────────────────────────
 function resetBookContent() {
+  _chapters        = [];
+  _activeChapterId = null;
+  _chapterCounter  = 0;
   const q = window._bookQuill;
   if (q) q.setText("");
+  renderChapterList();
   document.getElementById("tab-file-mode")?.click();
 }
 
