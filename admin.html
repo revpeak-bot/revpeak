@@ -206,6 +206,49 @@
       font-weight: 700; color: var(--text);
     }
     #chapter-title-input:focus { outline: none; }
+    /* Toggle mode Visual / HTML */
+    .editor-mode-toggle {
+      display: flex; gap: 0; border: 1px solid var(--border);
+      border-radius: 6px; overflow: hidden; flex-shrink: 0; margin-left: auto;
+    }
+    .editor-mode-btn {
+      padding: 4px 10px; border: none; background: var(--surface);
+      font-family: inherit; font-size: .76rem; font-weight: 700;
+      cursor: pointer; color: var(--text-muted); transition: all .15s;
+      line-height: 1.4;
+    }
+    .editor-mode-btn.active {
+      background: var(--accent, #E03E0B); color: #fff;
+    }
+    .editor-mode-btn:first-child { border-right: 1px solid var(--border); }
+    /* Textarea HTML editor */
+    #chapter-html-editor {
+      display: none;
+      width: 100%; min-height: 280px; max-height: 560px;
+      padding: 14px 16px; box-sizing: border-box;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: .82rem; line-height: 1.65;
+      color: var(--text); background: var(--bg);
+      border: none; resize: vertical; outline: none;
+      overflow-y: auto; white-space: pre; tab-size: 2;
+    }
+    /* Toolbar HTML helper (format, copy) */
+    .html-toolbar {
+      display: none; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 6px 14px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .html-toolbar.visible { display: flex; }
+    .html-toolbar-btn {
+      padding: 3px 9px; border: 1px solid var(--border);
+      border-radius: 5px; background: var(--bg);
+      font-size: .76rem; font-weight: 600; cursor: pointer;
+      color: var(--text); transition: all .12s; white-space: nowrap;
+    }
+    .html-toolbar-btn:hover { background: var(--accent,#E03E0B); color:#fff; border-color:var(--accent,#E03E0B); }
+    .html-mode-hint {
+      font-size: .73rem; color: var(--text-muted); margin-left: auto;
+    }
     #bf-content-toolbar { border: none; border-bottom: 1px solid var(--border); border-radius: 0; flex-wrap: wrap; }
     #bf-content-editor  {
       min-height: 280px; max-height: 560px; overflow-y: auto;
@@ -844,15 +887,49 @@
 
             <!-- Area editor (aktif saat bab dipilih) -->
             <div class="chapter-editor-wrap" id="chapter-editor-wrap" style="display:none">
-              <!-- Header: label bab + input judul -->
+              <!-- Header: label bab + input judul + toggle mode -->
               <div class="chapter-editor-header">
                 <label for="chapter-title-input">Judul Bab:</label>
                 <input type="text" id="chapter-title-input" class="form-input"
                   placeholder="Masukkan judul bab..." maxlength="120"
                   aria-label="Judul bab yang sedang diedit">
+                <!-- Toggle Visual / HTML -->
+                <div class="editor-mode-toggle" role="group" aria-label="Mode editor">
+                  <button type="button" class="editor-mode-btn active" id="btn-mode-visual"
+                    title="Mode visual (WYSIWYG)" aria-pressed="true">✏️ Visual</button>
+                  <button type="button" class="editor-mode-btn" id="btn-mode-html"
+                    title="Mode HTML (kode sumber)" aria-pressed="false">🖥 HTML</button>
+                </div>
               </div>
 
-              <!-- Toolbar Quill -->
+              <!-- Toolbar bantu HTML (hanya tampil saat mode HTML) -->
+              <div class="html-toolbar" id="html-toolbar" role="toolbar" aria-label="Alat HTML">
+                <button type="button" class="html-toolbar-btn" id="btn-html-format"
+                  title="Format / indentasi HTML otomatis">⚙ Format</button>
+                <button type="button" class="html-toolbar-btn" id="btn-html-copy"
+                  title="Salin HTML ke clipboard">📋 Salin</button>
+                <button type="button" class="html-toolbar-btn" id="btn-html-wrap-p"
+                  title="Bungkus teks terpilih dengan &lt;p&gt;">&lt;p&gt;</button>
+                <button type="button" class="html-toolbar-btn" id="btn-html-wrap-h2"
+                  title="Bungkus teks terpilih dengan &lt;h2&gt;">&lt;h2&gt;</button>
+                <button type="button" class="html-toolbar-btn" id="btn-html-wrap-h3"
+                  title="Bungkus teks terpilih dengan &lt;h3&gt;">&lt;h3&gt;</button>
+                <button type="button" class="html-toolbar-btn" id="btn-html-wrap-strong"
+                  title="Bungkus teks terpilih dengan &lt;strong&gt;">&lt;b&gt;</button>
+                <button type="button" class="html-toolbar-btn" id="btn-html-wrap-em"
+                  title="Bungkus teks terpilih dengan &lt;em&gt;">&lt;i&gt;</button>
+                <button type="button" class="html-toolbar-btn" id="btn-html-wrap-a"
+                  title="Bungkus teks terpilih dengan &lt;a href&gt;">&lt;a&gt;</button>
+                <button type="button" class="html-toolbar-btn" id="btn-html-wrap-ul"
+                  title="Sisipkan &lt;ul&gt;&lt;li&gt;">&lt;ul&gt;</button>
+                <button type="button" class="html-toolbar-btn" id="btn-html-wrap-img"
+                  title="Sisipkan tag &lt;img&gt;">&lt;img&gt;</button>
+                <button type="button" class="html-toolbar-btn" id="btn-html-wrap-bq"
+                  title="Bungkus dengan &lt;blockquote&gt;">&lt;bq&gt;</button>
+                <span class="html-mode-hint">Ctrl+S untuk simpan ke bab</span>
+              </div>
+
+              <!-- Toolbar Quill (mode visual) -->
               <div id="bf-content-toolbar">
                 <span class="ql-formats">
                   <select class="ql-header" title="Gaya Teks">
@@ -921,8 +998,15 @@
                 </span>
               </div>
 
-              <!-- Quill editor canvas -->
+              <!-- Quill editor canvas (mode visual) -->
               <div id="bf-content-editor" aria-label="Editor konten bab buku"></div>
+
+              <!-- Textarea HTML editor (mode HTML, tersembunyi default) -->
+              <textarea id="chapter-html-editor"
+                spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+                placeholder="<p>Tulis HTML di sini...</p>"
+                aria-label="Editor HTML bab buku"></textarea>
+
               <input type="hidden" id="bf-content">
             </div><!-- /chapter-editor-wrap -->
 
