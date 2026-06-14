@@ -23,7 +23,7 @@ const SUPABASE_KEY            = process.env.SUPABASE_SERVICE_KEY;
 
 // ─── Konstanta ─────────────────────────────────────────────────────────────────
 const CF_AI_BASE     = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run`;
-const TEXT_MODEL     = "@cf/meta/llama-3.1-8b-instruct";
+const TEXT_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
 const IMAGE_MODEL    = "@cf/stabilityai/stable-diffusion-xl-base-1.0";
 const JUMLAH_ARTIKEL = 1;
 const DELAY_MS       = 5000;

@@ -31,7 +31,7 @@ const CF_R2_ENDPOINT = `https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 
 // Endpoint Cloudflare Workers AI
 const CF_AI_BASE    = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run`;
-const CF_AI_TEXT    = `${CF_AI_BASE}/@cf/meta/llama-3.1-8b-instruct`;
+const CF_AI_TEXT = `${CF_AI_BASE}/@cf/meta/llama-3.1-8b-instruct-fp8`;
 const CF_AI_IMAGE   = `${CF_AI_BASE}/@cf/stabilityai/stable-diffusion-xl-base-1.0`;
 
 // Jumlah section per tipe konten
