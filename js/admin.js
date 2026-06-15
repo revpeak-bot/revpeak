@@ -1952,7 +1952,7 @@ function initHtmlModeToggle() {
     _editorMode             = "html";
     quillWrap.style.display = "none";
     toolbar.style.display   = "none";
-    htmlTa.style.display    = "";
+    htmlTa.style.display    = "block";
     if (htmlBar) htmlBar.classList.add("visible");
     htmlTa.focus();
 
