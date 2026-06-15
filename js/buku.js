@@ -173,6 +173,23 @@
   }
 
   // ──────────────────────────────────────────────────────────────
+  // CHAPTER PARSER
+  // ──────────────────────────────────────────────────────────────
+  function parseChapters(html) {
+    const parser   = new DOMParser();
+    const doc      = parser.parseFromString(html, "text/html");
+    const sections = doc.querySelectorAll("section.buku-bab");
+    if (!sections.length) return null; // konten lama tanpa struktur bab
+
+    return Array.from(sections).map((sec, i) => ({
+      num    : i + 1,
+      id     : `bab-${i + 1}`,
+      title  : sec.querySelector(".bab-judul")?.textContent?.trim() || `Bab ${i + 1}`,
+      content: sec.querySelector(".bab-isi")?.innerHTML || "",
+    }));
+  }
+
+  // ──────────────────────────────────────────────────────────────
   // RENDER: KONTEN TULISAN (prioritas di atas file)
   // ──────────────────────────────────────────────────────────────
   function renderContent(book) {
@@ -184,14 +201,141 @@
     if (toolbar) toolbar.textContent = book.title || "";
     skeleton?.remove();
 
-    // Wrapper konten
     const wrap = document.createElement("div");
     wrap.className = "buku-content-wrap";
-    wrap.innerHTML = `
-      <article class="buku-content-body" aria-label="Isi buku ${esc(book.title)}">
-        ${book.content}
-      </article>`;
-    panel.appendChild(wrap);
+
+    const chapters = parseChapters(book.content);
+
+    if (chapters && chapters.length > 0) {
+      // ── Format baru: konten berbasis bab ──────────────────────
+
+      // Progress bar
+      const progressBar = document.createElement("div");
+      progressBar.className = "buku-read-progress" ;
+      progressBar.innerHTML = `<div class="buku-read-progress-fill" id="buku-progress-fill"></div>`;
+
+      // Daftar isi
+      const toc = document.createElement("div");
+      toc.className = "buku-toc";
+      toc.id        = "buku-toc";
+      toc.innerHTML = `
+        <div class="buku-toc-header" id="buku-toc-header" role="button"
+             tabindex="0" aria-expanded="false" aria-controls="buku-toc-body">
+          <span>
+            <span class="buku-toc-title">📑 Daftar Isi</span>
+            <span class="buku-toc-count">${chapters.length} bab</span>
+          </span>
+          <span class="buku-toc-chevron">▼</span>
+        </div>
+        <div class="buku-toc-body" id="buku-toc-body" role="list">
+          <ol class="buku-toc-list">
+            ${chapters.map(ch => `
+            <li role="listitem">
+              <a href="#${ch.id}" class="buku-toc-link" data-toc-id="${ch.id}">
+                <span class="buku-toc-num">${ch.num}</span>
+                ${esc(ch.title)}
+              </a>
+            </li>`).join("")}
+          </ol>
+        </div>`;
+
+      // Konten bab
+      const body = document.createElement("div");
+      body.className = "buku-content-body";
+      body.setAttribute("aria-label", `Isi buku ${esc(book.title)}`);
+
+      chapters.forEach((ch, idx) => {
+        const isLast = idx === chapters.length - 1;
+        const next   = !isLast ? chapters[idx + 1] : null;
+
+        const section = document.createElement("section");
+        section.className = "bab-section";
+        section.id        = ch.id;
+        section.setAttribute("aria-label", `Bab ${ch.num}: ${ch.title}`);
+
+        section.innerHTML = `
+          <div class="bab-header">
+            <span class="bab-num-label">Bab ${ch.num}</span>
+            <h2 class="bab-judul-display">${esc(ch.title)}</h2>
+          </div>
+          <div class="bab-isi-display">${ch.content}</div>
+          ${next ? `
+          <a href="#${next.id}" class="bab-next-link" aria-label="Lanjut ke ${esc(next.title)}">
+            <span class="bab-next-label">Bab berikutnya:</span>
+            ${esc(next.title)} →
+          </a>` : `
+          <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border);
+            text-align:center;color:var(--text-muted);font-size:.85rem">
+            🎉 Selesai membaca
+          </div>`}`;
+
+        body.appendChild(section);
+      });
+
+      wrap.appendChild(progressBar);
+      wrap.appendChild(toc);
+      wrap.appendChild(body);
+      panel.appendChild(wrap);
+
+      // ── ToC toggle ─────────────────────────────────────────
+      const tocEl     = document.getElementById("buku-toc");
+      const tocHeader = document.getElementById("buku-toc-header");
+      tocHeader?.addEventListener("click", () => {
+        const open = tocEl.classList.toggle("open");
+        tocHeader.setAttribute("aria-expanded", String(open));
+      });
+      tocHeader?.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tocHeader.click(); }
+      });
+
+      // Auto-close ToC setelah klik link pada mobile
+      wrap.querySelectorAll(".buku-toc-link").forEach(link => {
+        link.addEventListener("click", () => {
+          if (window.innerWidth < 768) {
+            tocEl?.classList.remove("open");
+            tocHeader?.setAttribute("aria-expanded", "false");
+          }
+        });
+      });
+
+      // ── Progress bar + ToC aktif via IntersectionObserver ──
+      const sectionEls  = wrap.querySelectorAll(".bab-section");
+      const tocLinks    = wrap.querySelectorAll(".buku-toc-link");
+      const progressFill = document.getElementById("buku-progress-fill");
+
+      // Progress membaca berdasarkan scroll dalam wrap
+      wrap.addEventListener("scroll", () => {
+        const { scrollTop, scrollHeight, clientHeight } = wrap;
+        const pct = scrollHeight <= clientHeight
+          ? 100
+          : Math.min(100, (scrollTop / (scrollHeight - clientHeight)) * 100);
+        if (progressFill) progressFill.style.width = pct.toFixed(1) + "%";
+      });
+
+      // Highlight ToC aktif berdasarkan bab yang paling dekat ke viewport
+      const observer = new IntersectionObserver(
+        entries => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            const id = entry.target.id;
+            tocLinks.forEach(l => {
+              l.classList.toggle("active", l.dataset.tocId === id);
+            });
+          });
+        },
+        { root: wrap, rootMargin: "-10% 0px -80% 0px", threshold: 0 }
+      );
+      sectionEls.forEach(s => observer.observe(s));
+
+    } else {
+      // ── Format lama: dump langsung sebagai satu blok ─────────
+      const legacy = document.createElement("article");
+      legacy.className = "buku-content-body-legacy";
+      legacy.setAttribute("aria-label", `Isi buku ${esc(book.title)}`);
+      legacy.innerHTML = book.content;
+      wrap.appendChild(legacy);
+      panel.appendChild(wrap);
+    }
   }
 
   // ──────────────────────────────────────────────────────────────
