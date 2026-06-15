@@ -197,51 +197,132 @@
     /* ── Konten tulisan (Mode 2) ────────────────────────────── */
     .buku-content-wrap {
       flex: 1;
-      padding: 28px 32px;
+      padding: 0;
       border: 1px solid var(--border);
       border-radius: 0 0 8px 8px;
       overflow-y: auto;
     }
 
-    .buku-content-body {
-      max-width: 680px;
-      margin: 0 auto;
-      font-size: 1rem;
-      line-height: 1.8;
-      color: var(--text);
+    /* Reading progress bar */
+    .buku-read-progress {
+      position: sticky; top: 0; z-index: 10;
+      height: 3px; background: var(--surface);
+    }
+    .buku-read-progress-fill {
+      height: 100%; width: 0%;
+      background: var(--accent, #E03E0B);
+      transition: width .1s;
     }
 
-    .buku-content-body h1 {
-      font-family: 'Syne', sans-serif;
-      font-size: clamp(1.4rem, 3vw, 1.9rem);
-      font-weight: 800; margin: 0 0 20px; line-height: 1.2;
-    }
-    .buku-content-body h2 {
-      font-family: 'Syne', sans-serif;
-      font-size: 1.3rem; font-weight: 700;
-      margin: 32px 0 12px; padding-bottom: 6px;
+    /* ── Daftar Isi (ToC) ──────────────────────────────────── */
+    .buku-toc {
       border-bottom: 1px solid var(--border);
+      background: var(--surface);
     }
-    .buku-content-body h3 {
-      font-size: 1.1rem; font-weight: 700; margin: 24px 0 10px;
+    .buku-toc-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px; cursor: pointer; user-select: none; gap: 10px;
     }
-    .buku-content-body p  { margin-bottom: 14px; }
-    .buku-content-body ul,
-    .buku-content-body ol { padding-left: 24px; margin-bottom: 14px; }
-    .buku-content-body li { margin-bottom: 6px; }
-    .buku-content-body blockquote {
-      border-left: 3px solid var(--accent, #E03E0B);
-      margin: 20px 0; padding: 10px 18px;
-      background: var(--surface); border-radius: 0 8px 8px 0;
-      font-style: italic; color: var(--text-muted);
+    .buku-toc-header:hover { background: color-mix(in srgb, var(--accent,#E03E0B) 5%, transparent); }
+    .buku-toc-title {
+      font-family: 'Syne', sans-serif; font-size: .82rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted);
     }
-    .buku-content-body strong { font-weight: 700; }
-    .buku-content-body em     { font-style: italic; }
-    .buku-content-body a      { color: var(--accent, #E03E0B); }
+    .buku-toc-count {
+      font-size: .75rem; font-weight: 600; color: var(--accent, #E03E0B);
+      background: color-mix(in srgb, var(--accent,#E03E0B) 12%, transparent);
+      border-radius: 10px; padding: 1px 8px; margin-left: 6px;
+    }
+    .buku-toc-chevron { flex-shrink: 0; color: var(--text-muted); transition: transform .2s; font-size: .8rem; line-height: 1; }
+    .buku-toc.open .buku-toc-chevron { transform: rotate(180deg); }
+    .buku-toc-body { display: none; padding: 0 28px 16px; }
+    .buku-toc.open .buku-toc-body { display: block; }
+    .buku-toc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+    .buku-toc-link {
+      display: flex; align-items: baseline; gap: 8px;
+      padding: 6px 10px; border-radius: 6px;
+      text-decoration: none; font-size: .86rem; color: var(--text); transition: all .12s;
+    }
+    .buku-toc-link:hover { background: var(--surface); color: var(--accent, #E03E0B); }
+    .buku-toc-link.active {
+      color: var(--accent, #E03E0B); font-weight: 700;
+      background: color-mix(in srgb, var(--accent,#E03E0B) 8%, transparent);
+    }
+    .buku-toc-num {
+      font-size: .72rem; font-weight: 800; color: var(--text-muted);
+      min-width: 20px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums;
+    }
+    .buku-toc-link.active .buku-toc-num { color: var(--accent, #E03E0B); }
+
+    /* ── Section per bab ───────────────────────────────────── */
+    .buku-content-body { max-width: 680px; margin: 0 auto; padding: 28px 32px; }
+
+    .bab-section { padding-top: 8px; }
+    .bab-section + .bab-section {
+      border-top: 1px dashed var(--border); margin-top: 48px; padding-top: 48px;
+    }
+    .bab-num-label {
+      display: inline-block; font-size: .7rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .1em;
+      color: var(--accent, #E03E0B); margin-bottom: 6px;
+    }
+    .bab-judul-display {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.2rem, 2.5vw, 1.6rem); font-weight: 800;
+      line-height: 1.25; color: var(--text); margin: 0 0 20px;
+      padding-bottom: 10px; border-bottom: 2px solid var(--accent, #E03E0B);
+    }
+
+    /* Konten dalam bab */
+    .bab-isi-display { font-size: 1rem; line-height: 1.8; color: var(--text); }
+    .bab-isi-display h1,.bab-isi-display h2 { font-family:'Syne',sans-serif; font-weight:700; line-height:1.3; margin:28px 0 12px; }
+    .bab-isi-display h1 { font-size:1.35rem; }
+    .bab-isi-display h2 { font-size:1.15rem; border-bottom:1px solid var(--border); padding-bottom:5px; }
+    .bab-isi-display h3 { font-size:1rem; font-weight:700; margin:20px 0 10px; }
+    .bab-isi-display p  { margin-bottom:14px; }
+    .bab-isi-display ul,.bab-isi-display ol { padding-left:24px; margin-bottom:14px; }
+    .bab-isi-display li { margin-bottom:5px; }
+    .bab-isi-display blockquote { border-left:3px solid var(--accent,#E03E0B); margin:20px 0; padding:10px 18px; background:var(--surface); border-radius:0 8px 8px 0; font-style:italic; color:var(--text-muted); }
+    .bab-isi-display strong { font-weight:700; } .bab-isi-display em { font-style:italic; }
+    .bab-isi-display a { color:var(--accent,#E03E0B); }
+    .bab-isi-display img { max-width:100%; border-radius:8px; margin:10px 0; }
+    .bab-isi-display hr { border:none; border-top:1px solid var(--border); margin:24px 0; }
+    .bab-isi-display pre,.bab-isi-display code { font-family:'Courier New',monospace; font-size:.88em; background:var(--surface); border-radius:5px; }
+    .bab-isi-display pre { padding:14px 18px; overflow-x:auto; }
+    .bab-isi-display code { padding:1px 5px; }
+
+    /* Link bab berikutnya */
+    .bab-next-link {
+      display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+      margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border);
+      text-decoration: none; color: var(--accent, #E03E0B);
+      font-size: .85rem; font-weight: 700; transition: opacity .15s;
+    }
+    .bab-next-link:hover { opacity: .8; }
+    .bab-next-label { font-size: .72rem; font-weight: 400; color: var(--text-muted); margin-right: 4px; }
+
+    /* Konten lama (tanpa bab) */
+    .buku-content-body-legacy {
+      max-width: 680px; margin: 0 auto; padding: 28px 32px;
+      font-size: 1rem; line-height: 1.8; color: var(--text);
+    }
+    .buku-content-body-legacy h1 { font-family:'Syne',sans-serif; font-size:clamp(1.4rem,3vw,1.9rem); font-weight:800; margin:0 0 20px; }
+    .buku-content-body-legacy h2 { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:700; margin:32px 0 12px; border-bottom:1px solid var(--border); padding-bottom:6px; }
+    .buku-content-body-legacy h3 { font-size:1.1rem; font-weight:700; margin:24px 0 10px; }
+    .buku-content-body-legacy p  { margin-bottom:14px; }
+    .buku-content-body-legacy ul,.buku-content-body-legacy ol { padding-left:24px; margin-bottom:14px; }
+    .buku-content-body-legacy li { margin-bottom:6px; }
+    .buku-content-body-legacy blockquote { border-left:3px solid var(--accent,#E03E0B); margin:20px 0; padding:10px 18px; background:var(--surface); border-radius:0 8px 8px 0; font-style:italic; color:var(--text-muted); }
+    .buku-content-body-legacy strong { font-weight:700; } .buku-content-body-legacy em { font-style:italic; }
+    .buku-content-body-legacy a { color:var(--accent,#E03E0B); }
 
     @media (max-width: 768px) {
-      .buku-content-wrap { padding: 20px 16px; border-radius: 0 0 8px 8px; }
-      .buku-content-body { font-size: .95rem; }
+      .buku-content-wrap { border-radius: 0 0 8px 8px; overflow-x: hidden; }
+      .buku-toc-header   { padding: 12px 16px; }
+      .buku-toc-body     { padding: 0 16px 14px; }
+      .buku-content-body { padding: 20px 16px; }
+      .buku-content-body-legacy { padding: 20px 16px; }
+      .bab-isi-display, .buku-content-body-legacy { word-break:break-word; overflow-wrap:break-word; }
     }
 
     /* Skeleton awal */
