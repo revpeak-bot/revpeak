@@ -1750,6 +1750,15 @@ function initBookContentEditor() {
   Font.whitelist = ['serif', 'monospace'];
   Quill.register(Font, true);
 
+  // ── Custom clipboard matchers agar tabel dipertahankan saat paste ──
+  // Quill 1.3.7 membuang <table> karena tidak punya blot untuk itu.
+  // Solusi: intercept di level Clipboard module sebelum Quill memprosesnya,
+  // lalu inject HTML tabel langsung ke editor.
+
+  // Simpan referensi convertFromNode asli agar bisa di-restore
+  const _ClipboardProto = Quill.import("modules/clipboard").prototype;
+  const _origOnPaste    = _ClipboardProto.onPaste;
+
   window._bookQuill = new Quill("#bf-content-editor", {
     theme:   "snow",
     modules: {
@@ -1766,9 +1775,122 @@ function initBookContentEditor() {
           table: function () { openTableInsertModal(); },
         },
       },
+      clipboard: {
+        matchVisual: false,
+      },
     },
     placeholder: "Tulis konten bab di sini...",
   });
+
+  // Override onPaste di instance Quill ini saja (tidak global)
+  // Cegat paste yang mengandung tabel, inject langsung ke innerHTML
+  window._bookQuill.clipboard.onPaste = function(e) {
+    const clipData = e.clipboardData || window.clipboardData;
+    if (!clipData) return _origOnPaste.call(this, e);
+
+    let html = "";
+    try { html = clipData.getData("text/html") || ""; } catch(_) {}
+
+    if (!html || !/<table/i.test(html)) {
+      return _origOnPaste.call(this, e);
+    }
+
+    // Ada tabel → bypass Quill sepenuhnya
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Ekstrak fragment jika ada
+    const frag = html.match(/<!--StartFragment-->([\s\S]*?)<!--EndFragment-->/i);
+    const raw  = frag ? frag[1] : html;
+
+    // Parse & sanitasi
+    const parser = new DOMParser();
+    const doc    = parser.parseFromString(raw, "text/html");
+    doc.querySelectorAll("script,style,meta,link").forEach(el => el.remove());
+    doc.querySelectorAll("table,thead,tbody,tfoot,tr,th,td").forEach(el => {
+      const keep = ["colspan","rowspan"];
+      [...el.attributes].forEach(a => { if (!keep.includes(a.name)) el.removeAttribute(a.name); });
+    });
+    const cleaned = doc.body ? doc.body.innerHTML : raw;
+
+    // Inject ke editor
+    const editor  = this.quill.root;
+    const isEmpty = !editor.innerHTML || editor.innerHTML === "<p><br></p>";
+    editor.innerHTML = (isEmpty ? "" : editor.innerHTML) + cleaned;
+    this.quill.update(Quill.sources.USER);
+
+    // Pindahkan kursor ke akhir
+    try {
+      const sel = window.getSelection();
+      const rng = document.createRange();
+      rng.selectNodeContents(editor);
+      rng.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(rng);
+    } catch(_) {}
+  };
+
+  // ── Modal "Tempel dari Gemini" ────────────────────────────────────
+  // Pendekatan via modal textarea: 100% bekerja di mobile Android
+  // karena tidak bergantung pada clipboard API (yang sering diblokir browser mobile)
+
+  const _modalPaste   = document.getElementById("modal-paste-gemini");
+  const _pasteArea    = document.getElementById("gemini-paste-area");
+  const _btnOpenPaste = document.getElementById("btn-paste-gemini");
+  const _btnClosePaste= document.getElementById("btn-close-paste-gemini");
+  const _btnCancelP   = document.getElementById("btn-cancel-paste-gemini");
+  const _btnConfirmP  = document.getElementById("btn-confirm-paste-gemini");
+
+  function _openPasteModal() {
+    if (!_modalPaste) return;
+    _pasteArea.value = "";
+    _modalPaste.style.display = "flex";
+    setTimeout(() => _pasteArea.focus(), 100);
+  }
+
+  function _closePasteModal() {
+    if (!_modalPaste) return;
+    _modalPaste.style.display = "none";
+    _pasteArea.value = "";
+  }
+
+  function _confirmPaste() {
+    const raw = _pasteArea.value.trim();
+    if (!raw) { _closePasteModal(); return; }
+
+    const quill  = window._bookQuill;
+    const editor = quill.root;
+
+    // Deteksi apakah input adalah HTML atau plain text
+    const looksLikeHtml = /^\s*<[a-z][\s\S]*>/i.test(raw);
+
+    if (looksLikeHtml) {
+      // Input HTML: inject langsung
+      const isEmpty = editor.innerHTML.trim() === "<p><br></p>" || editor.innerHTML.trim() === "";
+      const before  = isEmpty ? "" : editor.innerHTML;
+      editor.innerHTML = before + raw;
+      quill.update(Quill.sources.USER);
+    } else {
+      // Input plain text: gunakan dangerouslyPasteHTML di posisi akhir
+      const len = quill.getLength();
+      quill.setSelection(len - 1, 0, Quill.sources.SILENT);
+      quill.clipboard.dangerouslyPasteHTML(len - 1, "<p>" + raw.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>") + "</p>", Quill.sources.USER);
+    }
+
+    _closePasteModal();
+  }
+
+  if (_btnOpenPaste)  _btnOpenPaste.addEventListener("click", _openPasteModal);
+  if (_btnClosePaste) _btnClosePaste.addEventListener("click", _closePasteModal);
+  if (_btnCancelP)    _btnCancelP.addEventListener("click", _closePasteModal);
+  if (_btnConfirmP)   _btnConfirmP.addEventListener("click", _confirmPaste);
+
+  // Tutup modal jika klik backdrop
+  if (_modalPaste) {
+    _modalPaste.addEventListener("click", function(e) {
+      if (e.target === _modalPaste) _closePasteModal();
+    });
+  }
 
   // ── Input judul bab ───────────────────────────────────────
   document.getElementById("chapter-title-input")
