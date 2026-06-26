@@ -996,6 +996,9 @@
                 <span class="ql-formats">
                   <button class="ql-clean" title="Hapus Format"></button>
                 </span>
+                <span class="ql-formats">
+                  <button type="button" id="btn-paste-gemini" title="Tempel konten dari Gemini (teks + tabel)" style="font-size:11px;padding:2px 8px;height:auto;white-space:nowrap;background:var(--accent,#E03E0B);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;">📋 Tempel Gemini</button>
+                </span>
               </div>
 
               <!-- Quill editor canvas (mode visual) -->
@@ -1009,6 +1012,24 @@
 
               <input type="hidden" id="bf-content">
             </div><!-- /chapter-editor-wrap -->
+
+            <!-- Modal: Tempel dari Gemini -->
+            <div id="modal-paste-gemini" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+              <div style="background:var(--surface,#fff);border-radius:12px;padding:20px;width:90%;max-width:560px;max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <strong style="font-size:1rem;">📋 Tempel Konten dari Gemini</strong>
+                  <button type="button" id="btn-close-paste-gemini" style="background:none;border:none;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+                </div>
+                <p style="font-size:0.85rem;color:var(--text-muted,#666);margin:0;">Tempel teks dari Gemini ke kotak di bawah, lalu klik <strong>Masukkan ke Editor</strong>.</p>
+                <textarea id="gemini-paste-area" rows="10" spellcheck="false"
+                  style="width:100%;border:1px solid var(--border,#ddd);border-radius:8px;padding:10px;font-size:0.875rem;resize:vertical;font-family:inherit;box-sizing:border-box;"
+                  placeholder="Tempel teks dari Gemini di sini..."></textarea>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                  <button type="button" id="btn-cancel-paste-gemini" style="padding:8px 16px;border:1px solid var(--border,#ddd);border-radius:6px;background:none;cursor:pointer;">Batal</button>
+                  <button type="button" id="btn-confirm-paste-gemini" style="padding:8px 16px;background:var(--accent,#E03E0B);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Masukkan ke Editor</button>
+                </div>
+              </div>
+            </div>
 
             <div class="content-actions">
               <button type="button" id="btn-preview-content" class="btn-secondary">
