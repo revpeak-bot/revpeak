@@ -1055,12 +1055,17 @@ function initApp() {
     bookFilter.format = this.value;
     loadBookList(1);
   });
+
+  const _doBookSearch = () => {
+    bookFilter.search = document.getElementById("book-search")?.value.trim() || "";
+    loadBookList(1);
+  };
   $("#book-search")?.addEventListener("input", () => {
     clearTimeout(window._bookSearchTimer);
-    window._bookSearchTimer = setTimeout(() => {
-      bookFilter.search = document.getElementById("book-search")?.value.trim() || "";
-      loadBookList(1);
-    }, 600);
+    window._bookSearchTimer = setTimeout(_doBookSearch, 600);
+  });
+  $("#book-search")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { clearTimeout(window._bookSearchTimer); _doBookSearch(); }
   });
 
   // Submit form buku
@@ -1217,13 +1222,22 @@ async function openEditBookForm(id) {
   showToast("Memuat data buku...", "info");
   await loadBookGenreCache();
   resetBookForm();
+
+  let bookContent = null;
   try {
     const book = await workerAdminFetch(`/api/admin/books/${id}`);
     if (!book) { showToast("Buku tidak ditemukan.", "error"); return; }
+    bookContent = book.content || null;   // simpan konten sebelum fillBookForm
     fillBookForm(book);
     populateBookGenreSelect(book.genre_id);
   } catch (e) { showToast("Gagal memuat buku: " + e.message, "error"); return; }
+
+  // Init editor dulu (sinkron) → tidak ada race condition
   initBookContentEditor();
+
+  // Load konten bab setelah Quill siap (delay kecil cukup)
+  setTimeout(() => setBookContent(bookContent), 30);
+
   showView("book-form");
   const titleEl = document.getElementById("topbar-title");
   if (titleEl) titleEl.textContent = "Edit Buku";
@@ -1254,9 +1268,8 @@ function fillBookForm(book) {
 
   if (book.cover_url) showCoverPreview(book.cover_url);
   if (book.file_url)  showFileInfo(book.file_url.split("/").pop(), book.file_size);
-
-  // Isi konten Quill (harus setelah editor init)
-  setTimeout(() => setBookContent(book.content || null), 50);
+  // Catatan: konten buku (bab) di-load terpisah lewat setBookContent()
+  // setelah initBookContentEditor() selesai — lihat openEditBookForm()
 }
 
 function resetBookForm() {
@@ -1490,12 +1503,97 @@ function initCoverUpload() {
 // SISTEM BAB (CHAPTERS) — Konten Buku
 // ============================================================
 
-// State bab
-let _chapters        = [];   // [{ id, title, content }]
+// State bab — setiap bab kini menyimpan mode editornya sendiri
+// ("visual" atau "html") agar tidak tertukar saat pindah antar-bab
+// atau saat draft dibuka kembali.
+let _chapters        = [];   // [{ id, title, content, mode }]
 let _activeChapterId = null;
 let _chapterCounter  = 0;
 
 function _newChapterId() { return ++_chapterCounter; }
+
+// ── Deteksi markup yang TIDAK didukung Quill secara native ───
+// Quill 1.3.7 tidak memiliki blot untuk tag-tag ini (table, iframe,
+// dll). Jika dipaksa masuk ke Quill via innerHTML + update(), bagian
+// ini berisiko hilang/rusak karena Quill tidak bisa merepresentasikannya
+// ke dalam model Delta-nya. Untuk bab dengan markup seperti ini, kita
+// SELALU tampilkan via textarea HTML mentah — TIDAK PERNAH lewat Quill.
+function _hasQuillUnsafeMarkup(html) {
+  if (!html) return false;
+  return /<(table|thead|tbody|tfoot|tr|td|th|colgroup|col|caption|iframe|svg|video|audio|form|object|embed)[\s/>]/i.test(html);
+}
+
+// ── Helper: load HTML ke Quill dengan aman ───────────────────
+// Menggunakan disable/enable agar MutationObserver Quill tidak
+// berlomba dengan innerHTML assignment, lalu force-sync delta.
+function _loadContentIntoQuill(html) {
+  const q = window._bookQuill;
+  if (!q) return;
+  const content = (html && html.trim() && html.trim() !== "<p><br></p>")
+    ? html
+    : "<p><br></p>";
+  // Matikan editor sementara untuk mencegah interferensi Quill
+  q.enable(false);
+  q.root.innerHTML = content;
+  q.enable(true);
+  // Force-sync delta internal Quill dengan DOM yang baru
+  // Gunakan try-catch karena q.update mungkin tidak tersedia di semua versi
+  try { q.update(Quill.sources.SILENT); } catch(_) {}
+}
+
+// ── Helper terpusat: terapkan mode editor bab (visual/html) ──
+// Satu fungsi ini menangani SEMUA aspek switch tampilan: toggle
+// display Quill vs textarea, isi konten ke editor yang tepat, dan
+// update tombol aktif. Dipakai oleh selectChapter, addChapter,
+// deleteChapter, setBookContent, dan tombol toggle Visual/HTML —
+// supaya tidak ada lagi logika yang terduplikasi & berbeda-beda.
+function _applyChapterEditorMode(mode, content) {
+  const isHtml    = mode === "html";
+  const htmlTa    = document.getElementById("chapter-html-editor");
+  const quillWrap = document.getElementById("bf-content-editor");
+  const toolbar   = document.getElementById("bf-content-toolbar");
+  const htmlBar   = document.getElementById("html-toolbar");
+  const btnVisual = document.getElementById("btn-mode-visual");
+  const btnHtml   = document.getElementById("btn-mode-html");
+
+  _editorMode = isHtml ? "html" : "visual";
+
+  if (isHtml) {
+    if (htmlTa)    { htmlTa.value = content || ""; htmlTa.style.display = "block"; }
+    if (quillWrap) quillWrap.style.display = "none";
+    if (toolbar)   toolbar.style.display   = "none";
+    if (htmlBar)   htmlBar.classList.add("visible");
+  } else {
+    _loadContentIntoQuill(content || "");
+    if (htmlTa)    htmlTa.style.display    = "none";
+    if (quillWrap) quillWrap.style.display = "";
+    if (toolbar)   toolbar.style.display   = "";
+    if (htmlBar)   htmlBar.classList.remove("visible");
+  }
+
+  if (btnVisual) { btnVisual.classList.toggle("active", !isHtml); btnVisual.setAttribute("aria-pressed", String(!isHtml)); }
+  if (btnHtml)   { btnHtml.classList.toggle("active", isHtml);    btnHtml.setAttribute("aria-pressed", String(isHtml)); }
+}
+
+// ── Helper: switch mode file/write tanpa bergantung event listener ───
+function _setContentMode(mode) {
+  const isWrite = mode === "write";
+  const tabFile    = document.getElementById("tab-file-mode");
+  const tabWrite   = document.getElementById("tab-write-mode");
+  const panelWrite = document.getElementById("panel-write-mode");
+  const modeLabel  = document.getElementById("content-mode-label");
+
+  if (tabFile) {
+    tabFile.classList.toggle("active", !isWrite);
+    tabFile.setAttribute("aria-selected", String(!isWrite));
+  }
+  if (tabWrite) {
+    tabWrite.classList.toggle("active", isWrite);
+    tabWrite.setAttribute("aria-selected", String(isWrite));
+  }
+  if (panelWrite) panelWrite.style.display = isWrite ? "" : "none";
+  if (modeLabel)  modeLabel.textContent    = isWrite ? "Tulis Konten" : "Upload File";
+}
 
 // ── Render daftar bab ────────────────────────────────────────
 function renderChapterList() {
@@ -1530,6 +1628,9 @@ function renderChapterList() {
 
     const canUp   = idx > 0;
     const canDown = idx < n - 1;
+    const htmlBadge = ch.mode === "html"
+      ? `<span class="chapter-mode-badge" title="Bab ini ditulis dalam mode HTML mentah">HTML</span>`
+      : "";
 
     item.innerHTML = `
       <div class="chapter-item-header" role="button" tabindex="0"
@@ -1537,6 +1638,7 @@ function renderChapterList() {
            aria-pressed="${isActive}">
         <span class="chapter-item-num">${idx + 1}</span>
         <span class="chapter-item-title">${escapeHtml(ch.title || "Tanpa Judul")}</span>
+        ${htmlBadge}
         <span class="chapter-item-actions">
           <button type="button" class="chapter-btn up"
             title="Pindah ke atas" ${!canUp ? "disabled" : ""} aria-label="Pindah bab ke atas">↑</button>
@@ -1578,28 +1680,18 @@ function renderChapterList() {
 
 // ── Pilih bab aktif ──────────────────────────────────────────
 function selectChapter(id) {
-  // Simpan konten editor ke bab yang sedang aktif sebelum pindah
+  // Simpan konten + mode editor ke bab yang sedang aktif sebelum pindah
   saveActiveChapterContent();
 
   _activeChapterId = id;
   const ch = _chapters.find(c => c.id === id);
   if (!ch) return;
 
-  // Load konten bab ke editor yang sedang aktif
-  if (_editorMode === "html") {
-    const ta = document.getElementById("chapter-html-editor");
-    if (ta) ta.value = ch.content || "";
-  } else {
-    const q = window._bookQuill;
-    if (q) {
-      if (ch.content) {
-        q.root.innerHTML = ch.content;
-      } else {
-        q.setText("");
-      }
-      q.setSelection(0, 0);
-    }
-  }
+  // Tentukan mode tampilan bab ini: pakai mode tersimpan, TAPI jika
+  // kontennya mengandung markup yang tidak aman untuk Quill (tabel, dll),
+  // PAKSA ke mode HTML supaya tidak rusak saat ditampilkan.
+  const safeMode = _hasQuillUnsafeMarkup(ch.content) ? "html" : (ch.mode || "visual");
+  _applyChapterEditorMode(safeMode, ch.content || "");
 
   // Update input judul bab
   const titleInput = document.getElementById("chapter-title-input");
@@ -1615,6 +1707,7 @@ function saveActiveChapterContent() {
   if (!ch) return;
 
   ch.content = getActiveEditorContent();
+  ch.mode    = _editorMode;   // simpan mode editor yang sedang dipakai bab ini
 
   // Simpan judul dari input
   const titleInput = document.getElementById("chapter-title-input");
@@ -1625,15 +1718,14 @@ function saveActiveChapterContent() {
 function addChapter() {
   saveActiveChapterContent();
 
-  const newCh = { id: _newChapterId(), title: `Bab ${_chapters.length + 1}`, content: "" };
+  const newCh = { id: _newChapterId(), title: `Bab ${_chapters.length + 1}`, content: "", mode: "visual" };
   _chapters.push(newCh);
 
   _activeChapterId = newCh.id;
   renderChapterList();
 
-  // Load bab kosong ke editor
-  const q = window._bookQuill;
-  if (q) { q.setText(""); q.setSelection(0, 0); }
+  // Load bab kosong ke editor (mode visual default)
+  _applyChapterEditorMode("visual", "");
 
   const titleInput = document.getElementById("chapter-title-input");
   if (titleInput) {
@@ -1663,19 +1755,19 @@ function deleteChapter(id) {
 
   _chapters.splice(idx, 1);
 
-  // Load bab aktif berikutnya (jika ada)
+  // Load bab aktif berikutnya (jika ada), pakai mode tersimpan bab tsb
   if (_activeChapterId) {
     const nextCh = _chapters.find(c => c.id === _activeChapterId);
-    const q = window._bookQuill;
-    if (q && nextCh) {
-      q.root.innerHTML = nextCh.content || "";
-      q.setSelection(0, 0);
+    if (nextCh) {
+      const safeMode = _hasQuillUnsafeMarkup(nextCh.content) ? "html" : (nextCh.mode || "visual");
+      _applyChapterEditorMode(safeMode, nextCh.content || "");
+      const titleInput = document.getElementById("chapter-title-input");
+      if (titleInput) titleInput.value = nextCh.title || "";
+    } else {
+      _applyChapterEditorMode("visual", "");
     }
-    const titleInput = document.getElementById("chapter-title-input");
-    if (titleInput && nextCh) titleInput.value = nextCh.title || "";
   } else {
-    const q = window._bookQuill;
-    if (q) q.setText("");
+    _applyChapterEditorMode("visual", "");
   }
 
   renderChapterList();
@@ -1719,12 +1811,15 @@ let _editorMode = "visual";
 function getActiveEditorContent() {
   if (_editorMode === "html") {
     const ta = document.getElementById("chapter-html-editor");
-    return ta ? ta.value.trim() : "";
+    if (!ta) return "";
+    const val = ta.value.trim();
+    return (val && val !== "<p><br></p>") ? val : "";
   }
   const q = window._bookQuill;
   if (!q) return "";
   const html = q.root.innerHTML;
-  return (html && html !== "<p><br></p>") ? html : "";
+  // Normalkan: Quill default "<p><br></p>" dianggap kosong
+  return (html && html !== "<p><br></p>" && html.trim() !== "") ? html : "";
 }
 
 // ── Quill editor init ────────────────────────────────────────
@@ -1901,23 +1996,10 @@ function initBookContentEditor() {
     ?.addEventListener("click", addChapter);
 
   // ── Toggle tab mode ──────────────────────────────────────
-  const tabFile    = document.getElementById("tab-file-mode");
-  const tabWrite   = document.getElementById("tab-write-mode");
-  const panelWrite = document.getElementById("panel-write-mode");
-  const modeLabel  = document.getElementById("content-mode-label");
-
-  function setMode(mode) {
-    const isWrite = mode === "write";
-    tabFile .classList.toggle("active", !isWrite);
-    tabWrite.classList.toggle("active",  isWrite);
-    tabFile .setAttribute("aria-selected", String(!isWrite));
-    tabWrite.setAttribute("aria-selected", String( isWrite));
-    panelWrite.style.display = isWrite ? "" : "none";
-    if (modeLabel) modeLabel.textContent = isWrite ? "Tulis Konten" : "Upload File";
-  }
-
-  tabFile ?.addEventListener("click", () => setMode("file"));
-  tabWrite?.addEventListener("click", () => setMode("write"));
+  // Menggunakan _setContentMode() yang didefinisikan di level modul
+  // sehingga bisa dipanggil dari mana saja (resetBookContent, setBookContent, dll.)
+  document.getElementById("tab-file-mode") ?.addEventListener("click", () => _setContentMode("file"));
+  document.getElementById("tab-write-mode")?.addEventListener("click", () => _setContentMode("write"));
 
   // ── Modal tabel ───────────────────────────────────────────
   initTableInsertModal();
@@ -1965,8 +2047,7 @@ function initBookContentEditor() {
     if (!confirmDialog(`Hapus semua ${_chapters.length} bab? Tindakan ini tidak bisa dibatalkan.`)) return;
     _chapters = [];
     _activeChapterId = null;
-    const q = window._bookQuill;
-    if (q) q.setText("");
+    _applyChapterEditorMode("visual", "");
     renderChapterList();
     showToast("Semua bab dihapus.");
   });
@@ -2035,57 +2116,59 @@ function initHtmlModeToggle() {
 
   // ── Switch ke mode Visual ─────────────────────────────────
   function activateVisual() {
+    // PENGAMAN: jika sudah di mode visual, jangan lakukan apa-apa.
+    // Tanpa ini, klik ganda/tidak sengaja bisa memuat ulang konten
+    // dari Quill yang sebenarnya sudah sinkron, menyebabkan kursor
+    // reset atau (dalam kasus lain) menimpa perubahan yang belum
+    // tersimpan dengan versi basi.
+    if (_editorMode === "visual") return;
+
     const currentHtml = htmlTa.value.trim();
 
-    // Coba load ke Quill
-    const q = window._bookQuill;
-    if (q) {
-      if (currentHtml) {
-        q.root.innerHTML = currentHtml;
-      } else {
-        q.setText("");
-      }
-      q.setSelection(0, 0);
+    // PERINGATAN: jika HTML yang ditulis mengandung markup yang TIDAK
+    // didukung Quill (tabel, iframe, dll), pindah ke Visual BERISIKO
+    // merusak/menghilangkan bagian tersebut karena Quill tidak bisa
+    // merepresentasikannya. Konfirmasi dulu ke pengguna.
+    if (_hasQuillUnsafeMarkup(currentHtml)) {
+      const lanjut = confirmDialog(
+        "Konten HTML ini mengandung tabel atau elemen kompleks yang TIDAK didukung oleh editor Visual.\n\n" +
+        "Memindahkan ke mode Visual BERISIKO membuat bagian tersebut hilang/rusak.\n\n" +
+        "Tetap lanjutkan ke mode Visual?"
+      );
+      if (!lanjut) return; // batal — tetap di mode HTML, konten tidak disentuh
     }
 
-    // Update state bab
+    // Update state bab dulu
     if (_activeChapterId) {
       const ch = _chapters.find(c => c.id === _activeChapterId);
-      if (ch) ch.content = currentHtml || "";
+      if (ch) { ch.content = currentHtml || ""; ch.mode = "visual"; }
     }
 
-    _editorMode = "visual";
-    htmlTa.style.display     = "none";
-    if (htmlBar) htmlBar.classList.remove("visible");
-    quillWrap.style.display  = "";
-    toolbar.style.display    = "";
-
-    btnVisual.classList.add("active");    btnVisual.setAttribute("aria-pressed","true");
-    btnHtml  .classList.remove("active"); btnHtml  .setAttribute("aria-pressed","false");
+    _applyChapterEditorMode("visual", currentHtml || "");
   }
 
   // ── Switch ke mode HTML ───────────────────────────────────
   function activateHtml() {
-    // Ambil HTML dari Quill
+    // PENGAMAN UTAMA: jika sudah di mode HTML, jangan lakukan apa-apa.
+    // Ini memperbaiki bug "teks langsung terhapus saat tidak sengaja
+    // menekan HTML" — sebelumnya, klik berulang pada tombol ini akan
+    // membaca ulang q.root.innerHTML (yang BASI/kosong karena Quill
+    // tidak pernah disinkronkan selama mode HTML aktif) dan menimpa
+    // textarea, menghapus semua teks yang baru saja diketik.
+    if (_editorMode === "html") return;
+
+    // Ambil HTML dari Quill (hanya terjadi sekali, saat transisi visual→html)
     const q    = window._bookQuill;
     const html = (q && q.root.innerHTML !== "<p><br></p>") ? q.root.innerHTML : "";
 
-    htmlTa.value            = html;
-    _editorMode             = "html";
-    quillWrap.style.display = "none";
-    toolbar.style.display   = "none";
-    htmlTa.style.display    = "block";
-    if (htmlBar) htmlBar.classList.add("visible");
-    htmlTa.focus();
-
-    // Update state bab
+    // Update state bab — simpan konten Quill ke bab aktif dulu
     if (_activeChapterId) {
       const ch = _chapters.find(c => c.id === _activeChapterId);
-      if (ch) ch.content = html || "";
+      if (ch) { ch.content = html || ""; ch.mode = "html"; }
     }
 
-    btnHtml  .classList.add("active");    btnHtml  .setAttribute("aria-pressed","true");
-    btnVisual.classList.remove("active"); btnVisual.setAttribute("aria-pressed","false");
+    _applyChapterEditorMode("html", html);
+    htmlTa.focus();
   }
 
   btnVisual.addEventListener("click", activateVisual);
@@ -2154,7 +2237,10 @@ function getBookContent() {
   if (allEmpty) return null;
 
   return _chapters.map((ch, i) =>
-    `<section class="buku-bab" data-bab="${i + 1}">` +
+    // data-mode disimpan agar saat draft dibuka kembali, bab yang
+    // ditulis sebagai HTML mentah TETAP dibuka di mode HTML — bukan
+    // dipaksa lewat Quill (yang berisiko merusak markup seperti tabel).
+    `<section class="buku-bab" data-bab="${i + 1}" data-mode="${ch.mode === 'html' ? 'html' : 'visual'}">` +
     `<h2 class="bab-judul">${escapeHtml(ch.title || `Bab ${i + 1}`)}</h2>` +
     `<div class="bab-isi">${ch.content || ""}</div>` +
     `</section>`
@@ -2169,7 +2255,7 @@ function setBookContent(html) {
 
   if (!html || html.trim() === "") {
     renderChapterList();
-    document.getElementById("tab-file-mode")?.click();
+    _setContentMode("file");
     return;
   }
 
@@ -2180,33 +2266,49 @@ function setBookContent(html) {
 
   if (sections.length) {
     sections.forEach(sec => {
-      const title   = sec.querySelector(".bab-judul")?.textContent?.trim() || "";
-      const isiEl   = sec.querySelector(".bab-isi");
-      const content = isiEl ? isiEl.innerHTML : "";
-      _chapters.push({ id: _newChapterId(), title, content });
+      const title     = sec.querySelector(".bab-judul")?.textContent?.trim() || "";
+      const isiEl     = sec.querySelector(".bab-isi");
+      const content   = isiEl ? isiEl.innerHTML : "";
+      const savedMode = sec.getAttribute("data-mode");
+      // Tentukan mode: hormati mode tersimpan, TAPI kalau kontennya
+      // mengandung markup yang TIDAK aman buat Quill (tabel, dll),
+      // PAKSA ke mode HTML — ini jaring pengaman utama supaya konten
+      // semacam itu tidak pernah disentuh Quill sama sekali.
+      const mode = _hasQuillUnsafeMarkup(content) ? "html" : (savedMode === "html" ? "html" : "visual");
+      _chapters.push({ id: _newChapterId(), title, content, mode });
     });
   } else {
     // Konten lama tanpa struktur bab → jadikan satu bab
-    _chapters.push({ id: _newChapterId(), title: "Konten", content: html });
+    const mode = _hasQuillUnsafeMarkup(html) ? "html" : "visual";
+    _chapters.push({ id: _newChapterId(), title: "Konten", content: html, mode });
   }
 
-  // Aktifkan bab pertama
   if (_chapters.length) {
     _activeChapterId = _chapters[0].id;
+    const first = _chapters[0];
+
+    // Gunakan satu setTimeout saja — cukup untuk menunggu Quill siap
     setTimeout(() => {
-      const q = window._bookQuill;
-      if (q) {
-        q.root.innerHTML = _chapters[0].content || "";
-        q.setSelection(0, 0);
-      }
+      // Tampilkan bab pertama sesuai mode aslinya. Jika mode-nya "html",
+      // ini TIDAK PERNAH menyentuh Quill — textarea diisi langsung,
+      // sehingga konten 100% aman dari proses internal Quill.
+      _applyChapterEditorMode(first.mode || "visual", first.content || "");
+
+      // Update judul bab
       const titleInput = document.getElementById("chapter-title-input");
-      if (titleInput) titleInput.value = _chapters[0].title || "";
+      if (titleInput) titleInput.value = first.title || "";
+
+      // Render daftar bab & switch ke mode tulis
       renderChapterList();
-      document.getElementById("tab-write-mode")?.click();
-    }, 50);
+      _setContentMode("write");
+
+      // Pastikan editor wrap terlihat
+      const edWrap = document.getElementById("chapter-editor-wrap");
+      if (edWrap) edWrap.style.display = "";
+    }, 80);
   } else {
     renderChapterList();
-    document.getElementById("tab-file-mode")?.click();
+    _setContentMode("file");
   }
 }
 
@@ -2215,28 +2317,18 @@ function resetBookContent() {
   _chapters        = [];
   _activeChapterId = null;
   _chapterCounter  = 0;
-  _editorMode      = "visual";
 
-  const q = window._bookQuill;
-  if (q) q.setText("");
-
-  // Kembalikan ke tampilan mode visual
-  const htmlTa    = document.getElementById("chapter-html-editor");
-  const quillEl   = document.getElementById("bf-content-editor");
-  const toolbarEl = document.getElementById("bf-content-toolbar");
-  const htmlBar   = document.getElementById("html-toolbar");
-  const btnVisual = document.getElementById("btn-mode-visual");
-  const btnHtml   = document.getElementById("btn-mode-html");
-  if (htmlTa)   htmlTa.style.display   = "none";
-  if (htmlTa)   htmlTa.value           = "";
-  if (quillEl)  quillEl.style.display  = "";
-  if (toolbarEl) toolbarEl.style.display = "";
-  if (htmlBar)  htmlBar.classList.remove("visible");
-  if (btnVisual) { btnVisual.classList.add("active");    btnVisual.setAttribute("aria-pressed","true"); }
-  if (btnHtml)   { btnHtml.classList.remove("active");   btnHtml.setAttribute("aria-pressed","false"); }
+  // Reset tampilan editor ke kondisi awal (visual, kosong) lewat
+  // helper terpusat — otomatis aman walau Quill belum ter-init.
+  try {
+    _applyChapterEditorMode("visual", "");
+  } catch(_) {
+    // Quill belum sepenuhnya siap pada pemanggilan pertama — abaikan
+  }
 
   renderChapterList();
-  document.getElementById("tab-file-mode")?.click();
+  // Switch ke mode file secara langsung (tidak bergantung pada event listener)
+  _setContentMode("file");
 }
 
 // ============================================================
