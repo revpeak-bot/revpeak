@@ -172,6 +172,13 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .chapter-item-actions { display: flex; gap: 3px; flex-shrink: 0; }
+    .chapter-mode-badge {
+      flex-shrink: 0; font-size: .62rem; font-weight: 800;
+      letter-spacing: .4px; padding: 1px 6px; border-radius: 4px;
+      background: rgba(0,0,0,.12); color: inherit;
+      font-family: 'SF Mono','Fira Mono',monospace;
+    }
+    .chapter-item.active .chapter-mode-badge { background: rgba(255,255,255,.25); }
     .chapter-btn {
       background: none; border: 1px solid transparent;
       border-radius: 5px; padding: 3px 7px; cursor: pointer;
