@@ -38,7 +38,7 @@ jobs:
           WORKER_SECRET:            ${{ secrets.WORKER_SECRET }}
           SUPABASE_URL:             ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY:     ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node agen-berita.js
+        run: node agents/agen-berita.js
 
       - name: 📋 Log selesai
         if: always()
