@@ -37,7 +37,9 @@ const AI_TEXT_MODEL    = process.env.AI_TEXT_MODEL || "@cf/meta/llama-3.3-70b-in
 const AI_FALLBACK_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
 const CF_AI_TEXT_PRIMARY  = `${CF_AI_BASE}/${AI_TEXT_MODEL}`;
 const CF_AI_TEXT_FALLBACK = `${CF_AI_BASE}/${AI_FALLBACK_MODEL}`;
-const CF_AI_IMAGE   = `${CF_AI_BASE}/@cf/stabilityai/stable-diffusion-xl-base-1.0`;
+// Model gambar: SDXL lama sudah dipensiunkan Cloudflare (20 Nov 2026). Bisa diganti lewat env AI_IMAGE_MODEL.
+const CF_AI_IMAGE_MODEL = process.env.AI_IMAGE_MODEL || "@cf/black-forest-labs/flux-1-schnell";
+const CF_AI_IMAGE   = `${CF_AI_BASE}/${CF_AI_IMAGE_MODEL}`;
 
 // Jumlah section per tipe konten
 const SECTION_COUNT = { article: 7, news: 4 };
@@ -76,7 +78,8 @@ const TOPIK = [
     kategori: "Sains", slug_kategori: "sains", post_type: "article",
     subtopik: [
       "bagaimana tata surya terbentuk dan apa saja anggotanya",
-      "mengapa terjadi perubahan musim dan fenomena gerhana",
+      "mengapa terjadi pergantian musim di bumi",
+      "bagaimana gerhana matahari dan gerhana bulan terjadi",
       "dasar-dasar fisika kuantum dengan analogi sederhana",
       "cara kerja energi surya dan energi angin",
       "siklus air dan perannya bagi kehidupan di bumi",
@@ -194,7 +197,7 @@ async function callAIModel(endpoint, prompt, maxTokens) {
 // ============================================================
 
 async function generateImage(prompt) {
-  log(`🎨 Generating gambar AI: "${prompt}"...`);
+  log(`🎨 Generating gambar AI (${CF_AI_IMAGE_MODEL}): "${prompt}"...`);
 
   const res = await fetch(CF_AI_IMAGE, {
     method: "POST",
@@ -202,13 +205,7 @@ async function generateImage(prompt) {
       "Authorization": `Bearer ${CF_AI_TOKEN}`,
       "Content-Type":  "application/json",
     },
-    body: JSON.stringify({
-      prompt,
-      num_steps: 20,
-      guidance:  7.5,
-      width:     1024,
-      height:    576,
-    }),
+    body: JSON.stringify({ prompt, steps: 6 }),
   });
 
   if (!res.ok) {
@@ -216,7 +213,18 @@ async function generateImage(prompt) {
     throw new Error(`CF AI Image ${res.status}: ${err.substring(0, 200)}`);
   }
 
-  const buffer = await res.arrayBuffer();
+  // FLUX mengembalikan JSON { result: { image: "<base64>" } }; model lain bisa mengembalikan biner.
+  let buffer;
+  const ctype = res.headers.get("content-type") || "";
+  if (ctype.includes("application/json")) {
+    const data = await res.json();
+    const b64  = data?.result?.image || data?.image;
+    if (!b64) throw new Error("Respons gambar tidak berisi field image");
+    buffer = Buffer.from(b64, "base64");
+  } else {
+    buffer = Buffer.from(await res.arrayBuffer());
+  }
+
   if (!buffer || buffer.byteLength < 1000) {
     throw new Error("Gambar yang dihasilkan terlalu kecil atau kosong");
   }
@@ -332,8 +340,10 @@ async function generateAndUploadImage(imagePrompt, slug) {
     const imageBuffer = await generateImage(imagePrompt);
 
     log("🔄 Mengkonversi gambar ke WebP...");
+    // Dipotong ke 1200x630 (rasio ideal untuk thumbnail dan og:image)
     const webpBuffer = await sharp(Buffer.from(imageBuffer))
-      .webp({ quality: 85 })
+      .resize(1200, 630, { fit: "cover" })
+      .webp({ quality: 82 })
       .toBuffer();
     log(`✅ Konversi WebP selesai: ${(webpBuffer.byteLength / 1024).toFixed(1)} KB`);
 
@@ -357,7 +367,7 @@ async function generateMetadata(topik, subtopik, postType) {
 
 Balas PERSIS dengan format ini (satu nilai per baris, tanpa penjelasan lain):
 FOCUS_KW: [kata kunci utama 2-4 kata yang paling sering dicari di Google Indonesia]
-TITLE: [judul 50-60 karakter: letakkan kata kunci di AWAL, gunakan angka atau kata tanya jika relevan, harus menarik untuk diklik]
+TITLE: [judul 50-60 karakter: letakkan kata kunci di AWAL, gunakan kata tanya jika relevan, harus menarik untuk diklik. JANGAN memakai angka berurutan seperti "5 Alasan" atau "7 Cara" karena isi artikel bukan daftar bernomor; gunakan kata tanya atau frasa jelas]
 EXCERPT: [140-155 karakter: sebut kata kunci di kalimat pertama, padat dan bernilai, hindari frasa "artikel ini membahas"]
 TAGS: [6-8 tag relevan dari umum ke spesifik, pisahkan koma]
 META_DESC: [130-155 karakter: buka dengan kata kunci, sebutkan manfaat utama pembaca, akhiri dengan CTA seperti "Simak panduan lengkapnya." atau "Pelajari lebih lanjut di sini."]
@@ -500,7 +510,7 @@ Posisi: ${instruksiPosisi}
 - Bahasa Indonesia baku, kalimat aktif, langsung ke inti
 - Sertakan minimal satu contoh ilustrasi yang mudah dibayangkan per bagian (tandai sebagai "misalnya"). JANGAN mengarang statistik, tanggal, nama, atau kutipan
 - Hindari kalimat pasif berlebihan dan kata sifat yang tidak terukur ("sangat", "banyak", "berbagai")
-- Target: 280-380 kata untuk bagian ini
+- Target: 350-450 kata untuk bagian ini (jangan kurang dari 300 kata)
 
 Langsung tulis konten HTML mulai dari <h2>:`;
 
@@ -551,11 +561,18 @@ async function sbFetch(path, options = {}) {
   return data;
 }
 
-async function getCategoryId(slug) {
+async function getCategoryId(slug, nama) {
   try {
-    const r = await sbFetch(`/categories?slug=eq.${encodeURIComponent(slug)}&select=id&limit=1`);
+    let r = await sbFetch(`/categories?slug=eq.${encodeURIComponent(slug)}&select=id&limit=1`);
+    if (r?.[0]?.id) return r[0].id;
+    // cadangan: cocokkan berdasarkan nama kategori (tanpa membedakan huruf besar/kecil)
+    r = await sbFetch(`/categories?name=ilike.${encodeURIComponent(nama)}&select=id&limit=1`);
+    if (!r?.[0]?.id) log(`⚠️  Kategori "${slug}" tidak ditemukan/terbaca (kemungkinan RLS membatasi akses baca tabel categories).`);
     return r?.[0]?.id || null;
-  } catch { return null; }
+  } catch (e) {
+    log(`⚠️  Gagal membaca kategori "${slug}": ${String(e.message).substring(0, 160)}`);
+    return null;
+  }
 }
 
 // Penulis tetap: akun "Redaksi Revpeak" (slug dari AUTHOR_SLUG). Jika belum dibuat di admin,
@@ -702,7 +719,7 @@ async function main() {
     : '\n\n<p class="ai-disclosure"><em>Artikel ini disusun dengan bantuan AI.</em></p>';
 
   const [categoryId, authorId] = await Promise.all([
-    getCategoryId(topikDipilih.slug_kategori),
+    getCategoryId(topikDipilih.slug_kategori, topikDipilih.kategori),
     getAuthorId(),
   ]);
   log(`🗂️  Category: ${categoryId ?? "null"} | Author: ${authorId ?? "null"}`);
