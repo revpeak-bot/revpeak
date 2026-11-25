@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- ===== SEO: Title & Meta Description ===== -->
+  <title>Revpeak – Berita dan Artikel Terkini Seputar Teknologi</title>
+  <meta name="description" content="Baca berita terkini dan artikel mendalam di Revpeak. Kami menyajikan informasi terpercaya seputar teknologi, bisnis, sains, dan gaya hidup setiap hari.">
+
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://revpeak.web.id">
+
+  <!-- ===== Open Graph (Facebook / WhatsApp) ===== -->
+  <meta property="og:type"        content="website">
+  <meta property="og:url"         content="https://revpeak.web.id">
+  <meta property="og:site_name"   content="Revpeak">
+  <meta property="og:locale"      content="id_ID">
+  <meta property="og:title"       content="Revpeak – Berita dan Artikel Terkini Seputar Teknologi">
+  <meta property="og:description" content="Baca berita terkini dan artikel mendalam di Revpeak. Kami menyajikan informasi terpercaya seputar teknologi, bisnis, sains, dan gaya hidup setiap hari.">
+  <meta property="og:image"       content="https://revpeak.web.id/img/logo-revpeak.webp">
+  <meta property="og:image:alt"   content="Revpeak – Platform Berita dan Artikel Terpercaya">
+
+  <!-- ===== Twitter / X Cards ===== -->
+  <meta name="twitter:card"        content="summary_large_image">
+  <meta name="twitter:title"       content="Revpeak – Berita dan Artikel Terkini Seputar Teknologi">
+  <meta name="twitter:description" content="Baca berita terkini dan artikel mendalam di Revpeak. Kami menyajikan informasi terpercaya seputar teknologi, bisnis, sains, dan gaya hidup setiap hari.">
+  <meta name="twitter:image"       content="https://revpeak.web.id/img/logo-revpeak.webp">
+
+  <!-- ===== Schema.org JSON-LD ===== -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://revpeak.web.id/#website",
+        "url": "https://revpeak.web.id",
+        "name": "Revpeak",
+        "description": "Platform berita dan artikel terpercaya seputar teknologi, bisnis, sains, dan gaya hidup.",
+        "inLanguage": "id",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://revpeak.web.id/search.html?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://revpeak.web.id/#organization",
+        "name": "Revpeak",
+        "url": "https://revpeak.web.id",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://revpeak.web.id/img/logo-revpeak.webp",
+          "width": 512,
+          "height": 512
+        },
+        "sameAs": []
+      }
+    ]
+  }
+  </script>
+
+  <!-- ===== Favicons & Assets ===== -->
+  <link rel="icon" type="image/webp" href="/img/logo-revpeak.webp">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#E03E0B">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+
+  <style>
+    /* ===== WELCOME NOTIFICATION ===== */
+    #rp-notif-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 9000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    #rp-notif-backdrop.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #rp-notif {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -40%);
+      opacity: 0;
+      pointer-events: none;
+      width: min(94vw, 480px);
+      z-index: 9001;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.08),
+        0 24px 64px rgba(0,0,0,0.28),
+        0 4px 16px rgba(0,0,0,0.12);
+      transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.34, 1.45, 0.64, 1);
+      font-family: 'DM Sans', sans-serif;
+    }
+    #rp-notif.active {
+      opacity: 1;
+      pointer-events: all;
+      transform: translate(-50%, -50%);
+    }
+    #rp-notif-accent {
+      height: 3px;
+      background: linear-gradient(90deg, #111 0%, #555 50%, #111 100%);
+      background-size: 200% 100%;
+      animation: rp-slide 3s linear infinite;
+    }
+    [data-theme="dark"] #rp-notif-accent {
+      background: linear-gradient(90deg, #fff 0%, #aaa 50%, #fff 100%);
+      background-size: 200% 100%;
+    }
+    @keyframes rp-slide {
+      0%   { background-position: 0% 0%; }
+      100% { background-position: -200% 0%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #rp-notif-accent { animation: none; }
+    }
+    #rp-notif-body {
+      background: #fff;
+      padding: 22px 22px 18px;
+    }
+    [data-theme="dark"] #rp-notif-body { background: #1a1a1a; }
+    #rp-notif-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    #rp-notif-logo {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    #rp-notif-logo img {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      object-fit: contain;
+    }
+    #rp-notif-logo span {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: #111;
+      letter-spacing: -0.3px;
+    }
+    [data-theme="dark"] #rp-notif-logo span { color: #f0f0f0; }
+    #rp-notif-logo span em { font-style: normal; color: #666; }
+    #rp-notif-badge {
+      margin-left: auto;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #111;
+      background: #f0f0f0;
+      border-radius: 20px;
+      padding: 3px 10px;
+    }
+    [data-theme="dark"] #rp-notif-badge { color: #f0f0f0; background: #2a2a2a; }
+    #rp-notif-divider {
+      height: 1px;
+      background: #ebebeb;
+      margin: 0 0 16px;
+    }
+    [data-theme="dark"] #rp-notif-divider { background: #2e2e2e; }
+    #rp-notif h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #111;
+      margin: 0 0 6px;
+      line-height: 1.35;
+      letter-spacing: -0.3px;
+    }
+    [data-theme="dark"] #rp-notif h2 { color: #f0f0f0; }
+    #rp-notif p {
+      font-size: 0.83rem;
+      line-height: 1.68;
+      color: #555;
+      margin: 0 0 18px;
+    }
+    [data-theme="dark"] #rp-notif p { color: #999; }
+    #rp-notif-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 18px;
+    }
+    .rp-pill {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #333;
+      background: #f5f5f5;
+      border-radius: 20px;
+      padding: 4px 12px;
+    }
+    [data-theme="dark"] .rp-pill { color: #ccc; background: #2a2a2a; }
+    #rp-notif-actions {
+      display: flex;
+      gap: 10px;
+    }
+    #rp-notif-dismiss {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1.5px solid #e0e0e0;
+      background: transparent;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
+    }
+    #rp-notif-dismiss:hover { background: #f5f5f5; }
+    [data-theme="dark"] #rp-notif-dismiss { border-color: #333; color: #aaa; }
+    [data-theme="dark"] #rp-notif-dismiss:hover { background: #222; }
+    #rp-notif-ok {
+      flex: 2;
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      background: #111;
+      color: #fff;
+      font-size: 0.83rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
+    }
+    #rp-notif-ok:hover { background: #333; }
+    [data-theme="dark"] #rp-notif-ok { background: #fff; color: #111; }
+    [data-theme="dark"] #rp-notif-ok:hover { background: #ddd; }
+
+    /* ===== SEO H1 hidden ===== */
+    .seo-h1 {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ===== Tabs sticky offset ===== */
+    .tabs-bar { top: 97px; }
+
+    @media (max-width: 600px) {
+      .tabs-bar { top: 88px; }
+      .section-header { padding-top: 16px; }
+      #rp-notif-actions { flex-direction: column; }
+      #rp-notif-ok, #rp-notif-dismiss { flex: unset; width: 100%; }
+    }
+
+    /* ===== Hero badge inline style moved here ===== */
+    .hero-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin: 0;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== WELCOME NOTIFICATION ===== -->
+  <div id="rp-notif-backdrop"></div>
+  <div id="rp-notif" role="dialog" aria-modal="true" aria-labelledby="rp-notif-title">
+    <div id="rp-notif-accent"></div>
+    <div id="rp-notif-body">
+      <div id="rp-notif-header">
+        <div id="rp-notif-logo">
+          <img src="/img/logo-revpeak.webp" alt="Revpeak">
+          <span>Rev<em>peak</em></span>
+        </div>
+        <span id="rp-notif-badge">Selamat Datang</span>
+      </div>
+      <div id="rp-notif-divider"></div>
+      <h2 id="rp-notif-title">Revpeak Hadir dengan Tampilan Baru 🎉</h2>
+      <p>Kini Revpeak fokus menyajikan berita terkini dan artikel mendalam yang bermanfaat untuk Anda setiap hari.</p>
+      <div id="rp-notif-pills">
+        <span class="rp-pill">📰 Berita Terkini</span>
+        <span class="rp-pill">📝 Artikel Mendalam</span>
+        <span class="rp-pill">🗂️ Berbagai Kategori</span>
+      </div>
+      <div id="rp-notif-actions">
+        <button id="rp-notif-dismiss">Nanti Saja</button>
+        <button id="rp-notif-ok">Jelajahi Sekarang</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DRAWER OVERLAY ===== -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+
+  <!-- ===== DRAWER MENU ===== -->
+  <aside class="drawer" id="drawer" aria-label="Menu navigasi">
+    <div class="drawer-header">
+      <div class="drawer-logo">
+        <div class="logo-icon" id="drawer-logo-icon">
+          <img src="/img/logo-revpeak.webp" alt="Revpeak logo" class="logo-img">
+        </div>
+        <span class="logo-text">Rev<span>peak</span></span>
+      </div>
+      <button class="drawer-close" id="drawer-close" aria-label="Tutup menu">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <nav class="drawer-nav">
+      <a href="/" class="drawer-link active">
+        <span class="drawer-link-icon">🏠</span>
+        <span>Beranda</span>
+      </a>
+      <a href="berita.html" class="drawer-link">
+        <span class="drawer-link-icon">📰</span>
+        <span>Berita</span>
+      </a>
+      <a href="artikel.html" class="drawer-link">
+        <span class="drawer-link-icon">📝</span>
+        <span>Artikel</span>
+      </a>
+      <a href="kategori.html" class="drawer-link">
+        <span class="drawer-link-icon">🗂️</span>
+        <span>Kategori</span>
+      </a>
+      <a href="penulis.html" class="drawer-link">
+        <span class="drawer-link-icon">👤</span>
+        <span>Penulis</span>
+      </a>
+      <a href="perpustakaan.html" class="drawer-link">
+        <span class="drawer-link-icon">📚</span>
+        <span>Perpustakaan</span>
+      </a>
+      <a href="search.html" class="drawer-link">
+        <span class="drawer-link-icon">🔍</span>
+        <span>Cari</span>
+      </a>
+      <a href="tentang.html" class="drawer-link">
+        <span class="drawer-link-icon">ℹ️</span>
+        <span>Tentang</span>
+      </a>
+      <a href="kontak.html" class="drawer-link">
+        <span class="drawer-link-icon">💬</span>
+        <span>Kontak</span>
+      </a>
+    </nav>
+
+    <div class="drawer-footer">
+      <div class="drawer-theme-row">
+        <span class="drawer-theme-label">Mode Gelap</span>
+        <button class="theme-toggle-pill" id="theme-toggle" role="switch" aria-checked="false" aria-label="Ganti tema">
+          <span class="theme-toggle-thumb"></span>
+        </button>
+      </div>
+      <p class="drawer-version">Revpeak v3.0</p>
+    </div>
+  </aside>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header" id="header">
+    <div class="header-top">
+      <div class="header-top-inner container">
+        <button class="hamburger" id="hamburger" aria-label="Buka menu" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <a href="/" class="header-logo">
+          <div class="logo-icon" id="header-logo-icon">
+            <img src="/img/logo-revpeak.webp" id="logo-img" alt="Revpeak logo" onerror="this.style.display='none'">
+            <span id="logo-letter">R</span>
+          </div>
+          <div class="header-logo-text">
+            <span class="logo-text">Rev<span>peak</span></span>
+            <span class="logo-tagline">Berita &amp; Artikel Terpercaya</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Search bar -->
+    <div class="header-search-wrap">
+      <div class="container">
+        <form id="header-search-form" class="header-search-inner" role="search" aria-label="Cari artikel">
+          <svg class="search-icon-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="search" id="header-search-input" class="search-input" placeholder="Cari berita, artikel, topik..." autocomplete="off" aria-label="Cari konten">
+          <button type="button" class="search-clear" id="search-clear" aria-label="Hapus pencarian">✕</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== TABS ===== -->
+  <div class="tabs-bar" id="tabs-bar" role="tablist" aria-label="Pilih kategori konten">
+    <div class="container">
+      <div class="tabs-inner">
+        <button class="tab-btn active" data-tab="rekomendasi" role="tab" aria-selected="true">
+          <span class="tab-icon">⭐</span>
+          <span class="tab-label">Rekomendasi</span>
+        </button>
+        <button class="tab-btn" data-tab="trending" role="tab" aria-selected="false">
+          <span class="tab-icon">🔥</span>
+          <span class="tab-label">Trending</span>
+        </button>
+        <button class="tab-btn" data-tab="terbaru" role="tab" aria-selected="false">
+          <span class="tab-icon">🆕</span>
+          <span class="tab-label">Terbaru</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main-section" id="main-content">
+    <div class="container">
+
+      <!-- SEO H1 -->
+      <h1 class="seo-h1">Berita &amp; Artikel Terkini — Revpeak</h1>
+
+      <!-- Section header -->
+      <div class="section-header">
+        <h2 class="section-title hero-title" id="section-title">⭐ Rekomendasi</h2>
+        <p class="hero-badge" id="hero-tab-label">Pilihan Editor</p>
+      </div>
+
+      <!-- Content grid -->
+      <div id="articles-grid" class="content-grid" role="feed" aria-label="Daftar berita dan artikel" aria-busy="true" aria-live="polite">
+        <!-- Skeleton awal -->
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line sk-tag"></div><div class="skeleton sk-line sk-title"></div><div class="skeleton sk-line"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line sk-tag"></div><div class="skeleton sk-line sk-title"></div><div class="skeleton sk-line"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line sk-tag"></div><div class="skeleton sk-line sk-title"></div><div class="skeleton sk-line"></div></div></div>
+      </div>
+
+      <!-- Pagination -->
+      <nav id="pagination" class="pagination-wrap" aria-label="Navigasi halaman"></nav>
+
+    </div>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <div class="logo-icon">
+              <img src="/img/logo-revpeak.webp" alt="Revpeak logo" class="logo-img">
+            </div>
+            <span class="logo-text">Rev<span>peak</span></span>
+          </div>
+          <p class="footer-desc">Kami menyajikan berita terkini dan artikel mendalam yang bermanfaat. Temukan informasi terpercaya setiap hari di Revpeak.</p>
+        </div>
+        <div class="footer-col">
+          <h3>Navigasi</h3>
+          <a href="/">Beranda</a>
+          <a href="berita.html">Berita</a>
+          <a href="artikel.html">Artikel</a>
+          <a href="kategori.html">Kategori</a>
+          <a href="penulis.html">Penulis</a>
+          <a href="perpustakaan.html">Perpustakaan</a>
+          <a href="tentang.html">Tentang Kami</a>
+          <a href="kontak.html">Kontak</a>
+        </div>
+        <div class="footer-col">
+          <h3>Jelajahi</h3>
+          <a href="kategori.html">Semua Kategori</a>
+          <a href="search.html">Cari Artikel</a>
+          <a href="berita.html">Berita Terkini</a>
+          <a href="artikel.html">Artikel Pilihan</a>
+          <a href="perpustakaan.html">Koleksi Buku</a>
+        </div>
+        <div class="footer-col">
+          <h3>Legal</h3>
+          <a href="kebijakan.html">Kebijakan Privasi</a>
+          <a href="disclaimer.html">Disclaimer</a>
+          <a href="sitemap.xml">Sitemap</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© <span id="footer-year"></span> Revpeak. Semua hak dilindungi.</p>
+        <div class="social-links">
+          <a href="#" aria-label="Instagram Revpeak">📸</a>
+          <a href="#" aria-label="YouTube Revpeak">▶️</a>
+          <a href="#" aria-label="Telegram Revpeak">✈️</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scroll to top -->
+  <button class="scroll-top" id="scroll-top" aria-label="Kembali ke atas">↑</button>
+
+  <script>
+    document.getElementById("footer-year").textContent = new Date().getFullYear();
+
+    // ── Welcome notification ──────────────────────────────────
+    (function () {
+      const KEY      = 'rp_welcome_v3';
+      const notif    = document.getElementById('rp-notif');
+      const backdrop = document.getElementById('rp-notif-backdrop');
+
+      function close(permanent) {
+        notif.classList.remove('active');
+        backdrop.classList.remove('active');
+        if (permanent) localStorage.setItem(KEY, '1');
+      }
+
+      const isBot = /lighthouse|headlesschrome|googlebot/i.test(navigator.userAgent);
+      if (!localStorage.getItem(KEY) && !isBot) {
+        setTimeout(function () {
+          notif.classList.add('active');
+          backdrop.classList.add('active');
+        }, 700);
+      }
+
+      document.getElementById('rp-notif-ok').addEventListener('click', function () { close(true); });
+      document.getElementById('rp-notif-dismiss').addEventListener('click', function () { close(false); });
+      backdrop.addEventListener('click', function () { close(false); });
+    })();
+
+    // ── Search clear button ───────────────────────────────────
+    const searchInput = document.getElementById('header-search-input');
+    const searchClear = document.getElementById('search-clear');
+    if (searchInput && searchClear) {
+      searchClear.style.display = 'none';
+      searchInput.addEventListener('input', function () {
+        searchClear.style.display = this.value ? '' : 'none';
+      });
+      searchClear.addEventListener('click', function () {
+        searchInput.value = '';
+        searchClear.style.display = 'none';
+        searchInput.focus();
+      });
+    }
+
+    // ── Theme toggle ──────────────────────────────────────────
+    // CATATAN: Hamburger & Drawer sepenuhnya ditangani oleh initDrawer() di app.js.
+    // Tidak ada handler hamburger di sini untuk menghindari konflik double listener.
+    const themeBtn    = document.getElementById('theme-toggle');
+    const savedTheme  = localStorage.getItem('rp_theme');
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      if (themeBtn) themeBtn.setAttribute('aria-checked', savedTheme === 'dark' ? 'true' : 'false');
+    }
+    themeBtn?.addEventListener('click', function () {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const next   = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('rp_theme', next);
+      this.setAttribute('aria-checked', isDark ? 'false' : 'true');
+    });
+
+    // ── Scroll to top ─────────────────────────────────────────
+    const scrollBtn = document.getElementById('scroll-top');
+    window.addEventListener('scroll', function () {
+      scrollBtn?.classList.toggle('show', window.scrollY > 400);
+    });
+    scrollBtn?.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  </script>
+  <script src="/js/seo.js" defer></script>
+  <script src="/js/app.js" defer></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>
