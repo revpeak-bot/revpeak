@@ -156,7 +156,7 @@ function injectSchema(article) {
       "url":   siteUrl,
       "logo": {
         "@type": "ImageObject",
-        "url":   `${siteUrl}/logo-revpeak.webp`,
+        "url":   `${siteUrl}/img/logo-revpeak.webp`,
       }
     },
     "mainEntityOfPage": {
