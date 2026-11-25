@@ -31,85 +31,84 @@ const CF_R2_ENDPOINT = `https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 
 // Endpoint Cloudflare Workers AI
 const CF_AI_BASE    = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run`;
-const CF_AI_TEXT = `${CF_AI_BASE}/@cf/meta/llama-3.1-8b-instruct-fp8`;
+// Model teks: bisa diganti lewat env AI_TEXT_MODEL (tanpa mengubah kode).
+// Default memakai model lebih besar; jika gagal otomatis turun ke model kecil.
+const AI_TEXT_MODEL    = process.env.AI_TEXT_MODEL || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+const AI_FALLBACK_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
+const CF_AI_TEXT_PRIMARY  = `${CF_AI_BASE}/${AI_TEXT_MODEL}`;
+const CF_AI_TEXT_FALLBACK = `${CF_AI_BASE}/${AI_FALLBACK_MODEL}`;
 const CF_AI_IMAGE   = `${CF_AI_BASE}/@cf/stabilityai/stable-diffusion-xl-base-1.0`;
 
 // Jumlah section per tipe konten
 const SECTION_COUNT = { article: 7, news: 4 };
 
+// ── Pengaturan kualitas & keamanan konten ───────────────────
+// ARTICLE_STATUS: "draft" (default, ditinjau manual di admin) atau "published"
+const ARTICLE_STATUS = (process.env.ARTICLE_STATUS || "draft") === "published" ? "published" : "draft";
+const MIN_WORDS      = Number(process.env.MIN_WORDS || 1200);   // di bawah ini → tidak disimpan
+const MAX_TOPIC_TRIES = 4;                                       // percobaan cari topik yang belum ada
+const SIMILARITY_LIMIT = 0.6;                                    // kemiripan judul maksimum (0–1)
+const AUTHOR_SLUG    = process.env.AUTHOR_SLUG || "redaksi-revpeak";
+
 // ============================================================
 // TOPIK
 // ============================================================
 
+// Topik EVERGREEN: panduan & penjelasan yang tahan lama.
+// Sengaja tidak memuat: "terbaru/tahun ini", saran investasi, kesehatan/medis,
+// karena model AI bisa keliru dan topik itu butuh tinjauan ahli.
+// Anda bebas menambah/mengubah daftar ini.
 const TOPIK = [
   {
     kategori: "Teknologi", slug_kategori: "teknologi", post_type: "article",
     subtopik: [
-      "kecerdasan buatan dan penerapannya dalam kehidupan sehari-hari",
-      "smartphone terbaru dan inovasinya di tahun ini",
-      "keamanan siber dan cara melindungi data pribadi",
-      "cloud computing dan manfaatnya untuk bisnis kecil",
-      "perkembangan chip AI terbaru dari perusahaan teknologi besar",
-      "internet of things dan rumah pintar masa depan",
-      "open source software yang wajib diketahui developer",
-      "tips memilih laptop terbaik sesuai kebutuhan",
+      "cara kerja kecerdasan buatan dijelaskan untuk orang awam",
+      "cara melindungi akun online dengan kata sandi dan verifikasi dua langkah",
+      "mengenali penipuan online dan phishing agar tidak jadi korban",
+      "perbedaan cloud storage dan penyimpanan lokal serta cara memilihnya",
+      "panduan memilih laptop sesuai kebutuhan kerja dan belajar",
+      "cara kerja internet dan jaringan Wi-Fi di rumah",
+      "dasar-dasar open source dan manfaatnya bagi pengguna biasa",
+      "cara menghemat baterai dan memperpanjang umur smartphone",
     ],
   },
   {
     kategori: "Sains", slug_kategori: "sains", post_type: "article",
     subtopik: [
-      "penemuan terbaru dalam eksplorasi luar angkasa",
-      "penelitian terkini tentang Mars dan planet lain",
-      "dampak perubahan iklim terhadap ekosistem bumi",
-      "bioteknologi modern dan dampaknya bagi kesehatan",
-      "fisika kuantum dijelaskan dengan cara sederhana",
-      "energi terbarukan dan potensinya menggantikan fosil",
-      "fenomena alam langka yang menakjubkan",
-      "penelitian otak manusia dan misteri kesadaran",
+      "bagaimana tata surya terbentuk dan apa saja anggotanya",
+      "mengapa terjadi perubahan musim dan fenomena gerhana",
+      "dasar-dasar fisika kuantum dengan analogi sederhana",
+      "cara kerja energi surya dan energi angin",
+      "siklus air dan perannya bagi kehidupan di bumi",
+      "bagaimana vaksin dan sistem kekebalan secara umum dipelajari sains",
+      "proses fotosintesis dan peran tumbuhan bagi atmosfer",
+      "bagaimana gempa bumi terjadi dan cara mitigasinya",
     ],
   },
   {
     kategori: "Bisnis", slug_kategori: "bisnis", post_type: "article",
     subtopik: [
-      "strategi membangun startup dari nol hingga berhasil",
-      "panduan investasi saham untuk pemula",
-      "tren ekonomi digital yang perlu diperhatikan",
-      "cara mengembangkan UMKM melalui platform digital",
-      "tips manajemen keuangan pribadi yang efektif",
-      "kepemimpinan efektif di era kerja hybrid",
-      "strategi digital marketing untuk bisnis lokal",
-      "inovasi fintech yang mengubah cara bertransaksi",
+      "langkah menyusun rencana bisnis sederhana untuk usaha kecil",
+      "cara memulai usaha online dari nol dengan modal terbatas",
+      "dasar-dasar pembukuan sederhana untuk UMKM",
+      "strategi membangun merek usaha yang mudah diingat",
+      "cara menulis deskripsi produk yang menarik pembeli",
+      "dasar-dasar pemasaran digital untuk bisnis lokal",
+      "cara melayani pelanggan dengan baik dan menangani keluhan",
+      "memahami arus kas dan mengapa penting bagi usaha",
     ],
   },
   {
     kategori: "Gaya Hidup", slug_kategori: "gaya-hidup", post_type: "article",
     subtopik: [
-      "tips produktivitas bekerja dari rumah yang terbukti efektif",
-      "cara menjaga kesehatan mental di tengah kesibukan",
-      "olahraga praktis yang bisa dilakukan di rumah",
-      "panduan pola makan sehat dan bergizi",
-      "tips traveling hemat namun tetap menyenangkan",
-      "kebiasaan pagi yang dilakukan orang sukses dunia",
-      "panduan meditasi untuk pemula",
-      "cara mencapai keseimbangan kerja dan kehidupan pribadi",
-    ],
-  },
-  {
-    kategori: "Teknologi", slug_kategori: "teknologi", post_type: "news",
-    subtopik: [
-      "peluncuran produk teknologi terbaru yang menggemparkan industri",
-      "kebijakan baru platform media sosial yang berdampak luas",
-      "regulasi AI terbaru dan dampaknya bagi pengembang",
-      "update sistem operasi terbaru dengan fitur baru",
-    ],
-  },
-  {
-    kategori: "Bisnis", slug_kategori: "bisnis", post_type: "news",
-    subtopik: [
-      "perkembangan ekonomi digital Indonesia terkini",
-      "startup Indonesia yang berhasil mendapatkan pendanaan besar",
-      "kebijakan moneter dan dampaknya terhadap investasi",
-      "tren pasar kerja teknologi di Indonesia dan global",
+      "tips mengatur waktu dan prioritas agar lebih produktif",
+      "cara menyiapkan ruang kerja di rumah yang nyaman",
+      "panduan merencanakan perjalanan hemat dengan anggaran jelas",
+      "kebiasaan sederhana untuk menjaga fokus saat bekerja",
+      "cara menyusun jadwal belajar mandiri yang konsisten",
+      "tips merapikan rumah dengan prinsip minimalis",
+      "panduan membaca buku lebih banyak dengan kebiasaan kecil",
+      "cara menyiapkan perjalanan dan barang bawaan yang efisien",
     ],
   },
 ];
@@ -150,7 +149,17 @@ function generateFileName(slug) {
 // ============================================================
 
 async function callAI(prompt, maxTokens = 1200) {
-  const res = await fetch(CF_AI_TEXT, {
+  try {
+    return await callAIModel(CF_AI_TEXT_PRIMARY, prompt, maxTokens);
+  } catch (e) {
+    if (CF_AI_TEXT_PRIMARY === CF_AI_TEXT_FALLBACK) throw e;
+    log(`⚠️  Model utama gagal (${e.message.substring(0, 120)}), memakai model cadangan...`);
+    return await callAIModel(CF_AI_TEXT_FALLBACK, prompt, maxTokens);
+  }
+}
+
+async function callAIModel(endpoint, prompt, maxTokens) {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${CF_AI_TOKEN}`,
@@ -160,7 +169,7 @@ async function callAI(prompt, maxTokens = 1200) {
       messages: [
         {
           role: "system",
-          content: `Anda adalah jurnalis dan editor senior Revpeak, media digital Indonesia. Gaya penulisan: lugas, informatif, tidak terasa ditulis AI, SEO-friendly. Aturan wajib: (1) Paragraf pendek—maksimal 3-4 kalimat per paragraf. (2) Tempatkan kata kunci utama secara natural di paragraf pertama setiap sub-bagian. (3) Gunakan <strong> untuk angka, statistik, dan fakta kunci—bukan sekadar dekorasi. (4) Hindari pembuka klise: "Dalam era modern ini...", "Tidak dapat dipungkiri...", "Sangat penting untuk diketahui...". (5) Sertakan minimal satu data atau contoh konkret per sub-bagian. (6) Ikuti format HTML yang diperintahkan dengan tepat—jangan gunakan Markdown.`,
+          content: `Anda adalah penulis dan editor senior Revpeak, media digital Indonesia. Gaya penulisan: lugas, informatif, hangat, tidak terasa ditulis mesin, SEO-friendly. ATURAN KEJUJURAN (paling penting): (1) JANGAN mengarang statistik, persentase, angka survei, tanggal, nama orang, nama lembaga, kutipan, hasil penelitian, atau tautan. Jika tidak yakin 100%, gunakan bahasa umum ("banyak orang", "biasanya", "umumnya") tanpa angka. (2) JANGAN menulis seolah Anda pernah mencoba, mengunjungi, atau mewawancarai sesuatu. (3) JANGAN menyebut "terbaru", "tahun ini", "saat ini", atau harga/spesifikasi produk tertentu karena bisa sudah berubah. (4) Jika memberi contoh, tandai sebagai contoh/ilustrasi ("misalnya", "sebagai gambaran"). (5) Jangan memberi nasihat medis, hukum, atau investasi yang spesifik. Aturan gaya: paragraf pendek maksimal 3-4 kalimat; kata kunci utama muncul natural di paragraf pertama tiap sub-bagian; gunakan <strong> hanya untuk istilah atau poin kunci; hindari pembuka klise ("Dalam era modern ini...", "Tidak dapat dipungkiri..."); ikuti format HTML yang diperintahkan dengan tepat, jangan Markdown.`,
         },
         { role: "user", content: prompt },
       ],
@@ -352,7 +361,7 @@ TITLE: [judul 50-60 karakter: letakkan kata kunci di AWAL, gunakan angka atau ka
 EXCERPT: [140-155 karakter: sebut kata kunci di kalimat pertama, padat dan bernilai, hindari frasa "artikel ini membahas"]
 TAGS: [6-8 tag relevan dari umum ke spesifik, pisahkan koma]
 META_DESC: [130-155 karakter: buka dengan kata kunci, sebutkan manfaat utama pembaca, akhiri dengan CTA seperti "Simak panduan lengkapnya." atau "Pelajari lebih lanjut di sini."]
-IMAGE_PROMPT: [10-20 kata bahasa Inggris: photorealistic professional scene yang relevan dengan topik, no text overlay, no watermark, high resolution]`;
+IMAGE_PROMPT: [10-20 kata bahasa Inggris: clean modern editorial illustration, flat vector style, soft colors, relevan dengan topik, no text, no letters, no logos, no real people faces]`;
 
   const raw = await callAI(prompt, 600);
 
@@ -366,7 +375,7 @@ IMAGE_PROMPT: [10-20 kata bahasa Inggris: photorealistic professional scene yang
   const excerpt      = get("EXCERPT")      || "";
   const metaDesc     = get("META_DESC")    || excerpt;
   const tagsRaw      = get("TAGS")         || "";
-  const imagePrompt  = get("IMAGE_PROMPT") || `${topik.toLowerCase()} professional photography, high quality`;
+  const imagePrompt  = get("IMAGE_PROMPT") || `${topik.toLowerCase()} clean modern editorial illustration, flat vector style, no text, no logos`;
 
   const tags = tagsRaw
     .replace(/[\[\]]/g, "")
@@ -441,11 +450,11 @@ async function generateSection(subtopik, title, sectionTitle, index, total) {
 
   let instruksiPosisi;
   if (isFirst) {
-    instruksiPosisi = `Ini adalah bagian PEMBUKA artikel. Mulai dengan kalimat pertama yang langsung menarik—bisa berupa fakta mengejutkan, kutipan pendek, atau pernyataan kuat. Jangan mulai dengan "Dalam era modern ini" atau sejenisnya. Perkenalkan topik secara konkret dan beri pembaca alasan kuat untuk terus membaca.`;
+    instruksiPosisi = `Ini adalah bagian PEMBUKA artikel. Mulai dengan kalimat pertama yang langsung menarik—bisa berupa pertanyaan yang relevan, situasi yang dekat dengan pembaca, atau pernyataan kuat (tanpa angka atau kutipan karangan). Jangan mulai dengan "Dalam era modern ini" atau sejenisnya. Perkenalkan topik secara konkret dan beri pembaca alasan kuat untuk terus membaca.`;
   } else if (isLast) {
     instruksiPosisi = `Ini adalah bagian PENUTUP artikel. Tulis kesimpulan yang tegas dan berkesan—rangkum poin utama secara padat, lalu tutup dengan kalimat yang memberi perspektif atau ajakan berpikir bagi pembaca. Hindari penutup klise seperti "Demikianlah artikel ini...".`;
   } else {
-    instruksiPosisi = `Ini adalah bagian ISI artikel. Bahas sub-topik ini secara mendalam dengan data, contoh nyata, atau analisis yang tajam. Jadikan setiap paragraf bernilai—tidak ada kalimat pengisi.`;
+    instruksiPosisi = `Ini adalah bagian ISI artikel. Bahas sub-topik ini secara mendalam dengan penjelasan, contoh ilustrasi, atau analisis yang tajam. Jadikan setiap paragraf bernilai—tidak ada kalimat pengisi.`;
   }
 
   const instruksiFAQ = isLast
@@ -473,7 +482,7 @@ Posisi: ${instruksiPosisi}
    <p>Penjelasan paragraf di bawahnya...</p>
 
 4. PENEKANAN
-   - <strong> untuk: angka/statistik (mis. <strong>85%</strong>), nama produk/lembaga penting, fakta kunci
+   - <strong> untuk: istilah kunci dan poin terpenting saja (JANGAN menaruh angka atau statistik karangan)
    - <em> hanya untuk penekanan makna yang benar-benar perlu
    - Tempatkan 2-4 tag <strong> per bagian secara natural, bukan dipaksakan
 
@@ -489,7 +498,7 @@ Posisi: ${instruksiPosisi}
 
 ═══ GAYA PENULISAN ═══
 - Bahasa Indonesia baku, kalimat aktif, langsung ke inti
-- Sertakan minimal satu data, angka konkret, atau contoh nyata per bagian
+- Sertakan minimal satu contoh ilustrasi yang mudah dibayangkan per bagian (tandai sebagai "misalnya"). JANGAN mengarang statistik, tanggal, nama, atau kutipan
 - Hindari kalimat pasif berlebihan dan kata sifat yang tidak terukur ("sangat", "banyak", "berbagai")
 - Target: 280-380 kata untuk bagian ini
 
@@ -549,11 +558,35 @@ async function getCategoryId(slug) {
   } catch { return null; }
 }
 
+// Penulis tetap: akun "Redaksi Revpeak" (slug dari AUTHOR_SLUG). Jika belum dibuat di admin,
+// null → website menampilkan "Revpeak". Tidak lagi memilih penulis acak.
 async function getAuthorId() {
   try {
-    const r = await sbFetch("/authors?select=id&order=id.asc&limit=10");
-    return r?.length ? pilihAcak(r).id : null;
+    const r = await sbFetch(`/authors?slug=eq.${encodeURIComponent(AUTHOR_SLUG)}&select=id&limit=1`);
+    return r?.[0]?.id || null;
   } catch { return null; }
+}
+
+// ── Cek kemiripan judul agar topik tidak kembar ─────────────
+const STOPWORDS = new Set(["yang","dan","di","ke","dari","untuk","dengan","pada","cara","tips","panduan","apa","bagaimana","dalam","atau","ini","itu","agar","serta","lebih"]);
+function kataPenting(s) {
+  return new Set(String(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(w => w.length > 2 && !STOPWORDS.has(w)));
+}
+function kemiripan(a, b) {
+  const A = kataPenting(a), B = kataPenting(b);
+  if (!A.size || !B.size) return 0;
+  let irisan = 0;
+  for (const w of A) if (B.has(w)) irisan++;
+  return irisan / (A.size + B.size - irisan);
+}
+async function getJudulTerbaru() {
+  try {
+    const r = await sbFetch("/articles?select=title&order=created_at.desc&limit=500");
+    return (r || []).map(x => x.title).filter(Boolean);
+  } catch { return []; }
+}
+function judulMirip(judulBaru, daftar) {
+  return daftar.some(j => kemiripan(judulBaru, j) >= SIMILARITY_LIMIT);
 }
 
 async function slugExists(slug) {
@@ -587,24 +620,39 @@ async function main() {
     process.exit(1);
   }
 
-  const topikDipilih = pilihAcak(TOPIK);
-  const subtopik     = pilihAcak(topikDipilih.subtopik);
-
-  log(`📌 Topik : [${topikDipilih.kategori}] ${subtopik}`);
-  log(`📄 Tipe  : ${topikDipilih.post_type}`);
+  log(`🛡️  Mode status artikel: ${ARTICLE_STATUS} | Model: ${AI_TEXT_MODEL} | Min kata: ${MIN_WORDS}`);
   log(`📦 Menggunakan bucket: ${CF_R2_BUCKET}`);
 
-  log("📋 Membuat metadata...");
-  let meta;
-  try {
-    meta = await generateMetadata(topikDipilih.kategori, subtopik, topikDipilih.post_type);
-    log(`✅ Judul        : "${meta.title}"`);
-    log(`🔑 Focus KW     : "${meta.focusKw}"`);
-    log(`📎 Tags         : ${meta.tags.join(", ")}`);
-    log(`🎨 Image prompt : "${meta.imagePrompt}"`);
-  } catch (e) {
-    console.error(`❌ Gagal buat metadata: ${e.message}`);
-    process.exit(1);
+  // Pilih topik yang belum pernah dibahas (cek kemiripan judul)
+  const judulLama = await getJudulTerbaru();
+  log(`📚 Judul yang sudah ada: ${judulLama.length}`);
+
+  let topikDipilih, subtopik, meta = null;
+  for (let percobaan = 1; percobaan <= MAX_TOPIC_TRIES; percobaan++) {
+    topikDipilih = pilihAcak(TOPIK);
+    subtopik     = pilihAcak(topikDipilih.subtopik);
+    log(`📌 Topik (percobaan ${percobaan}): [${topikDipilih.kategori}] ${subtopik}`);
+    log(`📄 Tipe  : ${topikDipilih.post_type}`);
+
+    log("📋 Membuat metadata...");
+    try {
+      meta = await generateMetadata(topikDipilih.kategori, subtopik, topikDipilih.post_type);
+      log(`✅ Judul        : "${meta.title}"`);
+      log(`🔑 Focus KW     : "${meta.focusKw}"`);
+      log(`📎 Tags         : ${meta.tags.join(", ")}`);
+      log(`🎨 Image prompt : "${meta.imagePrompt}"`);
+    } catch (e) {
+      console.error(`❌ Gagal buat metadata: ${e.message}`);
+      process.exit(1);
+    }
+
+    if (!judulMirip(meta.title, judulLama)) break;
+    log(`⚠️  Judul mirip artikel yang sudah ada, cari topik lain...`);
+    meta = null;
+  }
+  if (!meta) {
+    log("⏭️  Semua percobaan menghasilkan topik yang mirip artikel lama. Run ini dilewati (bukan error).");
+    process.exit(0);
   }
 
   let slug      = slugify(meta.title);
@@ -634,12 +682,24 @@ async function main() {
     console.error(`❌ Gagal buat konten: ${content.reason}`);
     process.exit(1);
   }
-  const articleContent = content.value;
+  let articleContent = content.value;
 
   if (!articleContent || articleContent.trim().length < 100) {
     console.error("❌ Konten terlalu pendek atau kosong.");
     process.exit(1);
   }
+
+  // Tolak artikel yang terlalu pendek (bukan error sistem, tidak disimpan)
+  const jumlahKata = hitungKata(articleContent);
+  if (jumlahKata < MIN_WORDS) {
+    console.error(`❌ Artikel hanya ${jumlahKata} kata (minimum ${MIN_WORDS}). Tidak disimpan.`);
+    process.exit(1);
+  }
+
+  // Keterangan transparansi (jujur sesuai mode: ditinjau hanya jika masuk draft)
+  articleContent += ARTICLE_STATUS === "draft"
+    ? '\n\n<p class="ai-disclosure"><em>Artikel ini disusun dengan bantuan AI dan ditinjau oleh tim redaksi Revpeak sebelum dipublikasikan.</em></p>'
+    : '\n\n<p class="ai-disclosure"><em>Artikel ini disusun dengan bantuan AI.</em></p>';
 
   const [categoryId, authorId] = await Promise.all([
     getCategoryId(topikDipilih.slug_kategori),
@@ -660,14 +720,14 @@ async function main() {
       slug:          slugFinal,
       excerpt:       meta.excerpt,
       content:       articleContent,
-      status:        "published",
+      status:        ARTICLE_STATUS,
       category_id:   categoryId,
       author_id:     authorId,
       published_at:  publishedAt,
       created_at:    publishedAt,
       updated_at:    publishedAt,
       thumbnail_url: thumb.url,   // selalu disertakan agar tidak hilang saat fallback
-      thumbnail_alt: meta.imagePrompt ?? meta.title,
+      thumbnail_alt: `Ilustrasi: ${meta.title}`,
     };
 
     const payloadOptional = {
@@ -694,7 +754,9 @@ async function main() {
     }
 
     log(`✅ Artikel tersimpan — ID: ${hasil?.[0]?.id ?? "?"}`);
-    log(`🔗 URL: https://revpeak.web.id/${topikDipilih.slug_kategori}/${slugFinal}`);
+    log(ARTICLE_STATUS === "draft"
+      ? `📝 Tersimpan sebagai DRAFT. Tinjau di admin, lalu ubah status ke published. Slug: ${slugFinal}`
+      : `🔗 URL: https://revpeak.web.id/${slugFinal}`);
   } catch (e) {
     console.error(`❌ Gagal simpan ke Supabase: ${e.message}`);
     process.exit(1);
