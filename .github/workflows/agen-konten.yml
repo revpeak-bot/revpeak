@@ -1,7 +1,7 @@
 # ============================================================
 # REVPEAK — Agen Konten AI
 # GitHub Actions + Cloudflare Workers AI REST API
-# Berjalan 6x sehari (setiap 4 jam)
+# Berjalan 2x sehari. Artikel disimpan sebagai DRAFT (ARTICLE_STATUS) untuk ditinjau di admin.
 #
 # Alur per run:
 #   1. Generate metadata (title, excerpt, tags, meta_desc, image_prompt)
@@ -19,14 +19,10 @@ name: Agen Konten AI
 
 on:
   schedule:
-    # Jam UTC: 00, 04, 08, 12, 16, 20
-    # Jam WIB: 07, 11, 15, 19, 23, 03
-    - cron: "0 0 * * *"
-    - cron: "0 4 * * *"
-    - cron: "0 8 * * *"
-    - cron: "0 12 * * *"
-    - cron: "0 16 * * *"
-    - cron: "0 20 * * *"
+    # 2x sehari (kualitas > kuantitas)
+    # Jam UTC: 02, 10  →  Jam WIB: 09:00, 17:00
+    - cron: "0 2 * * *"
+    - cron: "0 10 * * *"
 
   # Jalankan manual dari tab Actions
   workflow_dispatch:
@@ -55,6 +51,12 @@ jobs:
 
       - name: Jalankan Agen Konten
         env:
+          # ── Pengaturan kualitas ───────────────────────────────
+          # draft = ditinjau manual di admin dulu. Ubah ke "published" hanya jika sudah yakin.
+          ARTICLE_STATUS:            "draft"
+          # Opsional: ganti model teks tanpa mengubah kode
+          # AI_TEXT_MODEL:           "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+
           # ── Supabase ──────────────────────────────────────────
           SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY:              ${{ secrets.SUPABASE_KEY }}
