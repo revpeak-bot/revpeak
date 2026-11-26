@@ -34,7 +34,7 @@ const CF_AI_BASE    = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUN
 // Model teks: bisa diganti lewat env AI_TEXT_MODEL (tanpa mengubah kode).
 // Default memakai model lebih besar; jika gagal otomatis turun ke model kecil.
 const AI_TEXT_MODEL    = process.env.AI_TEXT_MODEL || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-const AI_FALLBACK_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
+const AI_FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL || "@cf/mistralai/mistral-small-3.1-24b-instruct"; // llama-3.1-8b sudah dipensiunkan (20 Nov 2026)
 const CF_AI_TEXT_PRIMARY  = `${CF_AI_BASE}/${AI_TEXT_MODEL}`;
 const CF_AI_TEXT_FALLBACK = `${CF_AI_BASE}/${AI_FALLBACK_MODEL}`;
 // Model gambar: SDXL lama sudah dipensiunkan Cloudflare (20 Nov 2026). Bisa diganti lewat env AI_IMAGE_MODEL.
